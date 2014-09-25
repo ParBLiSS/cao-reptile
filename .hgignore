@@ -1,0 +1,19 @@
+# use glob syntax.
+syntax: glob
+
+*.elc
+*.pyc
+*~
+*.o
+preptile*
+*.a
+src/test/*
+out.txt
+*.d
+google-*
+install/*
+src/CMakeFiles/*
+# switch to regexp syntax.
+#syntax: regexp
+#^\.pc/
+

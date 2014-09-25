@@ -15,10 +15,10 @@
 
 namespace pure_c {
  template <typename RandomIterator, typename T>
- bool implicit_heap_search(RandomIterator begin,
-			   RandomIterator beyond,
-			   int degree,
-			   const T& value) {
+ RandomIterator implicit_heap_search(RandomIterator begin,
+                           RandomIterator beyond,
+                           int degree,
+                           const T& value) {
    typedef typename std::iterator_traits<RandomIterator>::difference_type diff_type;
   initialize:
    RandomIterator lower_bound, l_middle, current_node = begin;
@@ -43,9 +43,9 @@ namespace pure_c {
    goto descend_tree;
 
   return_false:
-   return false;
+   return beyond;
   return_true:
-   return true;
+   return lower_bound;
  }
 }
 

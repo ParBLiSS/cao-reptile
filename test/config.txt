@@ -1,0 +1,86 @@
+# ------------------------------------------------------------------------------
+# Reptile version 1.1
+# © 2011 Xiao Yang, Karin S. Dorman, and Srinivas Aluru
+#
+# Example 'reptile-v1.1' configuration file
+# ------------------------------------------------------------------------------
+
+# File containing short read sequences (must be in fasta format)
+InFaFile        ./test-fa/Testing.fa
+
+# Use quality score information? (for current version, must be set to 1)
+QFlag           1
+
+# File containing short read quality scores (to accompany sequences--see README
+# file for more information)
+IQFile          ./test-fa/Testing.q
+
+# File to which output will be written (see README file for output format)
+OErrFile        reptile-output
+
+# If the dataset is too large to fit in memory, it can be read in batches. This
+# parameter specifies the number of reads to be loaded into memory for each
+# batch. Default value is 1 million.
+BatchSize       30
+
+# k-mer length
+KmerLen         7
+
+# Maximum Hamming distance per k-mer
+hd_max          2
+
+# Tile length = 'KmerLen' + 'Step'    
+Step            1
+
+# This controls the run-time and memory,  set to 4^c (1 <= c <= 4); to reduce
+# the run time set c to be a smaller value, but memory usage will increase; to
+# save memory, increase c value
+ExpectSearch    4
+
+# Let t_c be the cardinality of a tile and t_c_prime be the cardinality of the
+# most frequently occuring alternative tile. Set 'T_ratio' = t_c / t_c_prime.
+# For each tile, if its T_ratio is less than or equal to this threshold, it will
+# be corrected to the alternative tile. For example, if the T_ratio is 0.5 and a
+# tile occurs 12 times and has an alternative tile that occurs 24 or more times,
+# then the tile is corrected to the alternative tile.
+T_ratio         0.5
+
+
+######## The following parameters need to be tuned to specific dataset ########
+
+# A base call > 'QThreshold' is considered high-quality
+QThreshold      50
+
+# Maximum number of bases < 'QThreshold' allowed per k-mer. If a k-mer contains    
+# <= 'MaxBadQPerKmer' bases having quality < 'QThreshold', it is considered as a
+# high quality k-mer. Default value is 0
+MaxBadQPerKmer  1
+
+# Lower threshold for ASCII-formatted quality scores. Any quality less than this
+# threshold is considered low probability base call.
+Qlb             65
+
+# If a tile has a k-mer that occurs with quality more than 'T_expGoodCnt' times,
+# it is considered error-free without further validation. Theoretically, if we
+# assume random genome sampling and uniform distribution of errors (with error
+# rate p_e), then this value would be the following.
+# [read_num/(genome_len - read_len + 1)*(read_len - tile_len + 1)] * (1-p_e)^{L}
+# See the README file for practical advice on setting this parameter.
+T_expGoodCnt    8
+
+# At a minimum, a tile must occur this many times to be considered a "good
+# tile." The README file provides advice for selecting this parameter, but it
+# can be arbitrarily chosen--assuming you understand the consequences of that
+# choice. Increasing this value of this parameter will significantly increase
+# specificity (reduce false positives), but at the same time will reduce
+# sensitivity (increase false negatives). Because of Reptile's conservative
+# approach to error correction, it is suggested that the value of this parameter
+# be chosen so as to maximize the size of the output file. The expectation is
+# that for each additional false positive, many additional true positives will
+# also be found, increasing the overall quality of the data. Also, make sure
+# that T_card < T_expGoodCnt.
+T_card          1
+
+# If set to 1, the program will store the reads and then 
+#  process the reads - Applicable only if run with out map reduce
+StoreReads      0
