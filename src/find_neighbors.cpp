@@ -21,6 +21,7 @@
  *  along with Libpnorm. If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#include "util.h"
 #include <iostream>
 #include <stdint.h>
 #include <vector>
@@ -28,7 +29,6 @@
 #include <string>
 #include <cassert>
 
-#include "util.h"
 
 
 //

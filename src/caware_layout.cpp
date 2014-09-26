@@ -2,7 +2,7 @@
 #include <iostream>
 #include <iterator>
 #include <cassert>
-#include <cstdint>
+#include <stdint.h>
 #include "implicit_heap_search_c.h"
 #include "caware_layout.hpp"
 
@@ -39,7 +39,7 @@ int test_caware(){
         idt.resize(n);
         ct.resize(n);
 
-        for(auto i = 0u; i < n; i++) {
+        for(size_type i = 0u; i < n; i++) {
             tst[i].ID = i+1;
             tst[i].count = n - i;
         }
@@ -48,8 +48,8 @@ int test_caware(){
         write_stvector(idt, std::cout);
 
         std::cout << "Search : ";
-        for(auto j = -1; j <= (int) (i+2);j++) {
-            auto where = pure_c::implicit_heap_search(idt.begin(), idt.end(),
+        for(int j = -1; j <= (int) (i+2);j++) {
+            std::vector<int>::iterator where = pure_c::implicit_heap_search(idt.begin(), idt.end(),
                                                       m + 1, j);
             std::cout << (where != idt.end()) << " ";
         }

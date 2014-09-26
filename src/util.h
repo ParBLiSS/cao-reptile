@@ -28,6 +28,7 @@
 #ifndef _UTIL_H
 #define	_UTIL_H
 
+#include <MPI_env.hpp>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -43,7 +44,6 @@
 #include <stdint.h>
 
 #include <sys/time.h>
-#include <MPI_env.hpp>
 #include <cassert>
 #include "fasta_file.hpp"
 

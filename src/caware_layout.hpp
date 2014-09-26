@@ -4,7 +4,7 @@
 #include <iostream>
 #include <iterator>
 #include <cassert>
-#include <cstdint>
+#include <stdint.h>
 
 #include "io_util.h"
 
@@ -18,9 +18,9 @@ class CacheAwareLayoutHelper{
    private:
     size_type_vector completeLevelSize;
     size_type_vector completeTreeSize;
-    size_type d_cache = 0;
-    size_type k_cache = 0;
-    size_type m_cache = 0;
+    size_type d_cache;
+    size_type k_cache;
+    size_type m_cache;
     size_type_vector stsize;
 
     void init_sizes(const size_type &m,
@@ -28,7 +28,7 @@ class CacheAwareLayoutHelper{
         completeLevelSize.resize(l);
         completeTreeSize.resize(l);
         completeTreeSize[0] =  completeLevelSize[0] = m;
-        for(auto i = 1u; i < l; i++){
+        for(size_type i = 1u; i < l; i++){
             completeLevelSize[i] = completeLevelSize[i - 1] * (m + 1);
             completeTreeSize[i] = completeTreeSize[i - 1] + completeLevelSize[i];
         }
@@ -53,10 +53,10 @@ class CacheAwareLayoutHelper{
         stsize.resize(m + 1);
         ls.resize(m + 1);
         // No. of elements at last level.
-        auto dk = d - completeTreeSize[k - 2];
+        size_type dk = d - completeTreeSize[k - 2];
         //
-        auto q = dk / completeLevelSize[k - 2];
-        auto r = dk % completeLevelSize[k - 2];
+        size_type q = dk / completeLevelSize[k - 2];
+        size_type r = dk % completeLevelSize[k - 2];
 #ifdef NDEBUG
         std::cout << "dk : " << dk
                   << " q : " << q
@@ -64,7 +64,7 @@ class CacheAwareLayoutHelper{
                   << std::endl;
 #endif
         //TODO: cache
-        for(auto j = 0u; j <= m; j++)
+        for(size_type j = 0u; j <= m; j++)
             if(j < q)
                 ls[j] = completeLevelSize[k - 2];
             else if(j > q)
@@ -77,7 +77,7 @@ class CacheAwareLayoutHelper{
         write_stvector(ls, std::cout);
 #endif
         //TODO: cache st size
-        for(auto j = 0u; j <= m; j++)
+        for(size_type j = 0u; j <= m; j++)
             if(k > 2)
                 stsize[j] = ls[j] + completeTreeSize[k - 3];
             else
@@ -112,7 +112,7 @@ void caware_layout(RandomIterator srt_begin,
             std::vector<IdType>& id_tree,
             std::vector<CountType>& count_tree){
 
-    auto n = std::distance(srt_begin, srt_end);
+    size_type n = std::distance(srt_begin, srt_end);
     assert(m > 2);
     assert(n > 0);
     assert(n % m == 0);
@@ -131,8 +131,8 @@ void caware_layout(RandomIterator srt_begin,
     id_tree[m - 1] = n - 1;
     while(i < n){
         // [x,y] is the range of indicies covered by this sub-tree
-        auto x = id_tree[c_ptr];
-        auto y = id_tree[c_ptr + m - 1];
+        size_type x = id_tree[c_ptr];
+        size_type y = id_tree[c_ptr + m - 1];
         // k no. levels of current sub-tree including root
         size_type k = id_tree[c_ptr + 1];
         size_type d = y - x + 1;
@@ -144,7 +144,7 @@ void caware_layout(RandomIterator srt_begin,
 #endif
         if(d == m){
             // no sub-trees
-            for(auto j = 0u; j < m; j++) {
+            for(size_type j = 0u; j < m; j++) {
                 id_tree[c_ptr + j] = (srt_begin + x)->ID;
                 count_tree[c_ptr + j] = (srt_begin + x)->count;
                 x++;
@@ -155,7 +155,7 @@ void caware_layout(RandomIterator srt_begin,
 
             y = x;
             // Update entries for current node
-            for(auto j = 0u; j < m; j++) {
+            for(size_type j = 0u; j < m; j++) {
                 y = y + stsize[j];
                 id_tree[c_ptr + j] = (srt_begin + y)->ID;
                 count_tree[c_ptr + j] = (srt_begin + y)->count;
@@ -163,7 +163,7 @@ void caware_layout(RandomIterator srt_begin,
                 y++;
             }
             // Insert indices for sub-trees
-            for(auto j = 0u; j <= m; j++) {
+            for(size_type j = 0u; j <= m; j++) {
                 if(stsize[j] > 0) {
                     y = x + stsize[j];
                     l_ptr = l_ptr + m;

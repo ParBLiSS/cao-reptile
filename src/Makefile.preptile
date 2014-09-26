@@ -1,0 +1,27 @@
+PROG=cao-preptile
+MPICXX=mpicxx
+MPIEXT = ../mpiext
+
+CFLAGS=-c -Wall -O3 -I$(MPIEXT)  -g
+LDFLAGS= 
+SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp
+OBJS=$(SRCS:.cpp=.o)
+
+ifeq ($(MAKECMDGOALS),debug)
+CFLAGS += -g -DDEBUG
+endif
+
+all:$(SRCS) $(PROG)
+
+$(PROG): $(OBJS)
+	$(MPICXX) -o $@ $(OBJS) $(LDFLAGS)
+
+$(OBJS): %.o : %.cpp
+	$(MPICXX) $(CFLAGS) $<   
+
+
+clean:
+	rm -rf $(PROG) $(OBJS)
+
+debug: all
+
