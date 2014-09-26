@@ -6,18 +6,13 @@
 #include <cassert>
 #include <cstdint>
 
+#include "io_util.h"
+
 typedef std::vector<uint64_t>::size_type size_type;
 typedef std::vector<size_type> size_type_vector;
 
 size_type int_log(const size_type& b, const size_type& x);
-
-template<typename T>
-void write_stvector(std::vector<T> sts, std::ostream& os) {
-    std::ostream_iterator<T> outs(os, " ");
-    std::copy(sts.cbegin(), sts.cend(), outs);
-    os << std::endl;
-}
-
+int test_caware();
 
 class CacheAwareLayoutHelper{
    private:

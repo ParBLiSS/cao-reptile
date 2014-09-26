@@ -117,12 +117,26 @@ cao-reptile/fast:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/build
 .PHONY : cao-reptile/fast
 
+#=============================================================================
+# Target rules for targets named cao-reptile-test
+
+# Build rule for target.
+cao-reptile-test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 cao-reptile-test
+.PHONY : cao-reptile-test
+
+# fast build rule for target.
+cao-reptile-test/fast:
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/build
+.PHONY : cao-reptile-test/fast
+
 ECData.o: ECData.cpp.o
 .PHONY : ECData.o
 
 # target to build an object file
 ECData.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/ECData.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/ECData.cpp.o
 .PHONY : ECData.cpp.o
 
 ECData.i: ECData.cpp.i
@@ -131,6 +145,7 @@ ECData.i: ECData.cpp.i
 # target to preprocess a source file
 ECData.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/ECData.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/ECData.cpp.i
 .PHONY : ECData.cpp.i
 
 ECData.s: ECData.cpp.s
@@ -139,6 +154,7 @@ ECData.s: ECData.cpp.s
 # target to generate assembly for a file
 ECData.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/ECData.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/ECData.cpp.s
 .PHONY : ECData.cpp.s
 
 Parser.o: Parser.cpp.o
@@ -147,6 +163,7 @@ Parser.o: Parser.cpp.o
 # target to build an object file
 Parser.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/Parser.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/Parser.cpp.o
 .PHONY : Parser.cpp.o
 
 Parser.i: Parser.cpp.i
@@ -155,6 +172,7 @@ Parser.i: Parser.cpp.i
 # target to preprocess a source file
 Parser.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/Parser.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/Parser.cpp.i
 .PHONY : Parser.cpp.i
 
 Parser.s: Parser.cpp.s
@@ -163,6 +181,7 @@ Parser.s: Parser.cpp.s
 # target to generate assembly for a file
 Parser.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/Parser.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/Parser.cpp.s
 .PHONY : Parser.cpp.s
 
 caware_layout.o: caware_layout.cpp.o
@@ -171,6 +190,7 @@ caware_layout.o: caware_layout.cpp.o
 # target to build an object file
 caware_layout.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/caware_layout.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/caware_layout.cpp.o
 .PHONY : caware_layout.cpp.o
 
 caware_layout.i: caware_layout.cpp.i
@@ -179,6 +199,7 @@ caware_layout.i: caware_layout.cpp.i
 # target to preprocess a source file
 caware_layout.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/caware_layout.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/caware_layout.cpp.i
 .PHONY : caware_layout.cpp.i
 
 caware_layout.s: caware_layout.cpp.s
@@ -187,7 +208,35 @@ caware_layout.s: caware_layout.cpp.s
 # target to generate assembly for a file
 caware_layout.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/caware_layout.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/caware_layout.cpp.s
 .PHONY : caware_layout.cpp.s
+
+coblivious_layout.o: coblivious_layout.cpp.o
+.PHONY : coblivious_layout.o
+
+# target to build an object file
+coblivious_layout.cpp.o:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/coblivious_layout.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/coblivious_layout.cpp.o
+.PHONY : coblivious_layout.cpp.o
+
+coblivious_layout.i: coblivious_layout.cpp.i
+.PHONY : coblivious_layout.i
+
+# target to preprocess a source file
+coblivious_layout.cpp.i:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/coblivious_layout.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/coblivious_layout.cpp.i
+.PHONY : coblivious_layout.cpp.i
+
+coblivious_layout.s: coblivious_layout.cpp.s
+.PHONY : coblivious_layout.s
+
+# target to generate assembly for a file
+coblivious_layout.cpp.s:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/coblivious_layout.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/coblivious_layout.cpp.s
+.PHONY : coblivious_layout.cpp.s
 
 find_neighbors.o: find_neighbors.cpp.o
 .PHONY : find_neighbors.o
@@ -195,6 +244,7 @@ find_neighbors.o: find_neighbors.cpp.o
 # target to build an object file
 find_neighbors.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/find_neighbors.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/find_neighbors.cpp.o
 .PHONY : find_neighbors.cpp.o
 
 find_neighbors.i: find_neighbors.cpp.i
@@ -203,6 +253,7 @@ find_neighbors.i: find_neighbors.cpp.i
 # target to preprocess a source file
 find_neighbors.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/find_neighbors.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/find_neighbors.cpp.i
 .PHONY : find_neighbors.cpp.i
 
 find_neighbors.s: find_neighbors.cpp.s
@@ -211,6 +262,7 @@ find_neighbors.s: find_neighbors.cpp.s
 # target to generate assembly for a file
 find_neighbors.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/find_neighbors.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/find_neighbors.cpp.s
 .PHONY : find_neighbors.cpp.s
 
 kmer_count.o: kmer_count.cpp.o
@@ -219,6 +271,7 @@ kmer_count.o: kmer_count.cpp.o
 # target to build an object file
 kmer_count.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/kmer_count.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/kmer_count.cpp.o
 .PHONY : kmer_count.cpp.o
 
 kmer_count.i: kmer_count.cpp.i
@@ -227,6 +280,7 @@ kmer_count.i: kmer_count.cpp.i
 # target to preprocess a source file
 kmer_count.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/kmer_count.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/kmer_count.cpp.i
 .PHONY : kmer_count.cpp.i
 
 kmer_count.s: kmer_count.cpp.s
@@ -235,6 +289,7 @@ kmer_count.s: kmer_count.cpp.s
 # target to generate assembly for a file
 kmer_count.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/kmer_count.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/kmer_count.cpp.s
 .PHONY : kmer_count.cpp.s
 
 main.o: main.cpp.o
@@ -267,6 +322,7 @@ sort_kmers.o: sort_kmers.cpp.o
 # target to build an object file
 sort_kmers.cpp.o:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/sort_kmers.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/sort_kmers.cpp.o
 .PHONY : sort_kmers.cpp.o
 
 sort_kmers.i: sort_kmers.cpp.i
@@ -275,6 +331,7 @@ sort_kmers.i: sort_kmers.cpp.i
 # target to preprocess a source file
 sort_kmers.cpp.i:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/sort_kmers.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/sort_kmers.cpp.i
 .PHONY : sort_kmers.cpp.i
 
 sort_kmers.s: sort_kmers.cpp.s
@@ -283,7 +340,32 @@ sort_kmers.s: sort_kmers.cpp.s
 # target to generate assembly for a file
 sort_kmers.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/sort_kmers.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/sort_kmers.cpp.s
 .PHONY : sort_kmers.cpp.s
+
+test_main.o: test_main.cpp.o
+.PHONY : test_main.o
+
+# target to build an object file
+test_main.cpp.o:
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/test_main.cpp.o
+.PHONY : test_main.cpp.o
+
+test_main.i: test_main.cpp.i
+.PHONY : test_main.i
+
+# target to preprocess a source file
+test_main.cpp.i:
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/test_main.cpp.i
+.PHONY : test_main.cpp.i
+
+test_main.s: test_main.cpp.s
+.PHONY : test_main.s
+
+# target to generate assembly for a file
+test_main.cpp.s:
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/test_main.cpp.s
+.PHONY : test_main.cpp.s
 
 # Help Target
 help:
@@ -292,6 +374,7 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... cao-reptile"
+	@echo "... cao-reptile-test"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... ECData.o"
@@ -303,6 +386,9 @@ help:
 	@echo "... caware_layout.o"
 	@echo "... caware_layout.i"
 	@echo "... caware_layout.s"
+	@echo "... coblivious_layout.o"
+	@echo "... coblivious_layout.i"
+	@echo "... coblivious_layout.s"
 	@echo "... find_neighbors.o"
 	@echo "... find_neighbors.i"
 	@echo "... find_neighbors.s"
@@ -315,6 +401,9 @@ help:
 	@echo "... sort_kmers.o"
 	@echo "... sort_kmers.i"
 	@echo "... sort_kmers.s"
+	@echo "... test_main.o"
+	@echo "... test_main.i"
+	@echo "... test_main.s"
 .PHONY : help
 
 

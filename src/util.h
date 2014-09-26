@@ -87,6 +87,7 @@ public:
     // cache additions
     int kmerCacheSize;
     int tileCacheSize;
+    int cacheOptimizedSearch;
 
     Para(const char *configFile) {
         setPara(configFile);
@@ -100,6 +101,7 @@ public:
 private:
 
     void setPara(const char *configFile) {
+        cacheOptimizedSearch = 0;
         absentKmers = false;
         std::string line, s1;
         std::ifstream input(configFile);
@@ -143,6 +145,8 @@ private:
                     buf >> tCard;
                 else if (s1 == "StoreReads")
                     buf >> storeReads;
+                else if (s1 == "CacheOptimizedSearch")
+                    buf >> cacheOptimizedSearch;
                 else if (s1 == "KmerCacheSize")
                     buf >> kmerCacheSize;
                 else if (s1 == "TileCacheSize")
@@ -217,8 +221,11 @@ private:
                       << "Qlb = " << Qlb << "\n"
                       << "T_expGoodCnt = " << tGoodTile << "\n"
                       << "T_card = " << tCard << "\n"
-                      << "StoreReads = " << storeReads << "\n";
-            std::cout << "----------------------------------\n";
+                      << "StoreReads = " << storeReads << "\n"
+                      << "CacheOptimizedSearch = " << cacheOptimizedSearch << "\n"
+                      << "Kmer Cache = " << kmerCacheSize << "\n"
+                      << "Tile Cache = " << tileCacheSize << "\n"
+                      << "----------------------------------\n";
         }
         return true;
     }

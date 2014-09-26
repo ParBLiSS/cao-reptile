@@ -119,14 +119,22 @@ class ECData {
     void replaceTileArray(tile_t *newTileArray,int newTileCount,
                           int newTileSize);
     bool findKmer(const kmer_id_t &kmerID);
+    bool findKmerDefault(const kmer_id_t &kmerID);
     bool findKmerCacheAware(const kmer_id_t &kmerID);
+    bool findKmerCacheOblivious(const kmer_id_t &kmerID);
 
     int findTile(const tile_id_t &tileID,kc_t& output);
+    int findTileDefault(const tile_id_t &tileID,kc_t& output);
     int findTileCacheAware(const tile_id_t &tileID,kc_t& output);
+    int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output);
+
     void mergeBatchKmers();
     void setBatchStart();
-    void buildCacheAwareStructure(const unsigned& kmerCacheSize,
-                                  const unsigned& tileCacheSize);
+    void buildCacheOptimizedLayout();
+    void buildCacheAwareLayout(const unsigned& kmerCacheSize,
+                               const unsigned& tileCacheSize);
+
+    void buildCacheObliviousLayout();
 
     ECData(Para *p);
     virtual ~ECData();

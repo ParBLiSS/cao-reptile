@@ -259,19 +259,19 @@ bool Parser::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
             reverse_complementary<uint32_t, uint32_t > (mosaic.second, myPara.K));
 
     uvec_t heads, tails, rvHeads, rvTails;
-    if (ecdata->findKmerCacheAware((kmer_id_t)mosaic.first)){
+    if (ecdata->findKmer((kmer_id_t)mosaic.first)){
         heads.push_back(mosaic.first);
     }
 
-    if (ecdata->findKmerCacheAware((kmer_id_t)mosaic.second)){
+    if (ecdata->findKmer((kmer_id_t)mosaic.second)){
         tails.push_back(mosaic.second);
     }
 
-    if (ecdata->findKmerCacheAware((kmer_id_t)rvMosaic.second)){
+    if (ecdata->findKmer((kmer_id_t)rvMosaic.second)){
         rvHeads.push_back(rvMosaic.second);
     }
 
-    if (ecdata->findKmerCacheAware((kmer_id_t)rvMosaic.first)){
+    if (ecdata->findKmer((kmer_id_t)rvMosaic.first)){
         rvTails.push_back(rvMosaic.first);
     }
 
@@ -734,7 +734,7 @@ void Parser::tiling(kcvec_t& tiles, const uvec_t& N1,
         exit(1);
     }
     kc_t output;
-    int idx = ecdata->findTileCacheAware(reptile,output);
+    int idx = ecdata->findTile(reptile,output);
     if (idx != -1) {
         tiles.push_back(output);
     }
@@ -748,7 +748,7 @@ void Parser::tiling(kcvec_t& tiles, const uvec_t& N1,
             if (overlay(tmptile, N1[i], N2[j], myPara)) {
                 //binary search
                 kc_t tmpoutput;
-                idx = ecdata->findTileCacheAware(tmptile,tmpoutput);
+                idx = ecdata->findTile(tmptile,tmpoutput);
 
                 if (idx != -1) {
                     tiles.push_back(tmpoutput);

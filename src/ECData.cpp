@@ -61,7 +61,7 @@ void ECData::registerKmerTypes(){
 
 }
 
-bool ECData::findKmer(const kmer_id_t &kmerID) {
+bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
    if(m_karray == 0){
        return false;
    }
@@ -93,7 +93,22 @@ bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) {
     return final;
 }
 
-int ECData::findTile(const tile_id_t &tileID,kc_t& output) {
+bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) {
+    // TODO::
+    return false;
+}
+
+bool ECData::findKmer(const kmer_id_t &kmerID) {
+    switch(m_params->cacheOptimizedSearch){
+        case 1:
+            return findKmerCacheAware(kmerID);
+        case 2:
+        default:
+            return findKmerDefault(kmerID);
+    }
+}
+
+int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
     int lb = 0, ub = m_tilecount - 1, mid;
     while (lb <= ub) {
         mid = (lb + ub) / 2;
@@ -119,16 +134,30 @@ int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
                                      tileID);
     int final;
     if( result != m_tile_ID.end()) {
-        int mid = result - m_tile_ID.begin();
+        final = result - m_tile_ID.begin();
         output.ID = tileID;
-        output.goodCnt = output.cnt = m_tile_count[mid];
-        final =  mid;
+        output.goodCnt = output.cnt = m_tile_count[final];
     } else{
         final = -1;
     }
     // std::cout << "Find " << tileID << " : "
     //           << ((final >= 0) ? m_tile_count[final] : 0) <<  std::endl;
     return final;
+}
+
+int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
+    // TODO:
+    return -1;
+}
+
+int ECData::findTile(const tile_id_t &tileID,kc_t& output){
+   switch(m_params->cacheOptimizedSearch){
+        case 1:
+            return findTileCacheAware(tileID, output);
+        case 2:
+        default:
+            return findTileDefault(tileID, output);
+    }
 }
 
 
@@ -272,8 +301,8 @@ void ECData::mergeBatchKmers(){
     currentKmerBatchStart = 0; currentTileBatchStart = 0;
 }
 
-void ECData::buildCacheAwareStructure(const unsigned& kmerCacheSize,
-                                      const unsigned& tileCacheSize){
+void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
+                                   const unsigned& tileCacheSize){
     //
     m_kdegree = kmerCacheSize + 1;
     unsigned rSize = (m_kcount % kmerCacheSize);
@@ -310,4 +339,21 @@ void ECData::buildCacheAwareStructure(const unsigned& kmerCacheSize,
     free(m_tilearray);
     m_tilearray = 0;
     m_tilecount = 0;
+}
+
+void ECData::buildCacheObliviousLayout(){
+    //TODO:
+}
+
+void ECData::buildCacheOptimizedLayout(){
+   switch(m_params->cacheOptimizedSearch){
+       case 1:
+           buildCacheAwareLayout(m_params->kmerCacheSize,
+                                 m_params->tileCacheSize);
+           break;
+       case 2:
+       default:
+           // nothing to do
+           break;
+   }
 }

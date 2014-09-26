@@ -51,6 +51,5 @@ void kmer_sort(ECData *ecdata) {
         ecdata->m_params);
 
     //
-    ecdata->buildCacheAwareStructure(params->kmerCacheSize,
-                                     params->tileCacheSize);
+    ecdata->buildCacheOptimizedLayout();
 }

@@ -23,7 +23,7 @@ typedef struct kd_s{
     unsigned char count;
 } kd_t;
 
-int test_caware(int argc, char* argv[]){
+int test_caware(){
 
     size_type m = 3, beg = m * 8,
         end = 1 + (m * 40);
