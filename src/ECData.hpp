@@ -80,11 +80,6 @@ class ECData {
   private:
     int m_kdegree;
     int m_tdegree;
-    kmer_id_vector m_kmer_ID;
-    kcount_vector m_kmer_count;
-
-    tile_id_vector m_tile_ID;
-    kcount_vector m_tile_count;
 
     void registerKmerTypes();
   public:
@@ -94,6 +89,12 @@ class ECData {
     // I own tilearray, tilesize and tilecount. So, Please be nice to them!
     tile_t *m_tilearray;
     int m_tilesize, m_tilecount;
+    
+    kmer_id_vector m_kmer_ID;
+    kcount_vector m_kmer_count;
+
+    tile_id_vector m_tile_ID;
+    kcount_vector m_tile_count;
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
 

@@ -303,16 +303,26 @@ void ECData::mergeBatchKmers(){
 
 void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
+    int rank = m_params->mpi_env->rank();
+
+    if(rank == 0)
+       std::cout << "Build Kmer Cache Aware Layout : " 
+         << m_kcount 
+         << std::endl;
     //
     m_kdegree = kmerCacheSize + 1;
     unsigned rSize = (m_kcount % kmerCacheSize);
     unsigned fillIn = kmerCacheSize - rSize;
     if(rSize > 0){
-        kmer_t& lastKmer = m_karray[m_kcount - 1];
+        kmer_t lastKmer = m_karray[m_kcount - 1];
         for(unsigned i = 0; i < fillIn; i++){
             addToArray(lastKmer.ID, lastKmer.count);
         }
     }
+    if(rank == 0)
+       std::cout << "Build Kmer Cache Aware Layout : " 
+         << m_kcount 
+         << std::endl;
     m_kmer_ID.resize(m_kcount);
     m_kmer_count.resize(m_kcount);
 
@@ -325,12 +335,23 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     m_tdegree = tileCacheSize + 1;
     rSize = (m_tilecount % tileCacheSize);
     fillIn = tileCacheSize - rSize;
+    if(rank == 0)
+       std::cout << "Build Cache Aware Layout for Tiles: "
+          << m_tilecount << " "
+          << rSize << " " 
+          << fillIn << " "
+          << std::endl;
+
     if(rSize > 0){
-        tile_t& lastTile = m_tilearray[m_tilecount - 1];
+        tile_t lastTile = m_tilearray[m_tilecount - 1];
         for(unsigned i = 0; i < fillIn; i++){
             addToArray(lastTile.ID, lastTile.count);
         }
     }
+    if(rank == 0)
+       std::cout << "Build Cache Aware Layout for Tiles: "
+         << rSize << " " << m_tilecount
+         << std::endl;
     m_tile_ID.resize(m_tilecount);
     m_tile_count.resize(m_tilecount);
 

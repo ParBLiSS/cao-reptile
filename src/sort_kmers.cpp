@@ -51,5 +51,5 @@ void kmer_sort(ECData *ecdata) {
         ecdata->m_params);
 
     //
-    ecdata->buildCacheOptimizedLayout();
+      ecdata->buildCacheOptimizedLayout();
 }

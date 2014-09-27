@@ -351,6 +351,9 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
             std::cout << AllData[i].ID << " " << ((int)AllData[i].count) << std::endl;
     }
 #endif
+    if(rank == 0)
+        std::cout << "SORTED LIST OF KMER AND FREQUENCY: " << 
+            NoofElements << std::endl;
 
     // DONOT free AllData : AllData is the output!
     delete[] Newlocal;
