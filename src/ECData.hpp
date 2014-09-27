@@ -26,6 +26,8 @@
 #define _ECDATA_H
 
 #include "util.h"
+#include "caware_layout.hpp"
+#include "coblivious_layout.hpp"
 
 // Structure from Reptile
 typedef struct KC{
@@ -76,11 +78,9 @@ typedef KeyIDComp<kmer_id_t> KmerIDComp;
 typedef std::vector<kmer_id_t> kmer_id_vector;
 typedef std::vector<tile_id_t> tile_id_vector;
 typedef std::vector<unsigned char> kcount_vector;
+
 class ECData {
   private:
-    int m_kdegree;
-    int m_tdegree;
-
     void registerKmerTypes();
   public:
     // I own karray, ksize and kcount. So, Please be nice to them!
@@ -89,12 +89,17 @@ class ECData {
     // I own tilearray, tilesize and tilecount. So, Please be nice to them!
     tile_t *m_tilearray;
     int m_tilesize, m_tilecount;
-    
-    kmer_id_vector m_kmer_ID;
-    kcount_vector m_kmer_count;
 
-    tile_id_vector m_tile_ID;
-    kcount_vector m_tile_count;
+    ECDataCOLayout<kmer_t*, kmer_id_t,
+                   unsigned char> m_kmerCOLayout;
+    ECDataCOLayout<tile_t*, tile_id_t,
+                   unsigned char> m_tileCOLayout;
+
+    ECDataCALayout<kmer_t*, kmer_id_t,
+                   unsigned char> m_kmerCALayout;
+    ECDataCALayout<tile_t*, tile_id_t,
+                   unsigned char> m_tileCALayout;
+
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
 

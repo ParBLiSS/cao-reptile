@@ -14,7 +14,7 @@
 
 namespace pure_c {
     template <typename RandomIterator, typename Tp>
- bool implicit_hp_search(RandomIterator begin,
+ RandomIterator implicit_hp_search(RandomIterator begin,
 			 RandomIterator beyond,
 			 RandomIterator Pos,
 			 RandomIterator T,
@@ -78,9 +78,11 @@ namespace pure_c {
    goto not_finished;
 
   return_false:
-   return false;
+   return beyond;
+   //return false;
   return_true:
-   return true;
+   return p;
+   //return true;
  }
 }
 #endif //__IMPLICIT_HP_SEARCH_PURE_C_CPP__

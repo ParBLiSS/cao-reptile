@@ -8,6 +8,7 @@
 
 #include "io_util.h"
 #include "cao_util.h"
+#include "implicit_heap_search_c.h"
 
 size_type int_log(const size_type& b, const size_type& x);
 int test_caware();
@@ -177,5 +178,56 @@ void caware_layout(RandomIterator srt_begin,
         c_ptr += m;
     }
 }
+
+template <typename RandomIterator,
+          typename IdType,
+          typename CountType>
+class ECDataCALayout{
+public:
+    typedef typename std::vector<IdType>::iterator id_iterator;
+    std::vector<IdType> mIds;
+    std::vector<CountType> mCounts;
+    int mDegree;
+    ECDataCALayout(){};
+    void init(RandomIterator intr,
+              size_type nTotal, int kSize){
+        assert(nTotal > 0);
+        assert(nTotal % kSize == 0);
+        mIds.resize(nTotal);
+        mCounts.resize(nTotal);
+        mDegree = kSize + 1;
+        caware_layout(intr, intr + nTotal,
+                      kSize, mIds, mCounts);
+    };
+
+    ECDataCALayout(RandomIterator intr,
+                 size_type nTotal,
+                 int kSize){
+        init_layout(intr, nTotal, kSize);
+    };
+
+    bool find(const IdType &rID) {
+        return (pure_c::implicit_heap_search(mIds.begin(),
+                                             mIds.end(),
+                                             mDegree,
+                                             rID)
+                !=  mIds.end());
+    };
+
+    int getCount(const IdType& rID, CountType& count){
+        id_iterator fpos = pure_c::implicit_heap_search(mIds.begin(),
+                                                        mIds.end(),
+                                                        mDegree,
+                                                        rID);
+        if(fpos != mIds.end()) {
+            int dist = fpos - mIds.begin();
+            count = mCounts[dist];
+            //std::cout << "count " << (int) count << std::endl;
+            return dist;
+        } else {
+            return -1;
+        }
+    }
+};
 
 #endif /* _CAWARE_LAYOUT_H_ */

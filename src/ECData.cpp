@@ -67,35 +67,40 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
    }
    kmer_t searchKmer;
    searchKmer.ID = kmerID;
-   bool result = std::binary_search(m_karray,m_karray + m_kcount,
+   bool final = std::binary_search(m_karray,m_karray + m_kcount,
                                     searchKmer, KmerComp());
    if(m_params->absentKmers == true)
-       return !result;
-   return result;
+       final = !final;
+
+   // std::cout << "Find " << kmerID << " : "
+   //           << (m_params->absentKmers) << " : "
+   //           << final << std::endl;
+
+   return final;
 }
 
 bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) {
-    kmer_id_vector::iterator result =
-        pure_c::implicit_heap_search(m_kmer_ID.begin(),
-                                     m_kmer_ID.end(),
-                                     m_kdegree,
-                                     kmerID);
 
-    bool final = false;
+    bool final = m_kmerCALayout.find(kmerID);
 
    if(m_params->absentKmers == true)
-       final = (result == m_kmer_ID.end());
-   else
-       final = (result != m_kmer_ID.end());
+       final = !final;
+
     // std::cout << "Find " << kmerID << " : "
-    //           << (m_params->absentKmers) << " : "
-    //           << final << std::endl;
+    //            << (m_params->absentKmers) << " : "
+    //            << final << std::endl;
     return final;
 }
 
 bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) {
-    // TODO::
-    return false;
+    bool final = m_kmerCOLayout.find(kmerID);
+   if(m_params->absentKmers == true)
+       final = !final;
+
+    // std::cout << "Find " << kmerID << " : "
+    //            << (m_params->absentKmers) << " : "
+    //            << final << std::endl;
+    return final;
 }
 
 bool ECData::findKmer(const kmer_id_t &kmerID) {
@@ -103,6 +108,7 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
         case 1:
             return findKmerCacheAware(kmerID);
         case 2:
+            return findKmerCacheOblivious(kmerID);
         default:
             return findKmerDefault(kmerID);
     }
@@ -110,44 +116,49 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
 
 int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
     int lb = 0, ub = m_tilecount - 1, mid;
+    int final = -1;
     while (lb <= ub) {
         mid = (lb + ub) / 2;
         if (m_tilearray[mid].ID == tileID) {
             output.ID = m_tilearray[mid].ID;
             output.goodCnt = m_tilearray[mid].count;
             output.cnt = m_tilearray[mid].count;
-            return mid;
+            final = mid;
+            break;
         }
         else if (m_tilearray[mid].ID < tileID)
             lb = mid + 1;
         else if (m_tilearray[mid].ID > tileID)
             ub = mid - 1;
     }
-    return -1;
+    // std::cout << "Find Tile " << tileID << " : "
+    //           << ((final >= 0) ? output.cnt : 0) <<  std::endl;
+    return final;
 }
 
 int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
-    tile_id_vector::iterator result =
-        pure_c::implicit_heap_search(m_tile_ID.begin(),
-                                     m_tile_ID.end(),
-                                     m_tdegree,
-                                     tileID);
-    int final;
-    if( result != m_tile_ID.end()) {
-        final = result - m_tile_ID.begin();
+    unsigned char count = 0;
+    int final = m_tileCALayout.getCount(tileID, count);
+
+    if( final != -1 ) {
         output.ID = tileID;
-        output.goodCnt = output.cnt = m_tile_count[final];
-    } else{
-        final = -1;
+        output.goodCnt = output.cnt = count;
     }
-    // std::cout << "Find " << tileID << " : "
-    //           << ((final >= 0) ? m_tile_count[final] : 0) <<  std::endl;
+    // std::cout << "Find Tile " << tileID << " : "
+    //           << ((final >= 0) ? count : 0) <<  std::endl;
     return final;
 }
 
 int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
-    // TODO:
-    return -1;
+    unsigned char count = 0;
+    int final = m_tileCOLayout.getCount(tileID, count);
+    if( final != -1 ) {
+        output.ID = tileID;
+        output.goodCnt = output.cnt = count;
+    }
+    // std::cout << "Find Tile " << tileID << " : "
+    //           << ((final >= 0) ? count : 0) <<  std::endl;
+    return final;
 }
 
 int ECData::findTile(const tile_id_t &tileID,kc_t& output){
@@ -155,6 +166,7 @@ int ECData::findTile(const tile_id_t &tileID,kc_t& output){
         case 1:
             return findTileCacheAware(tileID, output);
         case 2:
+            return findTileCacheOblivious(tileID, output);
         default:
             return findTileDefault(tileID, output);
     }
@@ -301,44 +313,40 @@ void ECData::mergeBatchKmers(){
     currentKmerBatchStart = 0; currentTileBatchStart = 0;
 }
 
+
 void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
     int rank = m_params->mpi_env->rank();
 
-    if(rank == 0)
-       std::cout << "Build Kmer Cache Aware Layout : " 
-         << m_kcount 
-         << std::endl;
+    // if(rank == 0)
+    //    std::cout << "Build Kmer Cache Aware Layout : "
+    //      << m_kcount
+    //      << std::endl;
     //
-    m_kdegree = kmerCacheSize + 1;
     unsigned rSize = (m_kcount % kmerCacheSize);
     unsigned fillIn = kmerCacheSize - rSize;
+    if(rank == 0)
+       std::cout << "Build Kmer Cache Aware Layout : "
+                 << m_kcount << " " << rSize
+                 << std::endl;
     if(rSize > 0){
         kmer_t lastKmer = m_karray[m_kcount - 1];
         for(unsigned i = 0; i < fillIn; i++){
             addToArray(lastKmer.ID, lastKmer.count);
         }
     }
-    if(rank == 0)
-       std::cout << "Build Kmer Cache Aware Layout : " 
-         << m_kcount 
-         << std::endl;
-    m_kmer_ID.resize(m_kcount);
-    m_kmer_count.resize(m_kcount);
-
-    caware_layout(m_karray, m_karray + m_kcount,
-                  kmerCacheSize, m_kmer_ID, m_kmer_count);
+    m_kmerCALayout.init(m_karray, m_kcount,
+                        kmerCacheSize);
     free(m_karray);
     m_karray = 0;
     m_kcount = 0;
 
-    m_tdegree = tileCacheSize + 1;
     rSize = (m_tilecount % tileCacheSize);
     fillIn = tileCacheSize - rSize;
     if(rank == 0)
        std::cout << "Build Cache Aware Layout for Tiles: "
           << m_tilecount << " "
-          << rSize << " " 
+          << rSize << " "
           << fillIn << " "
           << std::endl;
 
@@ -348,22 +356,27 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
             addToArray(lastTile.ID, lastTile.count);
         }
     }
-    if(rank == 0)
-       std::cout << "Build Cache Aware Layout for Tiles: "
-         << rSize << " " << m_tilecount
-         << std::endl;
-    m_tile_ID.resize(m_tilecount);
-    m_tile_count.resize(m_tilecount);
-
-    caware_layout(m_tilearray, m_tilearray + m_tilecount,
-                  tileCacheSize, m_tile_ID, m_tile_count);
+    // if(rank == 0)
+    //    std::cout << "Build Cache Aware Layout for Tiles: "
+    //      << rSize << " " << m_tilecount
+    //      << std::endl;
+    m_tileCALayout.init(m_tilearray, m_tilecount,
+                        tileCacheSize);
     free(m_tilearray);
     m_tilearray = 0;
     m_tilecount = 0;
 }
 
 void ECData::buildCacheObliviousLayout(){
-    //TODO:
+    int rank = m_params->mpi_env->rank();
+    if(rank == 0)
+       std::cout << "Build Kmer Cache Oblivious Layout : "
+                 << m_kcount << std::endl;
+    m_kmerCOLayout.init(m_karray, m_kcount, 1);
+    if(rank == 0)
+       std::cout << "Build Kmer Cache Oblivious Layout : "
+                 << m_tilecount << std::endl;
+    m_tileCOLayout.init(m_tilearray, m_tilecount, 1);
 }
 
 void ECData::buildCacheOptimizedLayout(){
@@ -373,6 +386,7 @@ void ECData::buildCacheOptimizedLayout(){
                                  m_params->tileCacheSize);
            break;
        case 2:
+           buildCacheObliviousLayout();
        default:
            // nothing to do
            break;
