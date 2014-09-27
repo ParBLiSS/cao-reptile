@@ -7,9 +7,7 @@
 #include <stdint.h>
 
 #include "io_util.h"
-
-typedef std::vector<uint64_t>::size_type size_type;
-typedef std::vector<size_type> size_type_vector;
+#include "cao_util.h"
 
 size_type int_log(const size_type& b, const size_type& x);
 int test_caware();

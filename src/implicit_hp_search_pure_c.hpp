@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace pure_c {
- template <typename RandomIterator, typename Tp>
+    template <typename RandomIterator, typename Tp>
  bool implicit_hp_search(RandomIterator begin,
 			 RandomIterator beyond,
 			 RandomIterator Pos,
@@ -33,6 +33,7 @@ namespace pure_c {
    current_bfs_index = current_bfs_index*2;
    current_bfs_index++;
    current_depth++;
+   if (current_bfs_index > size) goto return_false;
    p = D + current_depth;
    x = *p;
    p = Pos + x;
@@ -59,6 +60,7 @@ namespace pure_c {
   descend_left:
    current_bfs_index = current_bfs_index*2;
    current_depth++;
+   if (current_bfs_index > size) goto return_false;
    p = D + current_depth;
    x = *p;
    p = Pos + x;
