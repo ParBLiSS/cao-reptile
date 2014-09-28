@@ -102,6 +102,10 @@ class ECData {
 
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
+    uint64_t m_kmerQueries;
+    uint64_t m_kmerQueryFails;
+    uint64_t m_tileQueries;
+    uint64_t m_tileQueryFails;
 
     // Store Reads if reqd.
     cvec_t m_ReadsString;
@@ -141,6 +145,7 @@ class ECData {
                                const unsigned& tileCacheSize);
 
     void buildCacheObliviousLayout();
+    void output(const std::string& filename);
 
     ECData(Para *p);
     virtual ~ECData();

@@ -50,6 +50,4 @@ void kmer_sort(ECData *ecdata) {
         true,params->tCard,
         ecdata->m_params);
 
-    //
-      ecdata->buildCacheOptimizedLayout();
 }

@@ -32,6 +32,10 @@
 
 ECData::ECData(Para *p) : m_karray(0),m_ksize(0),m_kcount(0),
         m_tilearray(0),m_tilesize(0),m_tilecount(0),m_params(p){
+    m_kmerQueries = 0;
+    m_kmerQueryFails = 0;
+    m_tileQueries = 0;
+    m_tileQueryFails = 0;
     registerKmerTypes();
 }
 
@@ -62,6 +66,7 @@ void ECData::registerKmerTypes(){
 }
 
 bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
+  //m_kmerQueries += 1;
    if(m_karray == 0){
        return false;
    }
@@ -71,7 +76,8 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
                                     searchKmer, KmerComp());
    if(m_params->absentKmers == true)
        final = !final;
-
+   //if(!final) 
+   //  m_kmerQueryFails += 1;
    // std::cout << "Find " << kmerID << " : "
    //           << (m_params->absentKmers) << " : "
    //           << final << std::endl;
@@ -131,6 +137,8 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
         else if (m_tilearray[mid].ID > tileID)
             ub = mid - 1;
     }
+    //m_tileQueries += 1;
+    //if(final == -1) m_tileQueryFails += 1;
     // std::cout << "Find Tile " << tileID << " : "
     //           << ((final >= 0) ? output.cnt : 0) <<  std::endl;
     return final;
@@ -326,8 +334,9 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     unsigned rSize = (m_kcount % kmerCacheSize);
     unsigned fillIn = kmerCacheSize - rSize;
     if(rank == 0)
-       std::cout << "Build Kmer Cache Aware Layout : "
-                 << m_kcount << " " << rSize
+       std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
+		 << " Kmer Cache : " << kmerCacheSize 
+		 << " Padding : " << fillIn
                  << std::endl;
     if(rSize > 0){
         kmer_t lastKmer = m_karray[m_kcount - 1];
@@ -344,11 +353,9 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     rSize = (m_tilecount % tileCacheSize);
     fillIn = tileCacheSize - rSize;
     if(rank == 0)
-       std::cout << "Build Cache Aware Layout for Tiles: "
-          << m_tilecount << " "
-          << rSize << " "
-          << fillIn << " "
-          << std::endl;
+       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount 
+		 << " Tile Cache : " << tileCacheSize
+		 << " Padding : " << fillIn << std::endl;
 
     if(rSize > 0){
         tile_t lastTile = m_tilearray[m_tilecount - 1];
@@ -380,6 +387,7 @@ void ECData::buildCacheObliviousLayout(){
 }
 
 void ECData::buildCacheOptimizedLayout(){
+
    switch(m_params->cacheOptimizedSearch){
        case 1:
            buildCacheAwareLayout(m_params->kmerCacheSize,
@@ -391,4 +399,17 @@ void ECData::buildCacheOptimizedLayout(){
            // nothing to do
            break;
    }
+}
+
+void ECData::output(const std::string& filename){
+    std::ofstream oHandle(filename.c_str(), ios::out | ios::app );
+    if (!oHandle.good()) {
+        std::cout << "open " << filename << " failed, correct path?\n";
+	return;
+    }
+    oHandle << m_kmerQueryFails << "/"
+	    << m_kmerQueries << std::endl;
+    oHandle << m_tileQueryFails << "/"
+	    << m_tileQueries << std::endl;
+    oHandle.close();
 }

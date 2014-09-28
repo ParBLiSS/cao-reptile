@@ -88,6 +88,7 @@ public:
     int kmerCacheSize;
     int tileCacheSize;
     int cacheOptimizedSearch;
+    int writeOutput;
 
     Para(const char *configFile) {
         setPara(configFile);
@@ -108,6 +109,7 @@ private:
         std::istringstream buf;
         storeReads = 0;
         kmerCacheSize = tileCacheSize = 4;
+	writeOutput = 1;
         while(getline(input, line)){
             buf.clear();
             buf.str(line);
@@ -151,6 +153,8 @@ private:
                     buf >> kmerCacheSize;
                 else if (s1 == "TileCacheSize")
                     buf >> tileCacheSize;
+                else if (s1 == "WriteOutput")
+                    buf >> writeOutput;
             }
         }
 

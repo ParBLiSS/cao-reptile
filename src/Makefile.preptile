@@ -2,7 +2,7 @@ PROG=cao-preptile
 MPICXX=mpicxx
 MPIEXT = ../mpiext
 
-CFLAGS=-c -Wall -O3 -I$(MPIEXT)  -g
+CFLAGS=-c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
 LDFLAGS= 
 SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp
 OBJS=$(SRCS:.cpp=.o)

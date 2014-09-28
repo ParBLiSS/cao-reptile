@@ -52,7 +52,8 @@ void run_reptile(ECData *ecdata,Para *params, double &tstart, double &tstop){
     myParser.ec(*params);
     std::stringstream out;
     out << params->oErrName << params->mpi_env->rank() ;
-    myParser.output(out.str());
+    if(params->writeOutput != 0)
+      myParser.output(out.str());
     return;
 }
 
@@ -99,6 +100,8 @@ int parallelEC( char *inputFile){
     }
     tstart = tstop;
 
+    // Cache Optimized layout construction
+    ecdata->buildCacheOptimizedLayout();
     // run reptile
     run_reptile(ecdata,params,tstart,tstop);
 
@@ -110,6 +113,10 @@ int parallelEC( char *inputFile){
         std::cout << "TOTAL TIME " << tstop-tstartInit
                   << " (secs)" << std::endl;
     }
+    // Output for counting the number of failures and success
+    //std::stringstream out;
+    //out << params->oErrName << params->mpi_env->rank() ;
+    //ecdata->output(out.str());
 
     delete params;
     delete ecdata;
