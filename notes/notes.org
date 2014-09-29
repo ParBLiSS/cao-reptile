@@ -1,4 +1,4 @@
-#+TITLE: Tree Construction
+#+TITLE: Cache Optimized error correction.
 #+AUTHOR:
 #+EMAIL:
 #+DATE:
@@ -118,6 +118,15 @@
 
 
 * Results
+** Kmer Table Sizes
+|---------+-----------------+-----------------|
+| Dataset | Kmer Table Size | Tile Table Size |
+|---------+-----------------+-----------------|
+| D1      |                 |                 |
+| D2      |         1699218 |         8830856 |
+| D3      |         6092949 |       240045877 |
+|---------+-----------------+-----------------|
+
 ** Dataset D2 (Hamming Distance 1)
 *** Default run results
 
@@ -258,26 +267,32 @@
 *** Default run results
 
 |-------+----------------+------------------+----------------|
-| Procs | Construction   | Error Correction | Total          |
-|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
 |-------+----------------+------------------+----------------|
-|   512 | 33.04          | 3503.59          | 3544.15        |
+|   256 |          27.49 |          5816.80 |        5865.32 |
+|   512 |          33.04 |          3503.59 |        3544.15 |
+|  1024 |          53.40 |          2156.35 |        2215.19 |
 |-------+----------------+------------------+----------------|
 
 *** Cache Aware run results
 
 |-------+----------------+------------------+----------------|
-| Procs | Construction   | Error Correction | Total          |
-|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
 |-------+----------------+------------------+----------------|
-|   512 | 31.87          | 1611.09          | 1644.02        |
+|   256 |          27.64 |          2633.96 |        2682.89 |
+|   512 |          31.87 |          1611.09 |        1644.02 |
+|  1024 |          53.62 |          1071.46 |        1130.10 |
 |-------+----------------+------------------+----------------|
 
 *** Cache Oblivious run results
 
 |-------+----------------+------------------+----------------|
-| Procs | Construction   | Error Correction | Total          |
-|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
 |-------+----------------+------------------+----------------|
-|   512 | 32.67          | 2184.29          | 2224.49        |
+|   256 |          28.27 |          3600.86 |        3649.69 |
+|   512 |          32.67 |          2184.29 |        2224.49 |
+|  1024 |          56.61 |          1313.32 |        1373.40 |
 |-------+----------------+------------------+----------------|
