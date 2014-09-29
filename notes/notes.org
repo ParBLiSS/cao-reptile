@@ -1,0 +1,283 @@
+#+TITLE: Tree Construction
+#+AUTHOR:
+#+EMAIL:
+#+DATE:
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+#+LaTeX_CLASS: article
+#+LaTeX_CLASS_OPTIONS: [integrals, nointegrals, article, 12pt, a4paper]
+#+LATEX_HEADER: \usepackage{geometry}
+#+LATEX_HEADER: \usepackage{amsmath}
+#+LATEX_HEADER: \usepackage{clrscode3e}
+#+LATEX_HEADER: \usepackage{palatino}
+#+LATEX_HEADER: \usepackage{euler}
+#+LATEX_HEADER: \setcounter{secnumdepth}{2}
+#+LATEX_HEADER: \geometry{a4paper, textwidth=6.5in, textheight=10in, marginparsep=7pt, marginparwidth=.6in}
+#+LaTeX_HEADER: \usepackage{amsthm}
+#+LaTeX_HEADER: \newtheorem{theorem}{Theorem}[section]
+#+LaTeX_HEADER: \newtheorem{lemma}[theorem]{Lemma}
+#+LATEX_CMD: pdflatex
+#+LATEX_EXPORT_ON_SAVE: t
+
+* Algorithm
+   We assume that the index of array and the level number starts with
+   $0$.  We say a search tree /complete/, if at every level $i$ of the
+   tree has exactly $m(m+1)^{i}$ elements. We also assume $n$ is a
+   multiple of $m$ and $m \geq 3$.
+
+  \begin{codebox}
+  \Procname{$\proc{Cache-Aware-Search-Tree}(X, m)$}
+  \zi \kw{Input : } List of Elements, $X$ ; No. of Elements in a cache line, $m$
+  \zi \kw{Output : } Cache-Aware Search Tree of the list $X$ of size $n$, $CT$
+  \li $l \gets \lceil \log_{m+1} (n+1) \rceil$
+  \li $\proc{Init-Global}(m, l)$
+  \li Initialize $CT$ as a vector of size $n$.
+  \li $i \gets 0$; $CT[0] \gets 0$; $CT[1] \gets l$; $CT[m - 1] \gets n - 1$
+  \li $l_{ptr} \gets 0$ \Comment Pointer to the last inserted node
+  \li $c_{ptr} \gets 0$ \Comment Pointer to the current node
+  \li \While $i < n$
+      \Do
+  \zi      \Comment $[x,y]$ range of indices covered by this subtree.
+  \li      $x \gets CT[c_{ptr}]$
+  \li      $y \gets CT[c_{ptr} + m - 1]$
+  \zi      \Comment $k$ is no. levels of current subtree including root.
+  \li      $k \gets CT[c_{ptr} + 1]$
+  \li      $d \gets y - x + 1$
+  \li      \If $d == m$
+           \Then
+  \li
+  \li      $ST \gets \proc{Subtree-Size}(y - x + 1, k)$
+  \li      $y \gets x$
+  \li      \For $j \gets 0 \To m - 1$ \Comment Update entries for current node.
+           \Do
+  \li           $y \gets y + ST[j]$
+  \li           $CT[c_{ptr} + j] \gets y$
+           \End
+  \li      \For $j \gets 0 \To m$ \Comment Insert indices for sub-trees.
+           \Do
+  \li           \If $ST[j] > 0$
+                \Do
+  \li               $y \gets x + ST[j]$
+  \li               $l_{ptr} \gets l_{ptr} + m$
+  \li               $CT[l_{ptr}] \gets x$
+  \li               $CT[l_{ptr} + 1] \gets k - 1$
+  \li               $CT[l_{ptr} + m - 1] \gets y - 1$
+  \li               $x \gets y + 1$
+                \End
+          \End
+  \li     $i = i + m$; $c_{ptr} = c_{ptr} + m$
+      \End
+  \li \Return $CT$
+  \end{codebox}
+
+  \begin{codebox}
+  \Procname{$\proc{Init-Global}(m, l)$}
+  \zi $A_1, A_2$ are global arrays of size $l$ each.
+  \li Initialize $A_1$ with $A_1[i] = m(m+1)^{i}$.
+  \zi \quad $A_1[i]$ is the number of elements at level $i$ of a
+      complete $m$-ary search tree.
+  \li Initialize $A_2$ with $A_2[i] = \sum_{j = 0}^i A_1[j]$.
+  \zi \quad $A_2[i]$ is the total number of elements at upto
+      level $i$ of a complete $m$-ary search tree.
+  \end{codebox}
+
+  \begin{codebox}
+  \Procname{$\proc{Subtree-Size}(d,k)$}
+  \zi \kw{Input : } No. of elements with in this subtree, $d$
+  \zi \kw{Input : } No. of Levels in the current subtree incl. root, $k$
+  \zi \kw{Output : } Size of each of the $m+1$ subtree sizes, $ST$
+  \li \If $d == m$ \Comment Last row : All zeroes
+  \li \Do Initialize $ST$ to $m+1$ zeros.
+  \li     \Return $ST$ \End
+  \li $d_k \gets d - A_2[k - 2]$ \Comment No. of elements in the last level
+  \li $q = d_k / A_1[k - 2]$
+  \li $r = d_k \% A_1[k - 2]$
+  \zi \Comment $LS$, No. elements in last row of $m+1$ sub-trees.
+  \li \For $j \gets 0 \To m$
+  \li \Do \If $j < q$
+  \li        \Then $LS[j] \gets A_1[k - 2]$
+  \li      \ElseIf $j > q$
+  \li        \Then $LS[j] \gets 0$
+  \li      \Else
+  \li         $LS[j] \gets r$ \End
+      \End
+  \zi \Comment $ST$, Size of $m+1$ sub-trees
+  \li \For $j \gets 0 \To m$
+  \li \Do $ST[j] = LS[j] + A_2[k-2]$ \End
+  \li \Return $ST$
+  \end{codebox}
+
+
+* Results
+** Dataset D2 (Hamming Distance 1)
+*** Default run results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     2 |          74.94 |          1326.61 |        1406.62 |
+|     4 |          42.61 |           761.65 |         808.91 |
+|     8 |          22.66 |           335.53 |         359.56 |
+|    16 |          13.12 |           189.28 |         203.14 |
+|    32 |           7.71 |            98.92 |         107.12 |
+|    64 |           4.90 |            52.46 |          57.59 |
+|   128 |           4.24 |            28.02 |          32.40 |
+|   256 |           5.90 |            14.25 |          20.37 |
+|   512 |          13.72 |             7.65 |          22.10 |
+|-------+----------------+------------------+----------------|
+
+
+*** Cache Aware results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     2 |          68.32 |           739.76 |         813.68 |
+|     4 |          37.69 |           451.68 |         491.88 |
+|     8 |          22.65 |           244.57 |         268.59 |
+|    16 |          12.12 |           133.60 |         147.47 |
+|    32 |           7.60 |            71.72 |          80.82 |
+|    64 |           4.90 |            36.42 |          41.51 |
+|   128 |           4.10 |            19.71 |          24.77 |
+|   256 |           5.80 |            10.40 |          16.80 |
+|   512 |          13.10 |             5.60 |          19.52 |
+|-------+----------------+------------------+----------------|
+
+*** Cache Oblivious results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     2 |          75.24 |           858.30 |         948.21 |
+|     4 |          42.07 |           475.62 |         520.45 |
+|     8 |          23.65 |           249.76 |         274.82 |
+|    16 |          13.14 |           130.01 |         147.21 |
+|    32 |           7.65 |            69.10 |          77.21 |
+|    64 |           4.72 |            35.79 |          40.83 |
+|   128 |           4.38 |            19.23 |          23.14 |
+|   256 |           6.36 |            10.06 |          16.49 |
+|   512 |          13.34 |             5.54 |          19.61 |
+|-------+----------------+------------------+----------------|
+
+** Dataset D2 (Hamming Distance = 2)
+*** Default run results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|    64 |           4.79 |          5820.63 |        5287.87 |
+|   128 |           4.06 |          2868.85 |        2874.39 |
+|   256 |           6.19 |          1627.04 |        1693.27 |
+|   512 |          13.06 |           835.94 |         908.36 |
+|-------+----------------+------------------+----------------|
+
+*** Cache Aware results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|    64 |           4.83 |          2430.41 |        2495.45 |
+|   128 |           4.10 |          1315.91 |        1321.59 |
+|   256 |           5.86 |           740.60 |         747.63 |
+|   512 |           14.1 |           380.16 |         394.61 |
+|-------+----------------+------------------+----------------|
+
+*** Cache Oblivious results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|    64 |           4.80 |          3430.27 |        3435.68 |
+|   128 |           4.07 |          1819.92 |        1825.67 |
+|   256 |           6.83 |          1042.59 |        1050.28 |
+|   512 |          13.01 |           537.66 |         551.67 |
+|-------+----------------+------------------+----------------|
+
+** Dataset D3 (Hamming Distance 1)
+*** Default run results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     8 |         742.81 |          1393.49 |        2161.24 |
+|    16 |         301.14 |           909.75 |        1242.94 |
+|    32 |          95.42 |           521.19 |         622.65 |
+|    64 |          56.96 |           268.58 |         328.34 |
+|   128 |          36.03 |           139.88 |         177.49 |
+|   256 |          27.98 |            89.03 |         117.85 |
+|   512 |          32.55 |            53.81 |          87.44 |
+|-------+----------------+------------------+----------------|
+
+*** Cache Aware results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     8 |                |                  |                |
+|    16 |         325.56 |           597.92 |         959.25 |
+|    32 |          95.07 |           339.56 |         440.89 |
+|    64 |          56.71 |           177.45 |         237.06 |
+|   128 |          36.47 |            95.91 |         133.95 |
+|   256 |          27.65 |            57.54 |          85.99 |
+|   512 |          31.31 |            36.12 |          68.50 |
+|-------+----------------+------------------+----------------|
+
+*** Cache Oblivious results
+
+|-------+----------------+------------------+----------------|
+| Procs |   Construction | Error Correction |          Total |
+|       | Time (seconds) |   Time (seconds) | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|     8 |                |                  |                |
+|    16 |         277.21 |           591.01 |         895.64 |
+|    32 |          95.85 |           343.65 |         442.24 |
+|    64 |          56.62 |           175.89 |         241.81 |
+|   128 |          36.34 |            93.65 |         135.92 |
+|   256 |          28.24 |            60.75 |          89.78 |
+|   512 |          31.28 |            47.29 |          81.26 |
+|-------+----------------+------------------+----------------|
+
+** Dataset D3 (Hamming Distance = 2)
+*** Default run results
+
+|-------+----------------+------------------+----------------|
+| Procs | Construction   | Error Correction | Total          |
+|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|   512 | 33.04          | 3503.59          | 3544.15        |
+|-------+----------------+------------------+----------------|
+
+*** Cache Aware run results
+
+|-------+----------------+------------------+----------------|
+| Procs | Construction   | Error Correction | Total          |
+|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|   512 | 31.87          | 1611.09          | 1644.02        |
+|-------+----------------+------------------+----------------|
+
+*** Cache Oblivious run results
+
+|-------+----------------+------------------+----------------|
+| Procs | Construction   | Error Correction | Total          |
+|       | Time (seconds) | Time (seconds)   | Time (seconds) |
+|-------+----------------+------------------+----------------|
+|   512 | 32.67          | 2184.29          | 2224.49        |
+|-------+----------------+------------------+----------------|
