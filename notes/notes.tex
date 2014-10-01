@@ -1,0 +1,364 @@
+% Created 2014-09-29 Mon 17:50
+\documentclass[integrals, nointegrals, article, 12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{wrapfig}
+\usepackage{soul}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{clrscode3e}
+\usepackage{palatino}
+\usepackage{euler}
+\setcounter{secnumdepth}{2}
+\geometry{a4paper, textwidth=6.5in, textheight=10in, marginparsep=7pt, marginparwidth=.6in}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\date{}
+\title{Cache Optimized error correction.}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 24.3.1 (Org mode 8.0)}}
+\begin{document}
+
+\maketitle
+
+\section{Algorithm}
+\label{sec-1}
+We assume that the index of array and the level number starts with
+$0$.  We say a search tree \emph{complete}, if at every level $i$ of the
+tree has exactly $m(m+1)^{i}$ elements. We also assume $n$ is a
+multiple of $m$ and $m \geq 3$.
+
+\begin{codebox}
+\Procname{$\proc{Cache-Aware-Search-Tree}(X, m)$}
+\zi \kw{Input : } List of Elements, $X$ ; No. of Elements in a cache line, $m$
+\zi \kw{Output : } Cache-Aware Search Tree of the list $X$ of size $n$, $CT$
+\li $l \gets \lceil \log_{m+1} (n+1) \rceil$
+\li $\proc{Init-Global}(m, l)$
+\li Initialize $CT$ as a vector of size $n$.
+\li $i \gets 0$; $CT[0] \gets 0$; $CT[1] \gets l$; $CT[m - 1] \gets n - 1$
+\li $l_{ptr} \gets 0$ \Comment Pointer to the last inserted node
+\li $c_{ptr} \gets 0$ \Comment Pointer to the current node
+\li \While $i < n$
+    \Do
+\zi      \Comment $[x,y]$ range of indices covered by this subtree.
+\li      $x \gets CT[c_{ptr}]$
+\li      $y \gets CT[c_{ptr} + m - 1]$
+\zi      \Comment $k$ is no. levels of current subtree including root.
+\li      $k \gets CT[c_{ptr} + 1]$
+\li      $d \gets y - x + 1$
+\li      \If $d == m$
+         \Then
+\li
+\li      $ST \gets \proc{Subtree-Size}(y - x + 1, k)$
+\li      $y \gets x$
+\li      \For $j \gets 0 \To m - 1$ \Comment Update entries for current node.
+         \Do
+\li           $y \gets y + ST[j]$
+\li           $CT[c_{ptr} + j] \gets y$
+         \End
+\li      \For $j \gets 0 \To m$ \Comment Insert indices for sub-trees.
+         \Do
+\li           \If $ST[j] > 0$
+              \Do
+\li               $y \gets x + ST[j]$
+\li               $l_{ptr} \gets l_{ptr} + m$
+\li               $CT[l_{ptr}] \gets x$
+\li               $CT[l_{ptr} + 1] \gets k - 1$
+\li               $CT[l_{ptr} + m - 1] \gets y - 1$
+\li               $x \gets y + 1$
+              \End
+        \End
+\li     $i = i + m$; $c_{ptr} = c_{ptr} + m$
+    \End
+\li \Return $CT$
+\end{codebox}
+
+\begin{codebox}
+\Procname{$\proc{Init-Global}(m, l)$}
+\zi $A_1, A_2$ are global arrays of size $l$ each.
+\li Initialize $A_1$ with $A_1[i] = m(m+1)^{i}$.
+\zi \quad $A_1[i]$ is the number of elements at level $i$ of a
+    complete $m$-ary search tree.
+\li Initialize $A_2$ with $A_2[i] = \sum_{j = 0}^i A_1[j]$.
+\zi \quad $A_2[i]$ is the total number of elements at upto
+    level $i$ of a complete $m$-ary search tree.
+\end{codebox}
+
+\begin{codebox}
+\Procname{$\proc{Subtree-Size}(d,k)$}
+\zi \kw{Input : } No. of elements with in this subtree, $d$
+\zi \kw{Input : } No. of Levels in the current subtree incl. root, $k$
+\zi \kw{Output : } Size of each of the $m+1$ subtree sizes, $ST$
+\li \If $d == m$ \Comment Last row : All zeroes
+\li \Do Initialize $ST$ to $m+1$ zeros.
+\li     \Return $ST$ \End
+\li $d_k \gets d - A_2[k - 2]$ \Comment No. of elements in the last level
+\li $q = d_k / A_1[k - 2]$
+\li $r = d_k \% A_1[k - 2]$
+\zi \Comment $LS$, No. elements in last row of $m+1$ sub-trees.
+\li \For $j \gets 0 \To m$
+\li \Do \If $j < q$
+\li        \Then $LS[j] \gets A_1[k - 2]$
+\li      \ElseIf $j > q$
+\li        \Then $LS[j] \gets 0$
+\li      \Else
+\li         $LS[j] \gets r$ \End
+    \End
+\zi \Comment $ST$, Size of $m+1$ sub-trees
+\li \For $j \gets 0 \To m$
+\li \Do $ST[j] = LS[j] + A_2[k-2]$ \End
+\li \Return $ST$
+\end{codebox}
+
+\section{Results}
+\label{sec-2}
+\subsection{Kmer Table Sizes}
+\label{sec-2-1}
+\begin{center}
+\begin{tabular}{lrr}
+\hline
+Dataset & Kmer Table Size & Tile Table Size\\
+\hline
+D1 &  & \\
+D2 & 1699218 & 8830856\\
+D3 & 6092949 & 240045877\\
+\hline
+\end{tabular}
+\end{center}
+\subsection{Dataset D2 (Hamming Distance 1)}
+\label{sec-2-2}
+\subsubsection{Default run results}
+\label{sec-2-2-1}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+2 & 74.94 & 1326.61 & 1406.62\\
+4 & 42.61 & 761.65 & 808.91\\
+8 & 22.66 & 335.53 & 359.56\\
+16 & 13.12 & 189.28 & 203.14\\
+32 & 7.71 & 98.92 & 107.12\\
+64 & 4.90 & 52.46 & 57.59\\
+128 & 4.24 & 28.02 & 32.40\\
+256 & 5.90 & 14.25 & 20.37\\
+512 & 13.72 & 7.65 & 22.10\\
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Cache Aware results}
+\label{sec-2-2-2}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+2 & 68.32 & 739.76 & 813.68\\
+4 & 37.69 & 451.68 & 491.88\\
+8 & 22.65 & 244.57 & 268.59\\
+16 & 12.12 & 133.60 & 147.47\\
+32 & 7.60 & 71.72 & 80.82\\
+64 & 4.90 & 36.42 & 41.51\\
+128 & 4.10 & 19.71 & 24.77\\
+256 & 5.80 & 10.40 & 16.80\\
+512 & 13.10 & 5.60 & 19.52\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Oblivious results}
+\label{sec-2-2-3}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+2 & 75.24 & 858.30 & 948.21\\
+4 & 42.07 & 475.62 & 520.45\\
+8 & 23.65 & 249.76 & 274.82\\
+16 & 13.14 & 130.01 & 147.21\\
+32 & 7.65 & 69.10 & 77.21\\
+64 & 4.72 & 35.79 & 40.83\\
+128 & 4.38 & 19.23 & 23.14\\
+256 & 6.36 & 10.06 & 16.49\\
+512 & 13.34 & 5.54 & 19.61\\
+\hline
+\end{tabular}
+\end{center}
+\subsection{Dataset D2 (Hamming Distance = 2)}
+\label{sec-2-3}
+\subsubsection{Default run results}
+\label{sec-2-3-1}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+64 & 4.79 & 5820.63 & 5287.87\\
+128 & 4.06 & 2868.85 & 2874.39\\
+256 & 6.19 & 1627.04 & 1693.27\\
+512 & 13.06 & 835.94 & 908.36\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Aware results}
+\label{sec-2-3-2}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+64 & 4.83 & 2430.41 & 2495.45\\
+128 & 4.10 & 1315.91 & 1321.59\\
+256 & 5.86 & 740.60 & 747.63\\
+512 & 14.1 & 380.16 & 394.61\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Oblivious results}
+\label{sec-2-3-3}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+64 & 4.80 & 3430.27 & 3435.68\\
+128 & 4.07 & 1819.92 & 1825.67\\
+256 & 6.83 & 1042.59 & 1050.28\\
+512 & 13.01 & 537.66 & 551.67\\
+\hline
+\end{tabular}
+\end{center}
+\subsection{Dataset D3 (Hamming Distance 1)}
+\label{sec-2-4}
+\subsubsection{Default run results}
+\label{sec-2-4-1}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+8 & 742.81 & 1393.49 & 2161.24\\
+16 & 301.14 & 909.75 & 1242.94\\
+32 & 95.42 & 521.19 & 622.65\\
+64 & 56.96 & 268.58 & 328.34\\
+128 & 36.03 & 139.88 & 177.49\\
+256 & 27.98 & 89.03 & 117.85\\
+512 & 32.55 & 53.81 & 87.44\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Aware results}
+\label{sec-2-4-2}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+8 &  &  & \\
+16 & 325.56 & 597.92 & 959.25\\
+32 & 95.07 & 339.56 & 440.89\\
+64 & 56.71 & 177.45 & 237.06\\
+128 & 36.47 & 95.91 & 133.95\\
+256 & 27.65 & 57.54 & 85.99\\
+512 & 31.31 & 36.12 & 68.50\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Oblivious results}
+\label{sec-2-4-3}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+8 &  &  & \\
+16 & 277.21 & 591.01 & 895.64\\
+32 & 95.85 & 343.65 & 442.24\\
+64 & 56.62 & 175.89 & 241.81\\
+128 & 36.34 & 93.65 & 135.92\\
+256 & 28.24 & 60.75 & 89.78\\
+512 & 31.28 & 47.29 & 81.26\\
+\hline
+\end{tabular}
+\end{center}
+\subsection{Dataset D3 (Hamming Distance = 2)}
+\label{sec-2-5}
+\subsubsection{Default run results}
+\label{sec-2-5-1}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+256 & 27.49 & 5816.80 & 5865.32\\
+512 & 33.04 & 3503.59 & 3544.15\\
+1024 & 53.40 & 2156.35 & 2215.19\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Aware run results}
+\label{sec-2-5-2}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+256 & 27.64 & 2633.96 & 2682.89\\
+512 & 31.87 & 1611.09 & 1644.02\\
+1024 & 53.62 & 1071.46 & 1130.10\\
+\hline
+\end{tabular}
+\end{center}
+\subsubsection{Cache Oblivious run results}
+\label{sec-2-5-3}
+
+\begin{center}
+\begin{tabular}{rrrr}
+\hline
+Procs & Construction & Error Correction & Total\\
+ & Time (seconds) & Time (seconds) & Time (seconds)\\
+\hline
+256 & 28.27 & 3600.86 & 3649.69\\
+512 & 32.67 & 2184.29 & 2224.49\\
+1024 & 56.61 & 1313.32 & 1373.40\\
+\hline
+\end{tabular}
+\end{center}
+% Emacs 24.3.1 (Org mode 8.0)
+\end{document}
