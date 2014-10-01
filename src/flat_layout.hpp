@@ -16,13 +16,13 @@ public:
     ECDataFlatLayout(){};
 
     void init(RandomIterator intr,
-              size_type nTotal, int kSize){
+              size_type nTotal){
         assert(nTotal > 0);
         mIds.resize(nTotal);
         mCounts.resize(nTotal);
         for(size_type i = 0u; i < nTotal;i++) {
-	  mIds[i] = (intr + i)->ID;
-          mCounts[i] = (intr + i)->count;
+            mIds[i] = (intr + i)->ID;
+            mCounts[i] = (intr + i)->count;
         }
     }
 
@@ -42,7 +42,7 @@ public:
       }
       return (final != -1);
     };
- 
+
    int getCount(const IdType& rID, CountType& count){
       int final = -1;
       int lb = 0, ub = mIds.size() - 1, mid;
@@ -67,4 +67,4 @@ public:
     }
 };
 
-#endif // 
+#endif //

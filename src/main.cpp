@@ -32,7 +32,7 @@
 #include "ECData.hpp"
 #include "Parser.h"
 
-void run_reptile(ECData *ecdata,Para *params, double &tstart, double &tstop){
+void run_reptile(ECData *ecdata,Para *params){
 
     // Run reptile
     Parser myParser(ecdata);
@@ -43,7 +43,7 @@ void run_reptile(ECData *ecdata,Para *params, double &tstart, double &tstop){
     //     tstop = MPI_Wtime();
     //     MPI_Barrier(MPI_COMM_WORLD);
     //     if (params->mpi_env->rank() == 0) {
-    //         std::cout << "TIME TO BUILD TABLE " << tstop-tstart 
+    //         std::cout << "TIME TO BUILD TABLE " << tstop-tstart
     //                   << " (secs)" << std::endl;
     //     }
     //     tstart = tstop;
@@ -70,17 +70,17 @@ int parallelEC( char *inputFile){
 
     // Object to encapsulate error-correction data
     ECData *ecdata = new ECData(params);
-     double tstartInit = MPI_Wtime(),	
-      tstart = tstartInit;	
-    // If we have to store the reads, we read and store the reads 
+     double tstartInit = MPI_Wtime(),
+      tstart = tstartInit;
+    // If we have to store the reads, we read and store the reads
     if(params->storeReads) {
         getReadsFromFile(ecdata);
     }
      MPI_Barrier(MPI_COMM_WORLD);
-    double tstop = MPI_Wtime();  
-    
+    double tstop = MPI_Wtime();
+
     if (mpi_env->rank() == 0) {
-        std::cout << "READING FILE " << tstop-tstart 
+        std::cout << "READING FILE " << tstop-tstart
                   << " (secs)" << std::endl;
     }
 
@@ -88,14 +88,14 @@ int parallelEC( char *inputFile){
 
     tstart = MPI_Wtime();
     // counts the k-mers and loads them in the ECData object
-    kmer_count(ecdata); 
+    kmer_count(ecdata);
     // sort kmers and tiles
     kmer_sort(ecdata);
 
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
-        std::cout << "K-Spectrum COnstruction Time " << tstop-tstart 
+        std::cout << "K-Spectrum COnstruction Time " << tstop-tstart
                   << " (secs)" << std::endl;
     }
     tstart = tstop;
@@ -103,12 +103,12 @@ int parallelEC( char *inputFile){
     // Cache Optimized layout construction
     ecdata->buildCacheOptimizedLayout();
     // run reptile
-    run_reptile(ecdata,params,tstart,tstop);
+    run_reptile(ecdata, params);
 
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
-        std::cout << "ERR CORRECTION TIME " << tstop-tstart 
+        std::cout << "ERR CORRECTION TIME " << tstop-tstart
                   << " (secs)" << std::endl;
         std::cout << "TOTAL TIME " << tstop-tstartInit
                   << " (secs)" << std::endl;
@@ -162,6 +162,3 @@ int main(int argc,char *argv[]){
     MPI::Finalize();
     return 0;
 }
-
-
-

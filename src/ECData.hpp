@@ -129,7 +129,7 @@ class ECData {
     bool addToArray(kmer_id_t &ID,int count);
     bool addToArray(kmer_id_t &ID,unsigned char count);
     bool addToArray(tile_id_t &ID,int count);
-    int getKmerCount(kmer_id_t &ID);
+
     void printKArray();
     void replaceKArray(kmer_t* allData,int allDataCount,int allDataSize);
     void replaceTileArray(tile_t *newTileArray,int newTileCount,

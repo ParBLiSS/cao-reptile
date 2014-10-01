@@ -55,7 +55,6 @@ typedef struct RECORD{
 class Parser {
 public:
     Parser(ECData *p){ readID_ = 0; ecdata = p;};
-    Parser(const Parser& orig){};
     virtual ~Parser(){};
     void load (const Para& myPara);
     void reLoad(const Para& myPara);
@@ -73,7 +72,7 @@ private:
 
     // temporary variables
     int readID_;
-    evec_t readErr_;    
+    evec_t readErr_;
 
     void readEC(char* addr, char* qAddr, const Para& myPara);
     bool errorCall(const upair_t& mosaic, const ipair_t& dPoints,
@@ -129,5 +128,3 @@ inline void print_kcvec (const std::string& msg, const kcvec_t& myvec, int len){
 }
 
 #endif	/* _PARSER_H */
-
-

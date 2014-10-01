@@ -62,7 +62,7 @@ void add_kmers(char *line,char *qAddr,
            !toID(ID, failidx, line + i, kLength)) i += failidx + 1;
 
     if(i < (read_length - kLength)) {
-        if(QFlag == false || 
+        if(QFlag == false ||
            (QFlag && goodQuality(qAddr+i,kLength,params))) {
             ecdata->addToArray(ID,1);
         }
@@ -80,7 +80,7 @@ void add_kmers(char *line,char *qAddr,
             i++;
         } else {
             // otherwise, shift to the next valid kmer
-            failidx = -1; i += kLength + 1; 
+            failidx = -1; i += kLength + 1;
             do {
                 i += failidx + 1;
                 addKmer = toID(ID, failidx, line + i, kLength);
@@ -88,7 +88,7 @@ void add_kmers(char *line,char *qAddr,
         }
 
         if( addKmer ) {
-            if(QFlag == false || 
+            if(QFlag == false ||
                (QFlag && goodQuality(qAddr+i,kLength,params)))
             {
                 ecdata->addToArray(ID,1);
@@ -106,11 +106,12 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
     int kLength  = params->K,
         tileLength = kLength + params->step;
 
+#ifdef DEBUG
     double tBatchStart = MPI_Wtime();
-
+#endif
     ecdata->setBatchStart();
     //std::cout << " PROCESS: " << ecdata->m_params->mpi_env->rank()
-     //         << " LOADING  BATCH " << _batch << std::endl;
+    //         << " LOADING  BATCH " << _batch << std::endl;
     for(unsigned long i = 0; i < ReadsOffset.size();i++) {
         int position = ReadsOffset[i];
         int qposition = QualsOffset[i];
@@ -121,10 +122,10 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
         add_kmers<tile_id_t>(addr,qAddr,true,read_length,tileLength,ecdata);
     }
     ecdata->mergeBatchKmers();
-    #ifdef DEBUG 
+#ifdef DEBUG
 	std::stringstream out;
     	out << " PROCESS: " << ecdata->m_params->mpi_env->rank()
-        << " BATCH " << _batch 
+        << " BATCH " << _batch
         << " LOAD TIME " << MPI_Wtime()-tBatchStart << std::endl;
         std::cout << out.str();
 #endif
@@ -158,7 +159,7 @@ void processReadsFromFile(ECData *ecdata){
                                    QualsString,QualsOffset,*params);
         std::stringstream out ;
 #ifdef DEBUG
-        out << "PROC : " << params->mpi_env->rank()  << " " 
+        out << "PROC : " << params->mpi_env->rank()  << " "
             << ReadsOffset.size() << " " << lastRead << " QS: "
             << QualsOffset.size() << std::endl;
         std::cout << out.str();
@@ -199,7 +200,7 @@ void fileread(void *payload){
     }
 }
 
-// Get the reads corresponding to this processor and 
+// Get the reads corresponding to this processor and
 // store it in ECData object
 bool getReadsFromFile(ECData *ecdata){
 
@@ -237,4 +238,3 @@ int kmer_count(ECData *ecdata){
     fileread(ecdata);
     return 0;
 }
-

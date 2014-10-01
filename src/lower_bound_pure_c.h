@@ -19,12 +19,10 @@
    l_len = l_len - 1; \
   l_not_finished: \
    if (l_len == 0) goto l_return; \
-  l_found: \
    l_half = l_len >> 1; \
    l_middle = lower_bound + l_half; \
    l_middle_value = *l_middle; \
    if (l_middle_value < value) goto l_right; \
-  l_left: \
    l_len = l_half; \
    goto l_not_finished; \
   l_return: \

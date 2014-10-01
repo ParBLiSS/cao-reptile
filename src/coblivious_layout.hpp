@@ -28,8 +28,7 @@ class ECDataCOLayout{
         }
     }
 
-    void init_layout(RandomInputItr inItrBegin, size_type nTotal,
-                     size_type limit){
+    void init_layout(RandomInputItr inItrBegin, size_type nTotal){
         RandomInputItr inItr = inItrBegin;
         id_iterator idItr = mIds.begin();
         count_iterator countItr = mCounts.begin();
@@ -96,7 +95,7 @@ public:
         // init steps
         init_steps(inItrBegin, nTotal, limit);
         // layout of each step
-        init_layout(inItrBegin, nTotal, limit);
+        init_layout(inItrBegin, nTotal);
     }
 
     ECDataCOLayout(RandomInputItr inItrBegin,

@@ -76,7 +76,7 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
                                   searchKmer, KmerComp());
   if(m_params->absentKmers == true)
     final = !final;
-  //if(!final) 
+  //if(!final)
   //  m_kmerQueryFails += 1;
   // std::cout << "Find " << kmerID << " : "
   //           << (m_params->absentKmers) << " : "
@@ -86,8 +86,6 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
 }
 
 bool ECData::findKmerFlat(const kmer_id_t &kmerID) {
-   kmer_t searchKmer;
-   searchKmer.ID = kmerID;
    bool final = m_kmerFlatLayout.find(kmerID);
    if(m_params->absentKmers == true)
        final = !final;
@@ -207,12 +205,6 @@ int ECData::findTile(const tile_id_t &tileID,kc_t& output){
         default:
             return findTileDefault(tileID, output);
     }
-}
-
-
-int ECData::getKmerCount(kmer_id_t &ID){
-    // TODO: do a binary search in kmer array
-    return -1;
 }
 
 
@@ -364,7 +356,7 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     unsigned fillIn = kmerCacheSize - rSize;
     if(rank == 0)
        std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
-         << " Kmer Cache : " << kmerCacheSize 
+         << " Kmer Cache : " << kmerCacheSize
          << " Padding : " << fillIn
                  << std::endl;
     if(rSize > 0){
@@ -382,7 +374,7 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     rSize = (m_tilecount % tileCacheSize);
     fillIn = tileCacheSize - rSize;
     if(rank == 0)
-       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount 
+       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount
          << " Tile Cache : " << tileCacheSize
          << " Padding : " << fillIn << std::endl;
 
@@ -420,14 +412,14 @@ void ECData::buildFlatLayout(){
     if(rank == 0)
        std::cout << "Build Kmer Flat Layout : "
                  << m_kcount << std::endl;
-    m_kmerFlatLayout.init(m_karray, m_kcount, 1);
+    m_kmerFlatLayout.init(m_karray, m_kcount);
     free(m_karray);
     m_karray = 0;
     m_kcount = 0;
     if(rank == 0)
        std::cout << "Build Tile Flat Layout : "
                  << m_tilecount << std::endl;
-    m_tileFlatLayout.init(m_tilearray, m_tilecount, 1);
+    m_tileFlatLayout.init(m_tilearray, m_tilecount);
     free(m_tilearray);
     m_tilearray = 0;
     m_tilecount = 0;
