@@ -26,6 +26,7 @@
 #define _ECDATA_H
 
 #include "util.h"
+#include "flat_layout.hpp"
 #include "caware_layout.hpp"
 #include "coblivious_layout.hpp"
 
@@ -100,6 +101,11 @@ class ECData {
     ECDataCALayout<tile_t*, tile_id_t,
                    unsigned char> m_tileCALayout;
 
+    ECDataFlatLayout<kmer_t*, kmer_id_t,
+                     unsigned char> m_kmerFlatLayout;
+    ECDataFlatLayout<tile_t*, tile_id_t,
+                     unsigned char> m_tileFlatLayout;
+
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
     uint64_t m_kmerQueries;
@@ -130,10 +136,12 @@ class ECData {
                           int newTileSize);
     bool findKmer(const kmer_id_t &kmerID);
     bool findKmerDefault(const kmer_id_t &kmerID);
+    bool findKmerFlat(const kmer_id_t &kmerID);
     bool findKmerCacheAware(const kmer_id_t &kmerID);
     bool findKmerCacheOblivious(const kmer_id_t &kmerID);
 
     int findTile(const tile_id_t &tileID,kc_t& output);
+    int findTileFlat(const tile_id_t &tileID,kc_t& output);
     int findTileDefault(const tile_id_t &tileID,kc_t& output);
     int findTileCacheAware(const tile_id_t &tileID,kc_t& output);
     int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output);
@@ -145,6 +153,7 @@ class ECData {
                                const unsigned& tileCacheSize);
 
     void buildCacheObliviousLayout();
+    void buildFlatLayout();
     void output(const std::string& filename);
 
     ECData(Para *p);

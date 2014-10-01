@@ -67,17 +67,30 @@ void ECData::registerKmerTypes(){
 
 bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
   //m_kmerQueries += 1;
-   if(m_karray == 0){
-       return false;
-   }
+  if(m_karray == 0){
+    return false;
+  }
+  kmer_t searchKmer;
+  searchKmer.ID = kmerID;
+  bool final = std::binary_search(m_karray,m_karray + m_kcount,
+                                  searchKmer, KmerComp());
+  if(m_params->absentKmers == true)
+    final = !final;
+  //if(!final) 
+  //  m_kmerQueryFails += 1;
+  // std::cout << "Find " << kmerID << " : "
+  //           << (m_params->absentKmers) << " : "
+  //           << final << std::endl;
+
+  return final;
+}
+
+bool ECData::findKmerFlat(const kmer_id_t &kmerID) {
    kmer_t searchKmer;
    searchKmer.ID = kmerID;
-   bool final = std::binary_search(m_karray,m_karray + m_kcount,
-                                    searchKmer, KmerComp());
+   bool final = m_kmerFlatLayout.find(kmerID);
    if(m_params->absentKmers == true)
        final = !final;
-   //if(!final) 
-   //  m_kmerQueryFails += 1;
    // std::cout << "Find " << kmerID << " : "
    //           << (m_params->absentKmers) << " : "
    //           << final << std::endl;
@@ -115,32 +128,46 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
             return findKmerCacheAware(kmerID);
         case 2:
             return findKmerCacheOblivious(kmerID);
+        case 3:
+            return findKmerFlat(kmerID);
         default:
             return findKmerDefault(kmerID);
     }
 }
 
 int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
-    int lb = 0, ub = m_tilecount - 1, mid;
-    int final = -1;
-    while (lb <= ub) {
-        mid = (lb + ub) / 2;
-        if (m_tilearray[mid].ID == tileID) {
-            output.ID = m_tilearray[mid].ID;
-            output.goodCnt = m_tilearray[mid].count;
-            output.cnt = m_tilearray[mid].count;
-            final = mid;
-            break;
-        }
-        else if (m_tilearray[mid].ID < tileID)
-            lb = mid + 1;
-        else if (m_tilearray[mid].ID > tileID)
-            ub = mid - 1;
+  int lb = 0, ub = m_tilecount - 1, mid;
+  int final = -1;
+  while (lb <= ub) {
+    mid = (lb + ub) / 2;
+    if (m_tilearray[mid].ID == tileID) {
+      output.ID = m_tilearray[mid].ID;
+      output.goodCnt = m_tilearray[mid].count;
+      output.cnt = m_tilearray[mid].count;
+      final = mid;
+      break;
     }
-    //m_tileQueries += 1;
-    //if(final == -1) m_tileQueryFails += 1;
-    // std::cout << "Find Tile " << tileID << " : "
-    //           << ((final >= 0) ? output.cnt : 0) <<  std::endl;
+    else if (m_tilearray[mid].ID < tileID)
+      lb = mid + 1;
+    else if (m_tilearray[mid].ID > tileID)
+      ub = mid - 1;
+  }
+  //m_tileQueries += 1;
+  //if(final == -1) m_tileQueryFails += 1;
+  // std::cout << "Find Tile " << tileID << " : "
+  //           << ((final >= 0) ? output.cnt : 0) <<  std::endl;
+  return final;
+}
+
+
+int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) {
+    unsigned char count = 0;
+    int final = m_tileFlatLayout.getCount(tileID, count);
+    if( final != -1 ) {
+        output.ID = tileID;
+        output.goodCnt = output.cnt = count;
+    }
+
     return final;
 }
 
@@ -175,6 +202,8 @@ int ECData::findTile(const tile_id_t &tileID,kc_t& output){
             return findTileCacheAware(tileID, output);
         case 2:
             return findTileCacheOblivious(tileID, output);
+        case 3:
+            return findTileFlat(tileID, output);
         default:
             return findTileDefault(tileID, output);
     }
@@ -335,8 +364,8 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     unsigned fillIn = kmerCacheSize - rSize;
     if(rank == 0)
        std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
-		 << " Kmer Cache : " << kmerCacheSize 
-		 << " Padding : " << fillIn
+         << " Kmer Cache : " << kmerCacheSize 
+         << " Padding : " << fillIn
                  << std::endl;
     if(rSize > 0){
         kmer_t lastKmer = m_karray[m_kcount - 1];
@@ -354,8 +383,8 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     fillIn = tileCacheSize - rSize;
     if(rank == 0)
        std::cout << "Build Tile Cache Aware Layout : " << m_tilecount 
-		 << " Tile Cache : " << tileCacheSize
-		 << " Padding : " << fillIn << std::endl;
+         << " Tile Cache : " << tileCacheSize
+         << " Padding : " << fillIn << std::endl;
 
     if(rSize > 0){
         tile_t lastTile = m_tilearray[m_tilecount - 1];
@@ -386,6 +415,24 @@ void ECData::buildCacheObliviousLayout(){
     m_tileCOLayout.init(m_tilearray, m_tilecount, 1);
 }
 
+void ECData::buildFlatLayout(){
+    int rank = m_params->mpi_env->rank();
+    if(rank == 0)
+       std::cout << "Build Kmer Flat Layout : "
+                 << m_kcount << std::endl;
+    m_kmerFlatLayout.init(m_karray, m_kcount, 1);
+    free(m_karray);
+    m_karray = 0;
+    m_kcount = 0;
+    if(rank == 0)
+       std::cout << "Build Tile Flat Layout : "
+                 << m_tilecount << std::endl;
+    m_tileFlatLayout.init(m_tilearray, m_tilecount, 1);
+    free(m_tilearray);
+    m_tilearray = 0;
+    m_tilecount = 0;
+}
+
 void ECData::buildCacheOptimizedLayout(){
 
    switch(m_params->cacheOptimizedSearch){
@@ -395,8 +442,11 @@ void ECData::buildCacheOptimizedLayout(){
            break;
        case 2:
            buildCacheObliviousLayout();
+           break;
+       case 3:
+           buildFlatLayout();
+           break;
        default:
-           // nothing to do
            break;
    }
 }
@@ -405,11 +455,11 @@ void ECData::output(const std::string& filename){
     std::ofstream oHandle(filename.c_str(), ios::out | ios::app );
     if (!oHandle.good()) {
         std::cout << "open " << filename << " failed, correct path?\n";
-	return;
+    return;
     }
     oHandle << m_kmerQueryFails << "/"
-	    << m_kmerQueries << std::endl;
+        << m_kmerQueries << std::endl;
     oHandle << m_tileQueryFails << "/"
-	    << m_tileQueries << std::endl;
+        << m_tileQueries << std::endl;
     oHandle.close();
 }
