@@ -20,7 +20,7 @@ namespace pure_c {
                            int degree,
                            const T& value) {
    typedef typename std::iterator_traits<RandomIterator>::difference_type diff_type;
-  initialize:
+   // initialize:
    RandomIterator lower_bound, l_middle, current_node = begin;
    diff_type l_len, l_half, index = 0, size = beyond-begin;
    T l_middle_value, x;
@@ -36,7 +36,7 @@ namespace pure_c {
    current_node = begin + index;
   not_finished:
    if (index >= size) goto return_false;
-  node_contains:
+   // node_contains:
    lower_bound = current_node;
    LOWER_BOUND(lower_bound, x)
    if (x == value) goto return_true;

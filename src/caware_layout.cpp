@@ -39,9 +39,9 @@ int test_caware(){
         idt.resize(n);
         ct.resize(n);
 
-        for(size_type i = 0u; i < n; i++) {
-            tst[i].ID = i+1;
-            tst[i].count = n - i;
+        for(size_type j = 0u; j < n; j++) {
+            tst[j].ID = j+1;
+            tst[j].count = n - j;
         }
 
         caware_layout(tst.begin(), tst.end(), m, idt, ct);

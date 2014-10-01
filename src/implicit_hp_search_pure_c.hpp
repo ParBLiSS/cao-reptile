@@ -22,7 +22,7 @@ namespace pure_c {
 			 RandomIterator D,
 			 const Tp& value) {
    typedef typename std::iterator_traits<RandomIterator>::difference_type diff_type;
-  initialize:
+   //initialize:
    diff_type current_depth = 0, current_bfs_index = 1, size = beyond - begin;
    Tp x, y, z, w;
    RandomIterator p;
@@ -50,14 +50,14 @@ namespace pure_c {
    *p = w;
   not_finished:
     if (current_bfs_index > size) goto return_false;
-  node_contains:
+  //node_contains:
    p = Pos+current_depth;
    x = *p;
    p = begin+x;
    x = *p;
    if (x == value) goto return_true;
    if (x < value) goto descend_right;
-  descend_left:
+  //descend_left:
    current_bfs_index = current_bfs_index*2;
    current_depth++;
    if (current_bfs_index > size) goto return_false;

@@ -84,3 +84,21 @@ T_card          1
 # If set to 1, the program will store the reads and then 
 #  process the reads - Applicable only if run with out map reduce
 StoreReads      0
+# Whether to write the output to the filesystem.
+# If 1, writes to the file system
+WriteOutput     1
+# Cache Optimized search will layout the memory to optimize k-mer search
+# IF CacheOptimizedSearch == 0,
+#   sorted layout of list of "{kmer, count}" is used k-spectrum search
+# If CacheOptimizedSearch == 1, 
+#   cache aware layout list of "kmer" is used for k-spectrum search 
+# If CacheOptimizedSearch == 2,
+#   cache oblivious layout "kmer" is used for k-spectrum search 
+# If CacheOptimizedSearch == 3, 
+#   sorted layout "kmer" list is used for k-spectrum search 
+CacheOptimizedSearch      0
+# KmerCacheSize and TileCacheSize are paramters used for cache
+# aware layout
+KmerCacheSize      4
+TileCacheSize      4
+

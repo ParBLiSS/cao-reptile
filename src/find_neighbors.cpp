@@ -32,13 +32,13 @@
 
 
 //
-// Iterating method for next r combination 
+// Iterating method for next r combination
 //  in the reverse order
 bool next_rcombination_rev(int n, int r, int *&next) {
     int i = r-1;
 
     // find the next gap to decrement
-    while (i > 0 && (next[i] - next[i-1] == 1) ) 
+    while (i > 0 && (next[i] - next[i-1] == 1) )
         i = i - 1;
 
     // reached the last one
@@ -59,7 +59,7 @@ bool next_rcombination(int n,int r,int *&next){
     int i = r-1;
 
     // me = Find the next position to increment
-    while (i >= 0 && next[i] == n - r + i ) 
+    while (i >= 0 && next[i] == n - r + i )
         i = i - 1;
 
     if(i < 0)
@@ -74,7 +74,7 @@ bool next_rcombination(int n,int r,int *&next){
 }
 
 bool next_rcombination(int n,int r,int **pnext,int stopPoint){
-
+    assert(n >= r);
     assert(r == 1); // Right now this works only if r == 1
     int i = r-1;
     int *next = *pnext;
@@ -115,7 +115,7 @@ inline T get_neighbors(T& ID,int len,int d,int *dpositions,T nbrdata){
         T nbrm = allones << (2 * (kpos+1));
         nbrm &= allones;
 
-        // get the two bits at  position 'i' to the 
+        // get the two bits at  position 'i' to the
         // end of the bit vector
         T nbrbits = nbrdata >> (2*i);
         nbrbits &= 3;
@@ -128,7 +128,7 @@ inline T get_neighbors(T& ID,int len,int d,int *dpositions,T nbrdata){
     }
 
 #ifdef DEBUG
-    std::cout << nbrclear << " " << nbrmask << " " 
+    std::cout << nbrclear << " " << nbrmask << " "
               << ((ID | nbrclear) & nbrmask) << std::endl;
 #endif
     return (ID | nbrclear) & nbrmask;
@@ -149,7 +149,7 @@ void print_bits(T &ID,int l){
 
 void print_comb(int l,int *next){
     std::cout << "{" ;
-    for(int j = 0; j < l;j++) 
+    for(int j = 0; j < l;j++)
         std::cout << next[j] << (j < l-1 ? "," :"");
     std::cout << "}" << std::endl;
 }
@@ -158,7 +158,7 @@ template <typename T>
 void get_neighbors(std::vector<T> &nbrs,T &ID,int len,
                    int d,int *dpositions,T &nbrdata){
     kmer_id_t max = 1 << (2*d),j = 0;
-    // enumerate all possible 4^d 
+    // enumerate all possible 4^d
     for(j = 0; j < max;j++) {
         kmer_id_t nbr = get_neighbors(ID,len,d,dpositions,j);
         if(nbr != ID) {
@@ -208,4 +208,3 @@ int get_dneighbors(int k,int d,kmer_id_t ID,
     free(a);
     return 0;
 }
-

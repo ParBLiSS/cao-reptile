@@ -12,8 +12,8 @@
 #ifndef EMPI_MPI_HOSTNAMES_HPP
 #define EMPI_MPI_HOSTNAMES_HPP
 
-#include <string>
 #include <mpi.h>
+#include <string>
 
 
 /** extMPI main namespace.

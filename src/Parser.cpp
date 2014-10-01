@@ -217,7 +217,7 @@ void Parser::updateRead(std::string& myRead, int shift) {
 }
 
 void candidates(ivec_t& candies, const kcvec_t& tiles, int threshold) {
-    for (int i = 1; i < tiles.size(); ++i) {
+    for (unsigned i = 1; i < tiles.size(); ++i) {
         if (tiles[i].goodCnt >= threshold)
             candies.push_back(i);
     }
@@ -313,19 +313,19 @@ bool Parser::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
                         int tGoodCnt = tiles[0].goodCnt / myPara.tRatio;
 
                         ivec_t highCardNbs;
-                        for (int i = 0; i < candies.size(); ++i) {
+                        for (unsigned i = 0; i < candies.size(); ++i) {
                             if (tiles[candies[i]].goodCnt >= tGoodCnt)
                                 highCardNbs.push_back(candies[i]);
                         }
                         int alterNum = 0;
-                        for (int i = 0; i < highCardNbs.size(); ++i) {
+                        for (unsigned i = 0; i < highCardNbs.size(); ++i) {
                             /*
                              * check all candidates, if ambig, then do not ec
                              */
                             evec_t errs;
                             diff(errs, tiles[highCardNbs[i]].ID, tiles[0].ID,
                                     qAddr, myPara.step + myPara.K);
-                            for (int j = 0; j < errs.size(); ++j) {
+                            for (unsigned j = 0; j < errs.size(); ++j) {
                                 if (errs[j].qual < myPara.Qlb) {
                                     readErr_ = errs;
                                     alterNum++;
@@ -370,7 +370,7 @@ bool Parser::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
                 bool tflag = true;
                 if (tiles.size() > 0) maxCnt = tiles[0].goodCnt;
                 if (maxCnt >= myPara.tCard) {
-                    for (int i = 1; i < tiles.size(); i ++){
+                    for (unsigned i = 1; i < tiles.size(); i ++){
                         if (maxCnt < tiles[i].goodCnt) {
                             tflag = false;
                             break;
@@ -423,7 +423,7 @@ void Parser::genericUnitNeighbor(uvec_t& myNB, int dPoint,const Para& myPara){
     stopPoint =  ((dPoint+1)/unitSize)*unitSize -1;
     // TODO: update as required
     stopPoint = dPoint;
-    for (int i = 0; i < myNB.size(); ++i) {
+    for (unsigned i = 0; i < myNB.size(); ++i) {
         get_dneighbors(myPara.K,1, (kmer_id_t)myNB[i],stopPoint,nbIDs);
     }
 
@@ -435,7 +435,7 @@ void Parser::genericUnitNeighbor(uvec_t& myNB, int dPoint,const Para& myPara){
 #ifdef DEBUG
     std::cout << "OUTPUT : " ;
 #endif
-    for (int i = 0; i < nbIDs.size(); ++i) {
+    for (unsigned i = 0; i < nbIDs.size(); ++i) {
         if ( nbIDs[i] != 0 && ecdata->findKmerCacheAware(nbIDs[i])){
 #ifdef DEBUG
             std::cout << nbIDs[i] << " " ;
@@ -462,9 +462,9 @@ void Parser::tableMaker(const Para& myPara) {
     //std::for_each(indices.begin(), indices.end(), print);  std::cout <<"\n";
 
     int unitSize = (log2(myPara.eSearch) / 2);
-    int num = myPara.K / unitSize;
+    unsigned num = myPara.K / unitSize;
 
-    for (int i = 0; i < num; ++i) {
+    for (unsigned i = 0; i < num; ++i) {
         ivec_t tmp(unitSize, 0);
         std::copy(indices.begin() + i*unitSize, indices.begin() + (i + 1)*unitSize, tmp.begin());
         //tmp.insert(tmp.end(), indices.begin() + i*unitSize,
@@ -486,9 +486,9 @@ void Parser::tableMaker(const Para& myPara) {
      * 2. Create Masks for tables
      */
     masks_.resize(num);
-    for (int i = 0; i < num; masks_[i] = 0xFFFFFFFF, i++);
-    for (int i = 0; i < num; ++i) {
-        for (int j = 0; j < maskIdx_[i].size(); ++j) {
+    for (unsigned i = 0; i < num; masks_[i] = 0xFFFFFFFF, i++);
+    for (unsigned i = 0; i < num; ++i) {
+        for (unsigned j = 0; j < maskIdx_[i].size(); ++j) {
             masks_[i] &= ~(1 << (2 * maskIdx_[i][j]));
             masks_[i] &= ~(1 << (2 * maskIdx_[i][j] + 1));
         }
@@ -500,7 +500,7 @@ void Parser::tableMaker(const Para& myPara) {
     /*
      * 3. Create Tables Then sort according to masks for each table
      */
-    for (int i = 0; i < num; ++ i){
+    for (unsigned i = 0; i < num; ++ i){
         for(int j = 0; j < ecdata->m_kcount;j++)
             table_.insert(table_.end(), ecdata->m_karray[j].ID);
     }
@@ -508,7 +508,7 @@ void Parser::tableMaker(const Para& myPara) {
      * sort tables
      */
     int tableSize = ecdata->m_kcount;
-    for (int i = 0; i < num; ++i) {
+    for (unsigned i = 0; i < num; ++i) {
         std::sort(table_.begin() + i*tableSize,
                 table_.begin() + (i + 1) * tableSize, TComp(masks_[i]));
     }
@@ -518,7 +518,7 @@ void Parser::tableMaker(const Para& myPara) {
 }
 
 bool checkPoint(const ivec_t& indices, int dPoint) {
-    for (int i = 0; i < indices.size(); ++i) {
+    for (unsigned i = 0; i < indices.size(); ++i) {
         if (indices[i] >= dPoint)
             return true;
     }
@@ -546,12 +546,12 @@ void Parser::tableUnitNeighbor(uvec_t& myNB, int dPoint, const Para& myPara) {
     }
 
     uvec_t inputIDs(myNB.size(), 0);
-    for (int i = 0; i < myNB.size(); inputIDs.push_back(myNB[i]), ++ i);
+    for (unsigned i = 0; i < myNB.size(); inputIDs.push_back(myNB[i]), ++ i);
     std::sort(inputIDs.begin(), inputIDs.end());
 
     uvec_t nbIDs; // neigbhoring IDs
 
-    for (int i = 0; i < myNB.size(); ++i) {
+    for (unsigned i = 0; i < myNB.size(); ++i) {
 
         uint32_t myID = myNB[i];
 
@@ -562,7 +562,7 @@ void Parser::tableUnitNeighbor(uvec_t& myNB, int dPoint, const Para& myPara) {
          */
 
         int tableSize = table_.size() / masks_.size();
-        for (int j = 0; j < masks_.size(); ++j) {
+        for (unsigned j = 0; j < masks_.size(); ++j) {
 
             if (!checkPoint(maskIdx_[j], dPoint)) continue; //a
 
@@ -617,7 +617,7 @@ void Parser::tableUnitNeighbor(uvec_t& myNB, int dPoint, const Para& myPara) {
     uvec_t outnbs;
     std::cout << "OUTPUT : " ;
 #endif
-    for (int i = 0; i < nbIDs.size(); ++i) {
+    for (unsigned i = 0; i < nbIDs.size(); ++i) {
 
         if (ecdata->findKmerCacheAware(nbIDs[i])){
 #ifdef DEBUG
@@ -640,17 +640,17 @@ void updateNodes(kcvec_t& N, kcvec_t& N_rv, const kcvec_t& tiles, int len) {
 
     std::set<uint64_t> IDs, IDs_rv;
     kcvec_t tmpVec;
-    for (int i = 0; i < tiles.size(); ++i) {
+    for (unsigned i = 0; i < tiles.size(); ++i) {
         uint64_t last2k = tiles[i].ID & ((0x1 << 2 * len) - 1);
         IDs.insert(last2k);
         IDs_rv.insert(reverse_complementary <uint32_t, uint32_t > (last2k, len));
     }
-    for (int i = 0; i < N.size(); ++i) {
+    for (unsigned i = 0; i < N.size(); ++i) {
         if (IDs.count(N[i].ID)) tmpVec.push_back(N[i]);
     }
     N = tmpVec;
     tmpVec.clear();
-    for (int i = 0; i < N_rv.size(); ++i) {
+    for (unsigned i = 0; i < N_rv.size(); ++i) {
         if (IDs_rv.count(N_rv[i].ID)) tmpVec.push_back(N_rv[i]);
     }
     N_rv = tmpVec;
@@ -670,7 +670,7 @@ void Parser::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom, const Para& myPara) 
 
     /* convert to reverse compl IDs
      */
-    for (int i = 0; i < tileFrom.size(); ++i) {
+    for (unsigned i = 0; i < tileFrom.size(); ++i) {
         tileFrom[i].ID = reverse_complementary <uint64_t, uint64_t >
                 (tileFrom[i].ID, myPara.K + myPara.step);
 
@@ -694,7 +694,7 @@ void Parser::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom, const Para& myPara) 
      */
     int idx1 = 0;
 
-    for (int idx2 = idx1 + 1; idx2 < tileTo.size(); ++idx2) {
+    for (int idx2 = idx1 + 1; idx2 < (int)tileTo.size(); ++idx2) {
         if (tileTo[idx2].ID == tileTo[idx1].ID) {
             tileTo[idx1].goodCnt += tileTo[idx2].goodCnt;
             tileTo[idx1].cnt += tileTo[idx2].cnt;
@@ -710,7 +710,7 @@ void Parser::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom, const Para& myPara) 
     /* keep repID in the first pos
      */
     if (tileTo[0].ID != repID) {
-        for (int i = 1; i < tileTo.size(); ++i) {
+        for (unsigned i = 1; i < tileTo.size(); ++i) {
             if (tileTo[i].ID == repID) {
                 kc_t tmp = tileTo[0];
                 tileTo[0] = tileTo[i];
@@ -741,8 +741,8 @@ void Parser::tiling(kcvec_t& tiles, const uvec_t& N1,
     else {
         tiles.push_back(kc_t(reptile, 0, 0));
     }
-    for (int i = 0; i < N1.size(); ++i) {
-        for (int j = 0; j < N2.size(); ++j) {
+    for (unsigned i = 0; i < N1.size(); ++i) {
+        for (unsigned j = 0; j < N2.size(); ++j) {
             if (i == 0 && j == 0) continue;
             uint64_t tmptile;
             if (overlay(tmptile, N1[i], N2[j], myPara)) {
@@ -785,11 +785,11 @@ void Parser::output(const std::string& filename) {
         exit(1);
     }
 
-    for (int i = 0; i < records_.size(); ++i) {
+    for (unsigned i = 0; i < records_.size(); ++i) {
 
         oHandle << records_[i].readID << "\t" << records_[i].evec.size();
 
-        for (int j = 0; j < records_[i].evec.size(); ++j) {
+        for (unsigned j = 0; j < records_[i].evec.size(); ++j) {
             oHandle << "\t" << records_[i].evec[j].pos << "\t"
                     << records_[i].evec[j].from << "\t" << records_[i].evec[j].to
                     << "\t" << records_[i].evec[j].qual;

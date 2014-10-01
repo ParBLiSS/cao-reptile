@@ -367,6 +367,33 @@ test_main.cpp.s:
 	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/test_main.cpp.s
 .PHONY : test_main.cpp.s
 
+util.o: util.cpp.o
+.PHONY : util.o
+
+# target to build an object file
+util.cpp.o:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/util.cpp.o
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/util.cpp.o
+.PHONY : util.cpp.o
+
+util.i: util.cpp.i
+.PHONY : util.i
+
+# target to preprocess a source file
+util.cpp.i:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/util.cpp.i
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/util.cpp.i
+.PHONY : util.cpp.i
+
+util.s: util.cpp.s
+.PHONY : util.s
+
+# target to generate assembly for a file
+util.cpp.s:
+	$(MAKE) -f CMakeFiles/cao-reptile.dir/build.make CMakeFiles/cao-reptile.dir/util.cpp.s
+	$(MAKE) -f CMakeFiles/cao-reptile-test.dir/build.make CMakeFiles/cao-reptile-test.dir/util.cpp.s
+.PHONY : util.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -404,6 +431,9 @@ help:
 	@echo "... test_main.o"
 	@echo "... test_main.i"
 	@echo "... test_main.s"
+	@echo "... util.o"
+	@echo "... util.i"
+	@echo "... util.s"
 .PHONY : help
 
 
