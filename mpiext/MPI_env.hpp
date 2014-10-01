@@ -12,9 +12,9 @@
 #ifndef EMPI_MPI_ENV_HPP
 #define EMPI_MPI_ENV_HPP
 
+#include <mpi_hostnames.hpp>
 #include <map>
 #include <vector>
-#include <mpi_hostnames.hpp>
 
 
 /** extMPI main namespace.
