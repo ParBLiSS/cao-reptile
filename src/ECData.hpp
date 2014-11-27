@@ -79,7 +79,7 @@ typedef KeyIDComp<kmer_id_t> KmerIDComp;
 typedef std::vector<kmer_id_t> kmer_id_vector;
 typedef std::vector<tile_id_t> tile_id_vector;
 typedef std::vector<unsigned char> kcount_vector;
-
+#define MAX_LEVELS 64
 class ECData {
   private:
     void registerKmerTypes();
@@ -112,6 +112,9 @@ class ECData {
     uint64_t m_kmerQueryFails;
     uint64_t m_tileQueries;
     uint64_t m_tileQueryFails;
+    unsigned m_kmerLevels[MAX_LEVELS];
+    unsigned m_tileLevels[MAX_LEVELS];
+
 
     // Store Reads if reqd.
     cvec_t m_ReadsString;

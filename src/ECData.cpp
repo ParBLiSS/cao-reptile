@@ -36,6 +36,10 @@ ECData::ECData(Para *p) : m_karray(0),m_ksize(0),m_kcount(0),
     m_kmerQueryFails = 0;
     m_tileQueries = 0;
     m_tileQueryFails = 0;
+    for(unsigned i = 0; i < MAX_LEVELS; i++)
+        m_tileLevels[i] = 0;
+    for(unsigned i = 0; i < MAX_LEVELS; i++)
+        m_kmerLevels[i] = 0;
     registerKmerTypes();
 }
 
@@ -69,18 +73,43 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
   if(m_karray == 0){
     return false;
   }
-  kmer_t searchKmer;
-  searchKmer.ID = kmerID;
-  bool final = std::binary_search(m_karray,m_karray + m_kcount,
-                                  searchKmer, KmerComp());
-  if(m_params->absentKmers == true)
-    final = !final;
+  bool final = false;
+  int lb = 0, ub = m_kcount  - 1, mid;
+#ifdef QUERY_COUNTS
+  int nlevels = 0;
+#endif
+  while (lb <= ub) {
+      mid = (lb + ub) / 2;
+      if (m_karray[mid].ID == kmerID) {
+          final = true;
+          break;
+      }
+      else if (m_karray[mid].ID < kmerID)
+          lb = mid + 1;
+      else if (m_karray[mid].ID > kmerID)
+          ub = mid - 1;
+#ifdef QUERY_COUNTS
+      nlevels += 1;
+#endif
+  }
+  //kmer_t searchKmer;
+  //searchKmer.ID = kmerID;
+  //bool final = std::binary_search(m_karray,m_karray + m_kcount,
+  //                                searchKmer, KmerComp());
 
 #ifdef QUERY_COUNTS
+  if(final){
+      assert(nlevels < MAX_LEVELS);
+      m_kmerLevels[nlevels] += 1;
+  }
   m_kmerQueries += 1;
   if(!final)
       m_kmerQueryFails += 1;
 #endif
+
+
+  if(m_params->absentKmers == true)
+    final = !final;
 
   // std::cout << "Find " << kmerID << " : "
   //           << (m_params->absentKmers) << " : "
@@ -140,6 +169,9 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
 int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
   int lb = 0, ub = m_tilecount - 1, mid;
   int final = -1;
+#ifdef QUERY_COUNTS
+  int nlevels = 0;
+#endif
   while (lb <= ub) {
     mid = (lb + ub) / 2;
     if (m_tilearray[mid].ID == tileID) {
@@ -153,8 +185,15 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
       lb = mid + 1;
     else if (m_tilearray[mid].ID > tileID)
       ub = mid - 1;
+#ifdef QUERY_COUNTS
+    nlevels += 1;
+#endif
   }
 #ifdef QUERY_COUNTS
+  if(final){
+      assert(nlevels < MAX_LEVELS);
+      m_tileLevels[nlevels] += 1;
+  }
   m_tileQueries += 1;
   if(final == -1)
       m_tileQueryFails += 1;

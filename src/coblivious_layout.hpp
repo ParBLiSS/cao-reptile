@@ -52,22 +52,29 @@ class ECDataCOLayout{
             mCounts[i] = (inItrBegin + i)->count;
         }
     }
+    void init_steps(RandomInputItr inItrBegin){
+        // asssumes that treesteps are initialized
+        assert(treeSteps.size() > 0);
+        stepIds.resize(treeSteps.size());
+        stepPrefixes.resize(treeSteps.size());
+        stepPrefixes[0] = (1 << treeSteps[0]) - 1;
+        stepIds[0] = (inItrBegin + stepPrefixes[0])->ID;
+
+        // init step mIds
+        for(size_t i = 1u; i < treeSteps.size();i++) {
+            stepPrefixes[i] = stepPrefixes[i - 1] + (1 << treeSteps[i]) - 1;
+            stepIds[i] = (inItrBegin + stepPrefixes[i])->ID;
+        }
+    }
 
     void init_steps(RandomInputItr inItrBegin, size_type nTotal,
                     size_type limit){
         stTotal = 0;
         // init steps
         log2_steps(nTotal, treeSteps, limit);
+        //
         if(treeSteps.size() > 0) {
-            stepIds.resize(treeSteps.size());
-            stepPrefixes.resize(treeSteps.size());
-            stepPrefixes[0] = (1 << treeSteps[0]) - 1;
-            stepIds[0] = (inItrBegin + stepPrefixes[0])->ID;
-        }
-        // init step mIds
-        for(size_t i = 1u; i < treeSteps.size();i++) {
-            stepPrefixes[i] = stepPrefixes[i - 1] + (1 << treeSteps[i]) - 1;
-            stepIds[i] = (inItrBegin + stepPrefixes[i])->ID;
+            init_steps(inItrBegin);
         }
     }
 

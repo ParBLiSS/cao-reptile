@@ -156,6 +156,7 @@ int parallelEC( char *inputFile){
                   << ec_sync_stop - ec_sync_start
                   << std::endl;
     }
+    MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
         if(i == mpi_env->rank()){
             std::cout << i << "\t" << "read local" << "\t"
@@ -178,17 +179,44 @@ int parallelEC( char *inputFile){
     }
 
 #ifdef QUERY_COUNTS
-    std::cout << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
-              << "query fails" << "\t" << "query success" << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(mpi_env->rank() == 0) {
+       std::cout << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
+                 << "query fails" << "\t" << "query success" << std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
         if(i == mpi_env->rank()){
             std::cout << i << "\t" << "kmer" <<  ecdata->m_kmerQueries << "\t"
                       << ecdata->m_kmerQueryFails << "\t"
                       << (ecdata->m_kmerQueries) - (ecdata->m_kmerQueryFails)
                       << std::endl;
+            std::cout << i << "\t" << "tile" <<  ecdata->m_tileQueries << "\t"
+                      << ecdata->m_tileQueryFails << "\t"
+                      << (ecdata->m_tileQueries) - (ecdata->m_tileQueryFails)
+                      << std::endl;
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(mpi_env->rank() == 0) {
+        std::cout << "proc" << "\t" << "type" << "\t" <<  std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    for(int i = 0; i < p; i++){
+        if(i == mpi_env->rank()){
+            std::cout << i << "\t" << "kmer";
+            for(unsigned j = 0; j < MAX_LEVELS; j++)
+                std::cout << "\t" << ecdata->m_kmerLevels[j];
+            std::cout << std::endl;
+            std::cout << i << "\t" << "tile";
+            for(unsigned j = 0; j < MAX_LEVELS; j++)
+                std::cout << "\t" << ecdata->m_tileLevels[j];
+            std::cout << std::endl;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
 #endif
 
     delete params;
