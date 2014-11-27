@@ -3,12 +3,16 @@ MPICXX=mpicxx
 MPIEXT = ../mpiext
 
 CFLAGS=-c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
-LDFLAGS= 
+LDFLAGS=
 SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp
 OBJS=$(SRCS:.cpp=.o)
 
 ifeq ($(MAKECMDGOALS),debug)
 CFLAGS += -g -DDEBUG
+endif
+
+ifeq ($(MAKECMDGOALS),counts)
+CFLAGS += -g -DQUERY_COUNTS
 endif
 
 all:$(SRCS) $(PROG)
@@ -17,7 +21,7 @@ $(PROG): $(OBJS)
 	$(MPICXX) -o $@ $(OBJS) $(LDFLAGS)
 
 $(OBJS): %.o : %.cpp
-	$(MPICXX) $(CFLAGS) $<   
+	$(MPICXX) $(CFLAGS) $<
 
 
 clean:
@@ -25,3 +29,4 @@ clean:
 
 debug: all
 
+counts: all

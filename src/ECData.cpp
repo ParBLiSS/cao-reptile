@@ -66,7 +66,6 @@ void ECData::registerKmerTypes(){
 }
 
 bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
-  //m_kmerQueries += 1;
   if(m_karray == 0){
     return false;
   }
@@ -76,8 +75,13 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
                                   searchKmer, KmerComp());
   if(m_params->absentKmers == true)
     final = !final;
-  //if(!final)
-  //  m_kmerQueryFails += 1;
+
+#ifdef QUERY_COUNTS
+  m_kmerQueries += 1;
+  if(!final)
+      m_kmerQueryFails += 1;
+#endif
+
   // std::cout << "Find " << kmerID << " : "
   //           << (m_params->absentKmers) << " : "
   //           << final << std::endl;
@@ -150,8 +154,11 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
     else if (m_tilearray[mid].ID > tileID)
       ub = mid - 1;
   }
-  //m_tileQueries += 1;
-  //if(final == -1) m_tileQueryFails += 1;
+#ifdef QUERY_COUNTS
+  m_tileQueries += 1;
+  if(final == -1)
+      m_tileQueryFails += 1;
+#endif
   // std::cout << "Find Tile " << tileID << " : "
   //           << ((final >= 0) ? output.cnt : 0) <<  std::endl;
   return final;
