@@ -186,7 +186,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
     else if (m_tilearray[mid].ID > tileID)
       ub = mid - 1;
 #ifdef QUERY_COUNTS
-    nlevels += 1;
+     nlevels += 1;
 #endif
   }
 #ifdef QUERY_COUNTS
@@ -446,11 +446,11 @@ void ECData::buildCacheObliviousLayout(){
     if(rank == 0)
        std::cout << "Build Kmer Cache Oblivious Layout : "
                  << m_kcount << std::endl;
-    m_kmerCOLayout.init(m_karray, m_kcount, 1);
+    m_kmerCOLayout.init(m_karray, m_kcount, 8);
     if(rank == 0)
        std::cout << "Build Kmer Cache Oblivious Layout : "
                  << m_tilecount << std::endl;
-    m_tileCOLayout.init(m_tilearray, m_tilecount, 1);
+    m_tileCOLayout.init(m_tilearray, m_tilecount, 8);
 }
 
 void ECData::buildFlatLayout(){

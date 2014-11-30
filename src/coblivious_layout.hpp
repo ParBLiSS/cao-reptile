@@ -19,13 +19,20 @@ template <typename RandomInputItr,
 class ECDataCOLayout{
 
     void log2_steps(size_type n, std::vector<IdType>& steps,
-                    size_type limit = 10){
+                    size_type limit){
         size_type mn = floor_log2(n);
-        while(mn > limit){
-            if((1 << mn) & n)
+        std::cout << limit << "\t" << mn << "\t";
+        while(mn > 2){
+            if((1 << mn) & n){
                 steps.push_back(mn);
-            mn = mn - 1;
+                limit -= 1;
+            }
+            mn -= 1;
+            std::cout << mn << "\t";
+            if(limit == 0)
+                break;
         }
+        std::cout << std::endl;
     }
 
     void init_layout(RandomInputItr inItrBegin, size_type nTotal){

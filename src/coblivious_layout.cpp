@@ -13,7 +13,7 @@ typedef struct kd_s{
 
 
 int test_oblivious(){
-    size_t m = 1, beg = 32,
+    size_t m = 4, beg = 32,
         end = 65;
     for(size_t i = beg; i  < end; i += m)
     {
@@ -34,7 +34,7 @@ int test_oblivious(){
 
 
         ECDataCOLayout< std::vector<kd_t>::iterator, unsigned int, char >
-            colayout(tst.begin(), n, 1);
+            colayout(tst.begin(), n, 2);
         write_stvector(colayout.treeSteps, std::cout);
         write_stvector(colayout.stepPrefixes, std::cout);
         write_stvector(colayout.stepIds, std::cout);
@@ -42,25 +42,27 @@ int test_oblivious(){
         write_stvector(colayout.mCounts, std::cout);
         char xCount;
         std::cout << colayout.getCount(n + 2, xCount) << " " << n + 2 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(n + 1, xCount) << " " << n + 1 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
+        std::cout << colayout.getCount(n, xCount) << " " << n << " ";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(0, xCount) << " " << 0 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(1, xCount) << " " << 1 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(31, xCount) << " " << 31 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(32, xCount) << " " << 32 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(33, xCount) << " " << 33 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(46, xCount) << " "  << 46 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(47, xCount) << " "  << 47 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << colayout.getCount(48, xCount) << " " << 48 << " ";
-        std::cout << (int)xCount << ":";
+        std::cout << (int)xCount << ";";
         std::cout << std::endl;
         // std::cout << colayout.find(32)
         //           << std::endl;
