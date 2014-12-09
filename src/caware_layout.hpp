@@ -183,6 +183,18 @@ template <typename RandomIterator,
           typename IdType,
           typename CountType>
 class ECDataCALayout{
+
+    int nbytes(IdType val){
+        int n = 0;
+        if(val == 0)
+            return 1;
+        while (val != 0) {
+            val >>= 8;
+            n ++;
+        }
+        return n;
+    }
+
 public:
     typedef typename std::vector<IdType>::iterator id_iterator;
     std::vector<IdType> mIds;
@@ -229,22 +241,28 @@ public:
         }
     };
 
-    void compression_stats(){
+    double compression_stats(){
+        double avg_bytes = 0.0;
         unsigned m = mDegree - 1;
         IdType e0, d0;
         std::vector<IdType> cline;
         cline.resize(m);
+        // TODO: Compute min max size
         for(unsigned i = 0; i < mIds.size(); i += m){
+            unsigned tbytes = 0;
             e0 = mIds[i];
-            for(unsigned j = 1;  j < m; j++){
+            for(unsigned j = 1;  j < m; j++)
                 cline[j] = mIds[i + j] - mIds[i];
-            }
-            d0 = cline[1];
-            for(unsigned j = 2;  j < m; j++){
+                 d0 = cline[1];
+            for(unsigned j = 2;  j < m; j++)
                 cline[j] = cline[j] - cline[1];
-            }
-            // TODO: count the number of bytes
+            tbytes += nbytes(e0);
+            tbytes += nbytes(d0);
+            for(unsigned j = 2;  j < m; j++)
+                tbytes += nbytes(cline[j]);
+            avg_bytes += tbytes;
         }
+        return (avg_bytes * m)/mIds.size();
     }
 };
 
