@@ -6,6 +6,7 @@
 #include "implicit_heap_search_c.h"
 #include "caware_layout.hpp"
 
+
 size_type int_log(const size_type& b,
                   const size_type& x){
     double st = b;

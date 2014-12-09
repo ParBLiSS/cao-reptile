@@ -187,12 +187,12 @@ int parallelEC( char *inputFile){
     MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
         if(i == mpi_env->rank()){
-            std::cout << i << "\t" << "kmer" <<  ecdata->m_kmerQueries << "\t"
-                      << ecdata->m_kmerQueryFails << "\t"
+            std::cout << i << "\t" << "kmer" << "\t" << ecdata->m_kmerQueries
+                      << "\t" << ecdata->m_kmerQueryFails << "\t"
                       << (ecdata->m_kmerQueries) - (ecdata->m_kmerQueryFails)
                       << std::endl;
-            std::cout << i << "\t" << "tile" <<  ecdata->m_tileQueries << "\t"
-                      << ecdata->m_tileQueryFails << "\t"
+            std::cout << i << "\t" << "tile" <<  "\t" << ecdata->m_tileQueries
+                      << "\t" << ecdata->m_tileQueryFails << "\t"
                       << (ecdata->m_tileQueries) - (ecdata->m_tileQueryFails)
                       << std::endl;
         }
@@ -200,7 +200,10 @@ int parallelEC( char *inputFile){
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(mpi_env->rank() == 0) {
-        std::cout << "proc" << "\t" << "type" << "\t" <<  std::endl;
+        std::cout << "proc" << "\t" << "type" << "\t" ;
+        for(unsigned j = 0; j < MAX_LEVELS; j++)
+            std::cout << "L" << j << "\t" ;
+        std::cout <<  std::endl;
     }
     MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){

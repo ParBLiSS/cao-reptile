@@ -125,6 +125,19 @@ class ECData {
     int currentKmerBatchStart;
     int currentTileBatchStart;
 
+    std::vector<kmer_id_t> m_byte_kref[3];
+    unsigned m_byte_kcount[3];
+    std::vector<tile_id_t> m_byte_tref[3];
+    unsigned m_byte_tcount[3];
+
+    void padKmerArray(unsigned kSize);
+    void padTileArray(unsigned kSize);
+    void estimateKmerByteCounters();
+    void estimateTileByteCounters();
+    void estimateByteCounters();
+    void printByteCounters();
+    void estimateCAStats();
+
   public:
     // I am only pointing to this parameter object. I don't own it!
     Para *m_params;

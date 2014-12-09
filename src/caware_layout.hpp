@@ -227,7 +227,26 @@ public:
         } else {
             return -1;
         }
+    };
+
+    void compression_stats(){
+        unsigned m = mDegree - 1;
+        IdType e0, d0;
+        std::vector<IdType> cline;
+        cline.resize(m);
+        for(unsigned i = 0; i < mIds.size(); i += m){
+            e0 = mIds[i];
+            for(unsigned j = 1;  j < m; j++){
+                cline[j] = mIds[i + j] - mIds[i];
+            }
+            d0 = cline[1];
+            for(unsigned j = 2;  j < m; j++){
+                cline[j] = cline[j] - cline[1];
+            }
+            // TODO: count the number of bytes
+        }
     }
 };
+
 
 #endif /* _CAWARE_LAYOUT_H_ */

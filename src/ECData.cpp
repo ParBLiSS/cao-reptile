@@ -30,6 +30,18 @@
 #include <cassert>
 #include <climits>
 
+template<typename T>
+int count_bytes(T val){
+    int n = 0;
+    if(val == 0)
+        return 1;
+    while (val != 0) {
+        val >>= 8;
+        n ++;
+    }
+    return n;
+}
+
 ECData::ECData(Para *p) : m_karray(0),m_ksize(0),m_kcount(0),
         m_tilearray(0),m_tilesize(0),m_tilecount(0),m_params(p){
     m_kmerQueries = 0;
@@ -388,57 +400,56 @@ void ECData::mergeBatchKmers(){
     currentKmerBatchStart = 0; currentTileBatchStart = 0;
 }
 
-
-void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
-                                   const unsigned& tileCacheSize){
-    int rank = m_params->mpi_env->rank();
-
-    // if(rank == 0)
-    //    std::cout << "Build Kmer Cache Aware Layout : "
-    //      << m_kcount
-    //      << std::endl;
-    //
-    unsigned rSize = (m_kcount % kmerCacheSize);
-    unsigned fillIn = kmerCacheSize - rSize;
-    if(rank == 0)
-       std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
-         << " Kmer Cache : " << kmerCacheSize
-         << " Padding : " << fillIn
-                 << std::endl;
+void ECData::padKmerArray(unsigned kSize){
+    unsigned rSize = (m_kcount % kSize);
+    unsigned fillIn = kSize - rSize;
     if(rSize > 0){
+        if(m_params->mpi_env->rank() == 0) {
+            std::cout << "Padding kmer array : " << fillIn << std::endl;
+        }
         kmer_t lastKmer = m_karray[m_kcount - 1];
         for(unsigned i = 0; i < fillIn; i++){
             addToArray(lastKmer.ID, lastKmer.count);
         }
     }
-    m_kmerCALayout.init(m_karray, m_kcount,
-                        kmerCacheSize);
-    free(m_karray);
-    m_karray = 0;
-    m_kcount = 0;
+}
 
-    rSize = (m_tilecount % tileCacheSize);
-    fillIn = tileCacheSize - rSize;
-    if(rank == 0)
-       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount
-         << " Tile Cache : " << tileCacheSize
-         << " Padding : " << fillIn << std::endl;
-
+void ECData::padTileArray(unsigned kSize){
+    unsigned rSize = (m_tilecount % kSize);
+    unsigned fillIn = kSize - rSize;
     if(rSize > 0){
+        if(m_params->mpi_env->rank() == 0) {
+            std::cout << "Padding tile array : " << fillIn << std::endl;
+        }
         tile_t lastTile = m_tilearray[m_tilecount - 1];
         for(unsigned i = 0; i < fillIn; i++){
             addToArray(lastTile.ID, lastTile.count);
         }
     }
-    // if(rank == 0)
-    //    std::cout << "Build Cache Aware Layout for Tiles: "
-    //      << rSize << " " << m_tilecount
-    //      << std::endl;
-    m_tileCALayout.init(m_tilearray, m_tilecount,
-                        tileCacheSize);
-    free(m_tilearray);
-    m_tilearray = 0;
-    m_tilecount = 0;
+}
+
+void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
+                                   const unsigned& tileCacheSize){
+    int rank = m_params->mpi_env->rank();
+    if(rank == 0) {
+       std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
+                 << " Kmer Cache : " << kmerCacheSize << std::endl;
+    }
+
+    padKmerArray(kmerCacheSize);
+    m_kmerCALayout.init(m_karray, m_kcount, kmerCacheSize);
+
+    free(m_karray); m_karray = 0; m_kcount = 0;
+
+    if(rank == 0){
+       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount
+                 << " Tile Cache : " << tileCacheSize << std::endl;
+    }
+
+    padTileArray(tileCacheSize);
+    m_tileCALayout.init(m_tilearray, m_tilecount, tileCacheSize);
+
+    free(m_tilearray); m_tilearray = 0; m_tilecount = 0;
 }
 
 void ECData::buildCacheObliviousLayout(){
@@ -446,11 +457,16 @@ void ECData::buildCacheObliviousLayout(){
     if(rank == 0)
        std::cout << "Build Kmer Cache Oblivious Layout : "
                  << m_kcount << std::endl;
-    m_kmerCOLayout.init(m_karray, m_kcount, 8);
+
+    padKmerArray(1024);
+    m_kmerCOLayout.init(m_karray, m_kcount, 20);
+
     if(rank == 0)
-       std::cout << "Build Kmer Cache Oblivious Layout : "
+       std::cout << "Build Tile Cache Oblivious Layout : "
                  << m_tilecount << std::endl;
-    m_tileCOLayout.init(m_tilearray, m_tilecount, 8);
+
+    padKmerArray(1024);
+    m_tileCOLayout.init(m_tilearray, m_tilecount, 20);
 }
 
 void ECData::buildFlatLayout(){
@@ -500,4 +516,65 @@ void ECData::output(const std::string& filename){
     oHandle << m_tileQueryFails << "/"
         << m_tileQueries << std::endl;
     oHandle.close();
+}
+
+void ECData::estimateKmerByteCounters(){
+    for(int j = 0; j < 3; j++){
+        m_byte_kref[j].push_back(m_karray[0].ID);
+        m_byte_kcount[j] = 0;
+    }
+
+    for(int i = 1; i < m_kcount;i++){
+        for(int j = 0; j < 3; j++){
+            kmer_id_t& last_ref = m_byte_kref[j].back();
+            int n = count_bytes<kmer_id_t>(m_karray[i].ID - last_ref);
+            if(n > j + 1){
+                m_byte_kref[j].push_back(m_karray[i].ID);
+            }
+            m_byte_kcount[j] += 1;
+        }
+    }
+}
+
+void ECData::estimateTileByteCounters(){
+    for(int j = 0; j < 3; j++) {
+        m_byte_tref[j].push_back(m_tilearray[0].ID);
+        m_byte_tcount[j] = 0;
+    }
+
+    for(int i = 1; i < m_tilecount;i++){
+        for(int j = 0; j < 3; j++){
+            tile_id_t& last_ref = m_byte_tref[j].back();
+            int n = count_bytes<tile_id_t>(m_tilearray[i].ID - last_ref);
+            if(n > j + 1){
+                m_byte_tref[j].push_back(m_tilearray[i].ID);
+            }
+            m_byte_tcount[j] += 1;
+        }
+    }
+}
+
+void ECData::estimateByteCounters(){
+    estimateKmerByteCounters();
+    //estimateTileByteCounters();
+}
+
+void ECData::printByteCounters(){
+
+    std::cout << "type" << "\t" << "nbyte" << "\t"
+              << "nref" << "\t" << "ncount" << std::endl;
+
+    for(int j = 0; j < 3; j++){
+        std::cout << "kmer" << "\t" << (j+1) << "\t"
+                  << m_byte_kref[j].size() << "\t" << m_byte_kcount[j] << std::endl;
+    }
+
+    //for(int j = 0; j < 3; j++){
+    //std::cout << "tile" << "\t" << (j+1) << "\t"
+    //}
+}
+
+void ECData::estimateCAStats(){
+    m_kmerCALayout.compression_stats();
+    m_tileCALayout.compression_stats();
 }
