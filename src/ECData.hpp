@@ -136,7 +136,7 @@ class ECData {
     void estimateTileByteCounters();
     void estimateByteCounters();
     void printByteCounters();
-    void estimateCAStats();
+    void runCAStats();
 
   public:
     // I am only pointing to this parameter object. I don't own it!

@@ -574,7 +574,19 @@ void ECData::printByteCounters(){
     //}
 }
 
-void ECData::estimateCAStats(){
-    m_kmerCALayout.compression_stats();
-    m_tileCALayout.compression_stats();
+void ECData::runCAStats(){
+    double kavg, kmax, kmin;
+    double tavg, tmax, tmin;
+    m_kmerCALayout.compression_stats(kavg, kmax, kmin);
+    m_tileCALayout.compression_stats(tavg, tmax, tmin);
+
+    std::cout << "type" << "\t" << "avg" << "\t"
+              << "max" << "\t" << "min" << std::endl;
+
+    std::cout << "kmer" << "\t" << kavg << "\t"
+              << kmax << "\t" << kmin << std::endl;
+
+    std::cout << "tile" << "\t" << tavg << "\t"
+              << tmax << "\t" << tmin << std::endl;
+
 }

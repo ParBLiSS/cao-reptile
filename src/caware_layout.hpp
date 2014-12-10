@@ -241,15 +241,17 @@ public:
         }
     };
 
-    double compression_stats(){
-        double avg_bytes = 0.0;
+    void compression_stats(double& avg_bytes,
+                           double& min_bytes,
+                           double& max_bytes){
         unsigned m = mDegree - 1;
         IdType e0, d0;
         std::vector<IdType> cline;
         cline.resize(m);
-        // TODO: Compute min max size
+        avg_bytes = max_bytes = 0.0;
+        min_bytes = sizeof(IdType) * m;
         for(unsigned i = 0; i < mIds.size(); i += m){
-            unsigned tbytes = 0;
+            double tbytes = 0;
             e0 = mIds[i];
             for(unsigned j = 1;  j < m; j++)
                 cline[j] = mIds[i + j] - mIds[i];
@@ -261,8 +263,12 @@ public:
             for(unsigned j = 2;  j < m; j++)
                 tbytes += nbytes(cline[j]);
             avg_bytes += tbytes;
+            if(tbytes > max_bytes)
+                max_bytes = tbytes;
+            if(tbytes < min_bytes)
+                min_bytes = tbytes;
         }
-        return (avg_bytes * m)/mIds.size();
+        avg_bytes = (avg_bytes * m)/mIds.size();
     }
 };
 
