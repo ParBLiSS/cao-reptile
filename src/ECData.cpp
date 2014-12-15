@@ -29,6 +29,7 @@
 #include "implicit_heap_search_c.h"
 #include <cassert>
 #include <climits>
+#include <fstream>
 
 template<typename T>
 int count_bytes(T val){
@@ -342,6 +343,35 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
     free(m_tilearray);
     m_tilearray = newTileArray; m_tilecount = newTileCount;
     m_tilesize = newTileSize;
+}
+
+void ECData::writeSpectrum(){
+    if(m_params->writeSpectrum > 0 && (m_params->mpi_env->rank() == 0)){
+        assert(m_params->kmerSpectrumOutFile.length() > 0);
+        assert(m_params->tileSpectrumOutFile.length() > 0);
+
+        std::ofstream kFile (m_params->kmerSpectrumOutFile.c_str(),
+                             std::ofstream::binary);
+        std::ofstream tFile (m_params->tileSpectrumOutFile.c_str(), std::ofstream::binary);
+        switch(m_params->cacheOptimizedSearch){
+        case 1:
+            m_kmerCALayout.serialize(kFile);
+            m_tileCALayout.serialize(tFile);
+            break;
+        case 2:
+            m_kmerCOLayout.serialize(kFile);
+            m_tileCOLayout.serialize(tFile);
+        case 3:
+            m_kmerFlatLayout.serialize(kFile);
+            m_tileFlatLayout.serialize(tFile);
+        default:
+            kFile.write((char*)m_karray, sizeof(kmer_id_t)*m_kcount);
+            tFile.write((char*)m_tilearray, sizeof(kmer_id_t)*m_tilecount);
+            break;
+        }
+        kFile.close();
+        tFile.close();
+    }
 }
 
 ECData::~ECData(){

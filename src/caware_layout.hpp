@@ -5,6 +5,7 @@
 #include <iterator>
 #include <cassert>
 #include <stdint.h>
+#include <fstream>
 
 #include "io_util.h"
 #include "cao_util.h"
@@ -269,6 +270,11 @@ public:
                 min_bytes = tbytes;
         }
         avg_bytes = (avg_bytes * m)/mIds.size();
+    }
+
+    void serialize(std::ofstream& ofs){
+        ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
+        ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }
 };
 

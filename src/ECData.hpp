@@ -171,6 +171,7 @@ class ECData {
     void buildCacheObliviousLayout();
     void buildFlatLayout();
     void output(const std::string& filename);
+    void writeSpectrum();
 
     ECData(Para *p);
     virtual ~ECData();

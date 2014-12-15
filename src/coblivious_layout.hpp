@@ -2,6 +2,7 @@
 #define _COBLIVIOUS_LAYOUT_H_
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <iterator>
 #include <cassert>
 #include <algorithm>
@@ -163,6 +164,10 @@ public:
         return (getPosition(val) != mIds.end());
     }
 
+    void serialize(std::ofstream& ofs){
+        ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
+        ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
+    }
 };
 int test_oblivious();
 

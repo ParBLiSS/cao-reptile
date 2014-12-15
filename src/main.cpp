@@ -222,6 +222,7 @@ int parallelEC( char *inputFile){
 
 #endif
 
+    ecdata->writeSpectrum();
     delete params;
     delete ecdata;
     return 0;
