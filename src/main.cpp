@@ -33,6 +33,10 @@
 #include "Parser.h"
 #include <time.h>
 
+double elapsed(clock_t& end, clock_t& start){
+  return (double (end - start))/ ((double) CLOCKS_PER_SEC);
+}
+
 void run_reptile(ECData *ecdata,Para *params){
 
     // Run reptile
@@ -76,15 +80,15 @@ int parallelEC( char *inputFile){
     double read_sync_start, read_sync_stop,
         kmer_sync_start, kmer_sync_stop,
         ec_sync_start, ec_sync_stop;
-    time_t tstart_read_p, tstop_read_p,
+    clock_t tstart_read_p, tstop_read_p,
         tstart_kmer_p, tstop_kmer_p,
         tstart_ec_p, tstop_ec_p;
     // If we have to store the reads, we read and store the reads
-    time(&tstart_read_p);
+    tstart_read_p = clock();
     if(params->storeReads) {
         getReadsFromFile(ecdata);
     }
-    time(&tstop_read_p);
+    tstop_read_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     double tstop = MPI_Wtime();
 
@@ -98,12 +102,12 @@ int parallelEC( char *inputFile){
      MPI_Barrier(MPI_COMM_WORLD);
 
     tstart = MPI_Wtime();
-    time(&tstart_kmer_p);
+    tstart_kmer_p = clock();
     // counts the k-mers and loads them in the ECData object
     kmer_count(ecdata);
     // sort kmers and tiles
     kmer_sort(ecdata);
-    time(&tstop_kmer_p);
+    tstop_kmer_p = clock();
 
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
@@ -114,12 +118,12 @@ int parallelEC( char *inputFile){
                   << " (secs)" << std::endl;
     }
     tstart = MPI_Wtime();
-    time(&tstart_ec_p);
+    tstart_ec_p = clock();
     // Cache Optimized layout construction
     ecdata->buildCacheOptimizedLayout();
     // run reptile
     run_reptile(ecdata, params);
-    time(&tstop_ec_p);
+    tstop_ec_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
@@ -130,101 +134,126 @@ int parallelEC( char *inputFile){
         std::cout << "TOTAL TIME " << tstop-tstartInit
                   << " (secs)" << std::endl;
     }
+    std::stringstream olog;
+    olog << params->oErrName << "-stats.log";
+    std::ostream& ofs = std::cout;
     // Output for counting the number of failures and success
     //std::stringstream out;
     //out << params->oErrName << params->mpi_env->rank() ;
     //ecdata->output(out.str());
     int p = mpi_env->size();
     if(mpi_env->rank() == 0){
-        std::cout << "rank" << "\t" << "phase" << "\t"
+        std::stringstream oss;
+        oss << "rank" << "\t" << "phase" << "\t"
                   << "start" << "\t" << "stop" << "\t"
                   << "duration"
                   << std::endl;
-        std::cout << "0" << "\t" << "read global" << "\t"
+        oss << "0" << "\t" << "read global" << "\t"
                   << read_sync_start << "\t"
                   << read_sync_stop << "\t"
                   << read_sync_stop - read_sync_start
                   << std::endl;
-        std::cout << "0" << "\t" << "kmer global" << "\t"
+        oss << "0" << "\t" << "kmer global" << "\t"
                   << kmer_sync_start << "\t"
                   << kmer_sync_stop << "\t"
                   << kmer_sync_stop - kmer_sync_start
                   << std::endl;
-        std::cout << "0" << "\t" << "ec global" << "\t"
+        oss << "0" << "\t" << "ec global" << "\t"
                   << ec_sync_start << "\t"
                   << ec_sync_stop << "\t"
                   << ec_sync_stop - ec_sync_start
                   << std::endl;
+        ofs << oss.str();
+        ofs.flush();
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
-        if(i == mpi_env->rank()){
-            std::cout << i << "\t" << "read local" << "\t"
-                      << difftime(tstart_read_p, tstart_read_p) << "\t"
-                      << difftime(tstop_read_p, tstart_read_p) << "\t"
-                      << difftime(tstop_read_p, tstart_read_p)
-                      << std::endl;
-            std::cout << i << "\t" << "kmer local" << "\t"
-                      << difftime(tstart_kmer_p, tstart_read_p) << "\t"
-                      << difftime(tstop_kmer_p, tstart_read_p) << "\t"
-                      << difftime(tstop_kmer_p, tstart_kmer_p)
-                      << std::endl;
-            std::cout << i << "\t" << "ec local" << "\t"
-                      << difftime(tstart_kmer_p, tstart_read_p) << "\t"
-                      << difftime(tstop_kmer_p, tstart_read_p) << "\t"
-                      << difftime(tstop_kmer_p, tstart_kmer_p)
-                      << std::endl;
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
+      if(i == mpi_env->rank()){
+        std::stringstream oss;
+        oss << i << "\t" << "read local" << "\t"
+            << elapsed(tstart_read_p, tstart_read_p) << "\t"
+            << elapsed(tstop_read_p, tstart_read_p) << "\t"
+            << elapsed(tstop_read_p, tstart_read_p)
+            << std::endl;
+        oss << i << "\t" << "kmer local" << "\t"
+            << elapsed(tstart_kmer_p, tstart_read_p) << "\t"
+            << elapsed(tstop_kmer_p, tstart_read_p) << "\t"
+            << elapsed(tstop_kmer_p, tstart_kmer_p)
+            << std::endl;
+        oss << i << "\t" << "ec local" << "\t"
+            << elapsed(tstart_ec_p, tstart_read_p) << "\t"
+            << elapsed(tstop_ec_p, tstart_read_p) << "\t"
+            << elapsed(tstop_ec_p, tstart_ec_p)
+            << std::endl;
+        ofs << oss.str();
+        ofs.flush();
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
     }
 
 #ifdef QUERY_COUNTS
-    MPI_Barrier(MPI_COMM_WORLD);
     if(mpi_env->rank() == 0) {
-       std::cout << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
-                 << "query fails" << "\t" << "query success" << std::endl;
+      std::stringstream oss;
+      oss << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
+          << "query fails" << "\t" << "query success" << std::endl;
+      ofs << oss.str();
+      ofs.flush();
     }
     MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
-        if(i == mpi_env->rank()){
-            std::cout << i << "\t" << "kmer" << "\t" << ecdata->m_kmerQueries
-                      << "\t" << ecdata->m_kmerQueryFails << "\t"
-                      << (ecdata->m_kmerQueries) - (ecdata->m_kmerQueryFails)
-                      << std::endl;
-            std::cout << i << "\t" << "tile" <<  "\t" << ecdata->m_tileQueries
-                      << "\t" << ecdata->m_tileQueryFails << "\t"
-                      << (ecdata->m_tileQueries) - (ecdata->m_tileQueryFails)
-                      << std::endl;
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(mpi_env->rank() == 0) {
-        std::cout << "proc" << "\t" << "type" << "\t" ;
-        for(unsigned j = 0; j < MAX_LEVELS; j++)
-            std::cout << "L" << j << "\t" ;
-        std::cout <<  std::endl;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int i = 0; i < p; i++){
-        if(i == mpi_env->rank()){
-            std::cout << i << "\t" << "kmer";
-            for(unsigned j = 0; j < MAX_LEVELS; j++)
-                std::cout << "\t" << ecdata->m_kmerLevels[j];
-            std::cout << std::endl;
-            std::cout << i << "\t" << "tile";
-            for(unsigned j = 0; j < MAX_LEVELS; j++)
-                std::cout << "\t" << ecdata->m_tileLevels[j];
-            std::cout << std::endl;
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
+      if(i == mpi_env->rank()){
+        std::stringstream oss;
+        oss << i << "\t" << "kmer" << "\t" << ecdata->m_kmerQueries
+            << "\t" << ecdata->m_kmerQueryFails << "\t"
+            << (ecdata->m_kmerQueries) - (ecdata->m_kmerQueryFails)
+            << std::endl;
+        oss << i << "\t" << "tile" <<  "\t" << ecdata->m_tileQueries
+            << "\t" << ecdata->m_tileQueryFails << "\t"
+            << (ecdata->m_tileQueries) - (ecdata->m_tileQueryFails)
+            << std::endl;
+        ofs << oss.str();
+        ofs.flush();
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(mpi_env->rank() == 0) {
+        std::stringstream oss;
+        oss << "proc" << "\t" << "type" << "\t" ;
+        for(unsigned j = 0; j < MAX_LEVELS; j++)
+            oss << "L" << j << "\t" ;
+        oss <<  std::endl;
+        ofs << oss.str();
+        ofs.flush();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for(int i = 0; i < p; i++){
+      MPI_Barrier(MPI_COMM_WORLD);
+      if(i == mpi_env->rank()){
+        std::stringstream oss;
+        oss << i << "\t" << "kmer";
+        for(unsigned j = 0; j < MAX_LEVELS; j++)
+          oss << "\t" << ecdata->m_kmerLevels[j];
+        oss << std::endl;
+        oss << i << "\t" << "tile";
+        for(unsigned j = 0; j < MAX_LEVELS; j++)
+          oss << "\t" << ecdata->m_tileLevels[j];
+        oss << std::endl;
+        ofs << oss.str();
+        ofs.flush();
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
     ecdata->writeSpectrum();
     delete params;
     delete ecdata;
+    //ofs.close();
     return 0;
 }
 

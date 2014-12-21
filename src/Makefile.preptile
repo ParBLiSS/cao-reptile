@@ -1,4 +1,5 @@
 PROG=cao-preptile
+PROG_COUNTS=cao-preptile-counts
 MPICXX=mpicxx
 MPIEXT = ../mpiext
 
@@ -12,7 +13,7 @@ CFLAGS += -g -DDEBUG
 endif
 
 ifeq ($(MAKECMDGOALS),counts)
-CFLAGS += -g -DQUERY_COUNTS
+CFLAGS += -DQUERY_COUNTS
 endif
 
 all:$(SRCS) $(PROG)
@@ -23,10 +24,15 @@ $(PROG): $(OBJS)
 $(OBJS): %.o : %.cpp
 	$(MPICXX) $(CFLAGS) $<
 
+$(PROG_COUNTS): $(OBJS)
+	$(MPICXX) -o $@ $(OBJS) $(LDFLAGS)
 
 clean:
 	rm -rf $(PROG) $(OBJS)
 
+ccounts:
+	rm -rf $(PROG_COUNTS) $(OBJS)
+
 debug: all
 
-counts: all
+counts: ccounts $(SRCS) $(PROG_COUNTS)

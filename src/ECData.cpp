@@ -91,6 +91,7 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
 #ifdef QUERY_COUNTS
   int nlevels = 0;
 #endif
+
   while (lb <= ub) {
       mid = (lb + ub) / 2;
       if (m_karray[mid].ID == kmerID) {
