@@ -256,18 +256,18 @@ public:
             e0 = mIds[i];
             for(unsigned j = 1;  j < m; j++)
                 cline[j] = mIds[i + j] - mIds[i];
-                 d0 = cline[1];
+            d0 = cline[1];
             for(unsigned j = 2;  j < m; j++)
                 cline[j] = cline[j] - cline[1];
             tbytes += nbytes(e0);
             tbytes += nbytes(d0);
             for(unsigned j = 2;  j < m; j++)
                 tbytes += nbytes(cline[j]);
-            avg_bytes += tbytes;
             if(tbytes > max_bytes)
                 max_bytes = tbytes;
             if(tbytes < min_bytes)
                 min_bytes = tbytes;
+            avg_bytes += tbytes;
         }
         avg_bytes = (avg_bytes * m)/mIds.size();
     }

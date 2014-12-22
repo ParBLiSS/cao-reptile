@@ -362,9 +362,11 @@ void ECData::writeSpectrum(){
         case 2:
             m_kmerCOLayout.serialize(kFile);
             m_tileCOLayout.serialize(tFile);
+            break;
         case 3:
             m_kmerFlatLayout.serialize(kFile);
             m_tileFlatLayout.serialize(tFile);
+            break;
         default:
             kFile.write((char*)m_karray, sizeof(kmer_id_t)*m_kcount);
             tFile.write((char*)m_tilearray, sizeof(kmer_id_t)*m_tilecount);
@@ -485,18 +487,17 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
 
 void ECData::buildCacheObliviousLayout(){
     int rank = m_params->mpi_env->rank();
+
+    padKmerArray(1024);
     if(rank == 0)
        std::cout << "Build Kmer Cache Oblivious Layout : "
                  << m_kcount << std::endl;
-
-    padKmerArray(1024);
     m_kmerCOLayout.init(m_karray, m_kcount, 20);
 
+    padTileArray(1024);
     if(rank == 0)
        std::cout << "Build Tile Cache Oblivious Layout : "
                  << m_tilecount << std::endl;
-
-    padKmerArray(1024);
     m_tileCOLayout.init(m_tilearray, m_tilecount, 20);
 }
 
@@ -556,14 +557,21 @@ void ECData::estimateKmerByteCounters(){
     }
 
     for(int i = 1; i < m_kcount;i++){
+        std::stringstream out;
+        out << i << " " << m_karray[i].ID << " "; 
         for(int j = 0; j < 3; j++){
             kmer_id_t& last_ref = m_byte_kref[j].back();
             int n = count_bytes<kmer_id_t>(m_karray[i].ID - last_ref);
             if(n > j + 1){
                 m_byte_kref[j].push_back(m_karray[i].ID);
-            }
-            m_byte_kcount[j] += 1;
+            } else 
+                m_byte_kcount[j] += 1;
+            out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref) 
+                << " " << n << " "; 
         }
+
+        out << std::endl;
+        //std::cout << out.str();
     }
 }
 
@@ -586,18 +594,27 @@ void ECData::estimateTileByteCounters(){
 }
 
 void ECData::estimateByteCounters(){
+   if(m_params->cacheOptimizedSearch != 0)
+       return;
     estimateKmerByteCounters();
-    //estimateTileByteCounters();
 }
 
-void ECData::printByteCounters(){
+void ECData::printByteCounters(std::ostream& ots){
+   if(m_params->cacheOptimizedSearch != 0)
+       return;
 
-    std::cout << "type" << "\t" << "nbyte" << "\t"
-              << "nref" << "\t" << "ncount" << std::endl;
+    std::stringstream oss;
+    oss << "type" << "\t" << "nbyte" << "\t"
+        << "nref" << "\t" << "ncount" << std::endl;
+    ots << oss.str();
+    ots.flush();
 
     for(int j = 0; j < 3; j++){
-        std::cout << "kmer" << "\t" << (j+1) << "\t"
-                  << m_byte_kref[j].size() << "\t" << m_byte_kcount[j] << std::endl;
+        std::stringstream oss2;
+        oss2 << "kmer" << "\t" << (j+1) << "\t"
+              << m_byte_kref[j].size() << "\t" << m_byte_kcount[j] << std::endl;
+        ots << oss2.str();
+        ots.flush();
     }
 
     //for(int j = 0; j < 3; j++){
@@ -605,19 +622,25 @@ void ECData::printByteCounters(){
     //}
 }
 
-void ECData::runCAStats(){
+void ECData::runCAStats(std::ostream& ots){
+   if(m_params->cacheOptimizedSearch != 1)
+       return;
+
     double kavg, kmax, kmin;
     double tavg, tmax, tmin;
-    m_kmerCALayout.compression_stats(kavg, kmax, kmin);
-    m_tileCALayout.compression_stats(tavg, tmax, tmin);
+    m_kmerCALayout.compression_stats(kavg, kmin, kmax);
+    m_tileCALayout.compression_stats(tavg, tmin, tmax);
 
-    std::cout << "type" << "\t" << "avg" << "\t"
-              << "max" << "\t" << "min" << std::endl;
+    std::stringstream oss;
+    oss << "type" << "\t" << "avg" << "\t"
+        << "max" << "\t" << "min" << std::endl;
 
-    std::cout << "kmer" << "\t" << kavg << "\t"
-              << kmax << "\t" << kmin << std::endl;
+    oss << "kmer" << "\t" << kavg << "\t"
+        << kmax << "\t" << kmin << std::endl;
 
-    std::cout << "tile" << "\t" << tavg << "\t"
-              << tmax << "\t" << tmin << std::endl;
+    oss << "tile" << "\t" << tavg << "\t"
+        << tmax << "\t" << tmin << std::endl;
+    ots << oss.str();
+    ots.flush();
 
 }

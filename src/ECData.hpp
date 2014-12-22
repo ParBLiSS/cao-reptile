@@ -135,8 +135,8 @@ class ECData {
     void estimateKmerByteCounters();
     void estimateTileByteCounters();
     void estimateByteCounters();
-    void printByteCounters();
-    void runCAStats();
+    void printByteCounters(std::ostream& ots);
+    void runCAStats(std::ostream& ots);
 
   public:
     // I am only pointing to this parameter object. I don't own it!
