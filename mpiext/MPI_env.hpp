@@ -59,14 +59,14 @@ namespace empi {
        *  @param root is a rank of the coordinating processor 
        *  (it can be any valid rank in the communicator).
        */
-      void publish_names(int root = 0) {
+      void publish_names() {
 	  std::vector<int> ranks(size_);
 	  std::vector<std::string> names(size_);
 
-	  mpi_hostnames(root, rank_, size_, comm_, 
+	  mpi_hostnames(rank_, size_, comm_, 
 			ranks.begin(), names.begin());
 	  
-	  for (unsigned int i = 0; i < size_; ++i) {
+	  for (unsigned int i = 0; i < (unsigned)size_; ++i) {
 	      rank2name_.insert(is_pair(ranks[i], names[i]));
 	      name2rank_.insert(si_pair(names[i], ranks[i]));
 	  }

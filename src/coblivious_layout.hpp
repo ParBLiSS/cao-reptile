@@ -2,6 +2,7 @@
 #define _COBLIVIOUS_LAYOUT_H_
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <iterator>
 #include <cassert>
 #include <algorithm>
@@ -19,13 +20,20 @@ template <typename RandomInputItr,
 class ECDataCOLayout{
 
     void log2_steps(size_type n, std::vector<IdType>& steps,
-                    size_type limit = 10){
+                    size_type limit){
         size_type mn = floor_log2(n);
-        while(mn > limit){
-            if((1 << mn) & n)
+        // std::cout << limit << "\t" << mn << "\t";
+        while(mn > 2){
+            if((1 << mn) & n){
                 steps.push_back(mn);
-            mn = mn - 1;
+                limit -= 1;
+            }
+            mn -= 1;
+            // std::cout << mn << "\t";
+            if(limit == 0)
+                break;
         }
+        // std::cout << std::endl;
     }
 
     void init_layout(RandomInputItr inItrBegin, size_type nTotal){
@@ -52,22 +60,29 @@ class ECDataCOLayout{
             mCounts[i] = (inItrBegin + i)->count;
         }
     }
+    void init_steps(RandomInputItr inItrBegin){
+        // asssumes that treesteps are initialized
+        assert(treeSteps.size() > 0);
+        stepIds.resize(treeSteps.size());
+        stepPrefixes.resize(treeSteps.size());
+        stepPrefixes[0] = (1 << treeSteps[0]) - 1;
+        stepIds[0] = (inItrBegin + stepPrefixes[0])->ID;
+
+        // init step mIds
+        for(size_t i = 1u; i < treeSteps.size();i++) {
+            stepPrefixes[i] = stepPrefixes[i - 1] + (1 << treeSteps[i]) - 1;
+            stepIds[i] = (inItrBegin + stepPrefixes[i])->ID;
+        }
+    }
 
     void init_steps(RandomInputItr inItrBegin, size_type nTotal,
                     size_type limit){
         stTotal = 0;
         // init steps
         log2_steps(nTotal, treeSteps, limit);
+        //
         if(treeSteps.size() > 0) {
-            stepIds.resize(treeSteps.size());
-            stepPrefixes.resize(treeSteps.size());
-            stepPrefixes[0] = (1 << treeSteps[0]) - 1;
-            stepIds[0] = (inItrBegin + stepPrefixes[0])->ID;
-        }
-        // init step mIds
-        for(size_t i = 1u; i < treeSteps.size();i++) {
-            stepPrefixes[i] = stepPrefixes[i - 1] + (1 << treeSteps[i]) - 1;
-            stepIds[i] = (inItrBegin + stepPrefixes[i])->ID;
+            init_steps(inItrBegin);
         }
     }
 
@@ -149,6 +164,10 @@ public:
         return (getPosition(val) != mIds.end());
     }
 
+    void serialize(std::ofstream& ofs){
+        ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
+        ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
+    }
 };
 int test_oblivious();
 

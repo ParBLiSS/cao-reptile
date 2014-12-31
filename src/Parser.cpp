@@ -223,7 +223,7 @@ void candidates(ivec_t& candies, const kcvec_t& tiles, int threshold) {
     }
 }
 
-void diff(evec_t& errs, uint64_t from, uint64_t to, char* qAddr, int len) {
+void diff(evec_t& errs, uint64_t from, uint64_t to, const char* qAddr, int len) {
     uint64_t tmp = from ^ to;
     int idx = 0;
     while (tmp) {
@@ -242,7 +242,7 @@ void diff(evec_t& errs, uint64_t from, uint64_t to, char* qAddr, int len) {
     }
 }
 
-bool goodQuals(char* qAddr, int len, int threshold) {
+bool goodQuals(const char* qAddr, int len, int threshold) {
     for (int i = 0; i < len; ++i) {
         if (qAddr[i] < threshold)
             return false;
@@ -250,6 +250,76 @@ bool goodQuals(char* qAddr, int len, int threshold) {
     return true;
 }
 
+bool Parser::correctTile(const kcvec_t& tiles, const char* qAddr, const Para& myPara) {
+    /*
+     * Error Calling Current Tile
+     * tiles.size() may equal to 0 due to error correction
+     */
+    if (tiles.size() == 0){
+        return false;
+    }
+
+    if (tiles[0].goodCnt >= myPara.tGoodTile) {
+        return true;
+    }
+
+    if (tiles.size() == 1) { // try to correct
+        if (tiles[0].goodCnt >= myPara.tCard &&
+            goodQuals(qAddr, myPara.K + myPara.step, myPara.Qlb)) {
+            return true;
+        }
+    } else {
+        ivec_t candies; // indices of tiles
+        candidates(candies, tiles, myPara.tCard);
+
+        if (tiles[0].goodCnt >= myPara.tCard) {
+            /*
+             * ec only if non-ambig correction of low qual bases
+             * could be identified and correcting to one of the
+             * high cardinality neighbors
+             */
+            int tGoodCnt = tiles[0].goodCnt / myPara.tRatio;
+
+            ivec_t highCardNbs;
+            for (unsigned i = 0; i < candies.size(); ++i) {
+                if (tiles[candies[i]].goodCnt >= tGoodCnt)
+                    highCardNbs.push_back(candies[i]);
+            }
+            int alterNum = 0;
+            for (unsigned i = 0; i < highCardNbs.size(); ++i) {
+                /*
+                 * check all candidates, if ambig, then do not ec
+                 */
+                evec_t errs;
+                diff(errs, tiles[highCardNbs[i]].ID, tiles[0].ID,
+                     qAddr, myPara.step + myPara.K);
+                for (unsigned j = 0; j < errs.size(); ++j) {
+                    if (errs[j].qual < myPara.Qlb) {
+                        readErr_ = errs;
+                        alterNum++;
+                        break;
+                    }
+                }
+            }
+            if (alterNum > 1) { // ambig
+                readErr_.clear();
+            } else
+                return true;
+        } else {
+            /*
+             * ec only if non-ambig correction to one of [candies]
+             * could be identified
+             */
+            if (candies.size() == 1) {
+                diff(readErr_, tiles[candies[0]].ID, tiles[0].ID,
+                     qAddr, myPara.step + myPara.K);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 bool Parser::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
         const ipair_t& hdUb, char* qAddr, const Para& myPara) {
@@ -286,70 +356,9 @@ bool Parser::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
         mergeTiles(tiles, rvTiles, myPara);
   //      print_kcvec("After Merging", tiles, myPara.K + myPara.step);
 
-        /*
-         * Error Calling Current Tile
-         * tiles.size() may equal to 0 due to error correction
-         */
-        if (tiles.size() > 0) {
-            if (tiles[0].goodCnt >= myPara.tGoodTile) {
-                return true;
-            }
-            else {
-                if (tiles.size() == 1) { // try to correct
-                    if (tiles[0].goodCnt >= myPara.tCard &&
-                        goodQuals(qAddr, myPara.K + myPara.step, myPara.Qlb)) {
-                        return true;
-                    }
-                } else {
-                    ivec_t candies; // indices of tiles
-                    candidates(candies, tiles, myPara.tCard);
+        if(correctTile(tiles, qAddr, myPara))
+            return true;
 
-                    if (tiles[0].goodCnt >= myPara.tCard) {
-                        /*
-                         * ec only if non-ambig correction of low qual bases
-                         * could be identified and correcting to one of the
-                         * high cardinality neighbors
-                         */
-                        int tGoodCnt = tiles[0].goodCnt / myPara.tRatio;
-
-                        ivec_t highCardNbs;
-                        for (unsigned i = 0; i < candies.size(); ++i) {
-                            if (tiles[candies[i]].goodCnt >= tGoodCnt)
-                                highCardNbs.push_back(candies[i]);
-                        }
-                        int alterNum = 0;
-                        for (unsigned i = 0; i < highCardNbs.size(); ++i) {
-                            /*
-                             * check all candidates, if ambig, then do not ec
-                             */
-                            evec_t errs;
-                            diff(errs, tiles[highCardNbs[i]].ID, tiles[0].ID,
-                                    qAddr, myPara.step + myPara.K);
-                            for (unsigned j = 0; j < errs.size(); ++j) {
-                                if (errs[j].qual < myPara.Qlb) {
-                                    readErr_ = errs;
-                                    alterNum++;
-                                    break;
-                                }
-                            }
-                        }
-                        if (alterNum > 1) { // ambig
-                            readErr_.clear();
-                        } else return true;
-                    } else {
-                        /*
-                         * ec only if non-ambig correction to one of [candies]
-                         * could be identified
-                         */
-                        if (candies.size() == 1) {
-                            diff(readErr_, tiles[candies[0]].ID, tiles[0].ID,
-                                    qAddr, myPara.step + myPara.K);
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
         /*
          * increase Hamming Distance to search for more neighbors
          */

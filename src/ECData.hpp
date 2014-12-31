@@ -79,7 +79,7 @@ typedef KeyIDComp<kmer_id_t> KmerIDComp;
 typedef std::vector<kmer_id_t> kmer_id_vector;
 typedef std::vector<tile_id_t> tile_id_vector;
 typedef std::vector<unsigned char> kcount_vector;
-
+#define MAX_LEVELS 64
 class ECData {
   private:
     void registerKmerTypes();
@@ -112,6 +112,9 @@ class ECData {
     uint64_t m_kmerQueryFails;
     uint64_t m_tileQueries;
     uint64_t m_tileQueryFails;
+    unsigned m_kmerLevels[MAX_LEVELS];
+    unsigned m_tileLevels[MAX_LEVELS];
+
 
     // Store Reads if reqd.
     cvec_t m_ReadsString;
@@ -121,6 +124,19 @@ class ECData {
 
     int currentKmerBatchStart;
     int currentTileBatchStart;
+
+    std::vector<kmer_id_t> m_byte_kref[3];
+    unsigned m_byte_kcount[3];
+    std::vector<tile_id_t> m_byte_tref[3];
+    unsigned m_byte_tcount[3];
+
+    void padKmerArray(unsigned kSize);
+    void padTileArray(unsigned kSize);
+    void estimateKmerByteCounters();
+    void estimateTileByteCounters();
+    void estimateByteCounters();
+    void printByteCounters(std::ostream& ots);
+    void runCAStats(std::ostream& ots);
 
   public:
     // I am only pointing to this parameter object. I don't own it!
@@ -155,6 +171,7 @@ class ECData {
     void buildCacheObliviousLayout();
     void buildFlatLayout();
     void output(const std::string& filename);
+    void writeSpectrum();
 
     ECData(Para *p);
     virtual ~ECData();

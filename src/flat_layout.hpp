@@ -3,6 +3,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <fstream>
 #include "cao_util.h"
 
 template <typename RandomIterator,
@@ -65,6 +66,12 @@ public:
             return -1;
       }
     }
+
+    void serialize(std::ofstream& ofs){
+        ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
+        ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
+    }
+
 };
 
 #endif //

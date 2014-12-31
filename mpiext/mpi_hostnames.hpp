@@ -31,7 +31,7 @@ namespace empi {
    *  should be written.
    */
   template <typename IterR, typename IterN>
-  inline void mpi_hostnames(int root, int rank, int size, MPI_Comm comm, 
+  inline void mpi_hostnames(int rank, int size, MPI_Comm comm, 
 			    IterR outR, IterN outN) {
       // get my name
       int len;

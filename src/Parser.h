@@ -77,6 +77,7 @@ private:
     void readEC(char* addr, char* qAddr, const Para& myPara);
     bool errorCall(const upair_t& mosaic, const ipair_t& dPoints,
                 const ipair_t& hdUb, char* qAddr, const Para& myPara);
+    bool correctTile(const kcvec_t& tiles, const char* qAddr, const Para& myPara);
 
     // Chunk divisonal logic taken from Reptile
     void tableMaker();

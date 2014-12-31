@@ -90,6 +90,10 @@ public:
     int cacheOptimizedSearch;
     int writeOutput;
 
+    int writeSpectrum;
+    std::string kmerSpectrumOutFile;
+    std::string tileSpectrumOutFile;
+
     Para(const char *configFile) {
         setPara(configFile);
         load_parallel_params();
