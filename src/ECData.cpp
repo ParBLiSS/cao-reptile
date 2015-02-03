@@ -562,10 +562,11 @@ void ECData::estimateKmerByteCounters(){
         for(int j = 0; j < 3; j++){
             kmer_id_t& last_ref = m_byte_kref[j].back();
             int n = count_bytes<kmer_id_t>(m_karray[i].ID - last_ref);
-            if(n > j + 1){
+            if(n > j + 1) {
                 m_byte_kref[j].push_back(m_karray[i].ID);
-            } else 
+            } else {
                 m_byte_kcount[j] += 1;
+            }
             out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref) 
                 << " " << n << " "; 
         }
@@ -576,19 +577,20 @@ void ECData::estimateKmerByteCounters(){
 }
 
 void ECData::estimateTileByteCounters(){
-    for(int j = 0; j < 3; j++) {
+    for(int j = 0; j < 7; j++) {
         m_byte_tref[j].push_back(m_tilearray[0].ID);
         m_byte_tcount[j] = 0;
     }
 
     for(int i = 1; i < m_tilecount;i++){
-        for(int j = 0; j < 3; j++){
+        for(int j = 0; j < 7; j++){
             tile_id_t& last_ref = m_byte_tref[j].back();
             int n = count_bytes<tile_id_t>(m_tilearray[i].ID - last_ref);
-            if(n > j + 1){
+            if(n > j + 1) {
                 m_byte_tref[j].push_back(m_tilearray[i].ID);
+            } else {
+              m_byte_tcount[j] += 1;
             }
-            m_byte_tcount[j] += 1;
         }
     }
 }
@@ -612,14 +614,20 @@ void ECData::printByteCounters(std::ostream& ots){
     for(int j = 0; j < 3; j++){
         std::stringstream oss2;
         oss2 << "kmer" << "\t" << (j+1) << "\t"
-              << m_byte_kref[j].size() << "\t" << m_byte_kcount[j] << std::endl;
+             << m_byte_kref[j].size() << "\t" 
+             << m_byte_kcount[j] << std::endl;
         ots << oss2.str();
         ots.flush();
     }
 
-    //for(int j = 0; j < 3; j++){
-    //std::cout << "tile" << "\t" << (j+1) << "\t"
-    //}
+    for(int j = 0; j < 7; j++){
+        std::stringstream oss2;
+        oss2 << "tile" << "\t" << (j+1) << "\t"
+              << m_byte_tref[j].size() << "\t" 
+             << m_byte_tcount[j] << std::endl;
+        ots << oss2.str();
+        ots.flush();
+    }
 }
 
 void ECData::runCAStats(std::ostream& ots){

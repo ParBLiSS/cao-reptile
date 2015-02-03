@@ -127,8 +127,8 @@ class ECData {
 
     std::vector<kmer_id_t> m_byte_kref[3];
     unsigned m_byte_kcount[3];
-    std::vector<tile_id_t> m_byte_tref[3];
-    unsigned m_byte_tcount[3];
+    std::vector<tile_id_t> m_byte_tref[7];
+    unsigned m_byte_tcount[7];
 
     void padKmerArray(unsigned kSize);
     void padTileArray(unsigned kSize);
