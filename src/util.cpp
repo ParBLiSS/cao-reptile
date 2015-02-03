@@ -55,7 +55,7 @@ void Para::setPara(const char *configFile) {
                 buf >> tileCacheSize;
             else if (s1 == "WriteOutput")
                 buf >> writeOutput;
-            else if (s1 == "KmerSpectrumOutFile")
+            else if (s1 == "WriteSpectrum")
                 buf >> writeSpectrum;
             else if (s1 == "KmerSpectrumOutFile")
                 buf >> kmerSpectrumOutFile;
