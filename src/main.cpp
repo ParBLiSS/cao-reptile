@@ -66,6 +66,7 @@ int parallelEC( char *inputFile){
     Para *params = new Para(inputFile);
     empi::MPI_env *mpi_env = params->mpi_env;
 
+    std::ostream& ofs = std::cout;
     // Validations on the parameters given in config file
     if(params->validate() == false) {
         if(mpi_env->rank() == 0)
@@ -112,10 +113,13 @@ int parallelEC( char *inputFile){
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
+        std::stringstream oss;
         kmer_sync_start = tstart;
         kmer_sync_stop = tstop;
-        std::cout << "K-Spectrum COnstruction Time " << tstop-tstart
+        oss << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
                   << " (secs)" << std::endl;
+        ofs << oss.str();
+        ofs.flush();
     }
     tstart = MPI_Wtime();
     tstart_ec_p = clock();
@@ -127,16 +131,18 @@ int parallelEC( char *inputFile){
     MPI_Barrier(MPI_COMM_WORLD);
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
+        std::stringstream oss;
         ec_sync_start = tstart;
         ec_sync_stop = tstop;
-        std::cout << "ERR CORRECTION TIME " << tstop-tstart
+        oss << "ERR CORRECTION TIME " << tstop-tstart
                   << " (secs)" << std::endl;
-        std::cout << "TOTAL TIME " << tstop-tstartInit
+        oss << "TOTAL TIME " << tstop-tstartInit
                   << " (secs)" << std::endl;
+        ofs << oss.str();
+        ofs.flush();
     }
     std::stringstream olog;
     olog << params->oErrName << "-stats.log";
-    std::ostream& ofs = std::cout;
     // Output for counting the number of failures and success
     //std::stringstream out;
     //out << params->oErrName << params->mpi_env->rank() ;

@@ -438,7 +438,9 @@ void ECData::padKmerArray(unsigned kSize){
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
         if(m_params->mpi_env->rank() == 0) {
-            std::cout << "Padding kmer array : " << fillIn << std::endl;
+            std::stringstream out;
+            out << "Padding kmer array : " << fillIn << std::endl;
+            std::cout << out.str();
         }
         kmer_t lastKmer = m_karray[m_kcount - 1];
         for(unsigned i = 0; i < fillIn; i++){
@@ -452,7 +454,9 @@ void ECData::padTileArray(unsigned kSize){
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
         if(m_params->mpi_env->rank() == 0) {
-            std::cout << "Padding tile array : " << fillIn << std::endl;
+            std::stringstream out;
+            out << "Padding tile array : " << fillIn << std::endl;
+            std::cout << out.str();
         }
         tile_t lastTile = m_tilearray[m_tilecount - 1];
         for(unsigned i = 0; i < fillIn; i++){
@@ -465,8 +469,10 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
     int rank = m_params->mpi_env->rank();
     if(rank == 0) {
-       std::cout << "Build Kmer Cache Aware Layout : " << m_kcount
+       std::stringstream out;
+       out << "Build Kmer Cache Aware Layout : " << m_kcount
                  << " Kmer Cache : " << kmerCacheSize << std::endl;
+       std::cout << out.str();
     }
 
     padKmerArray(kmerCacheSize);
@@ -475,8 +481,10 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     free(m_karray); m_karray = 0; m_kcount = 0;
 
     if(rank == 0){
-       std::cout << "Build Tile Cache Aware Layout : " << m_tilecount
+       std::stringstream out;
+       out << "Build Tile Cache Aware Layout : " << m_tilecount
                  << " Tile Cache : " << tileCacheSize << std::endl;
+       std::cout << out.str();
     }
 
     padTileArray(tileCacheSize);
@@ -489,30 +497,42 @@ void ECData::buildCacheObliviousLayout(){
     int rank = m_params->mpi_env->rank();
 
     padKmerArray(1024);
-    if(rank == 0)
-       std::cout << "Build Kmer Cache Oblivious Layout : "
+    if(rank == 0){
+       std::stringstream out;
+       out << "Build Kmer Cache Oblivious Layout : "
                  << m_kcount << std::endl;
+       std::cout << out.str();
+    }
     m_kmerCOLayout.init(m_karray, m_kcount, 20);
 
     padTileArray(1024);
-    if(rank == 0)
-       std::cout << "Build Tile Cache Oblivious Layout : "
+    if(rank == 0) {
+       std::stringstream out;
+       out << "Build Tile Cache Oblivious Layout : "
                  << m_tilecount << std::endl;
+       std::cout << out.str();
+    }
     m_tileCOLayout.init(m_tilearray, m_tilecount, 20);
 }
 
 void ECData::buildFlatLayout(){
     int rank = m_params->mpi_env->rank();
-    if(rank == 0)
-       std::cout << "Build Kmer Flat Layout : "
+    if(rank == 0) {
+       std::stringstream out;
+       out << "Build Kmer Flat Layout : "
                  << m_kcount << std::endl;
+       std::cout << out.str();
+    }
     m_kmerFlatLayout.init(m_karray, m_kcount);
     free(m_karray);
     m_karray = 0;
     m_kcount = 0;
-    if(rank == 0)
-       std::cout << "Build Tile Flat Layout : "
+    if(rank == 0){
+       std::stringstream out;
+       out << "Build Tile Flat Layout : "
                  << m_tilecount << std::endl;
+       std::cout << out.str();
+    }
     m_tileFlatLayout.init(m_tilearray, m_tilecount);
     free(m_tilearray);
     m_tilearray = 0;

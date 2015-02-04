@@ -94,14 +94,15 @@ bool Para::validate() {
     }
 
     if(mpi_env->rank() == 0) {
-        std::cout << "Input Parameters:\n----------------------------------\n";
-        std::cout << "Short Reads file: " << iFaName << "\n";
+        std::stringstream oss;
+        oss << "Input Parameters:\n----------------------------------\n";
+        oss << "Short Reads file: " << iFaName << "\n";
         if (QFlag){
-            std::cout << "I/QualFile = " << iQName << "\n"
+            oss << "I/QualFile = " << iQName << "\n"
                       << "Qthreshold = " << qualThreshold << "\n";
         }
-        std::cout << "O/ErrFile = " << oErrName << "\n";
-        std::cout << "(K, step, tile) = " << "(" << K << "," << step << ","
+        oss << "O/ErrFile = " << oErrName << "\n";
+        oss << "(K, step, tile) = " << "(" << K << "," << step << ","
                   << K + step << ")\n"
                   << "BatchSize = " << batchSize << "\n"
                   << "Max Hamming Distance Allowed = " << hdMax << "\n"
@@ -117,6 +118,7 @@ bool Para::validate() {
                   << "Kmer Cache = " << kmerCacheSize << "\n"
                   << "Tile Cache = " << tileCacheSize << "\n"
                   << "----------------------------------\n";
+       std::cout << oss.str();
     }
     return true;
 }
@@ -200,67 +202,3 @@ void Para::compute_offsets(){
 #endif
 }
 
-/*
-void Para::compute_readcount(){
-        int rank = mpi_env->rank(),
-            size = mpi_env->size();
-
-        // TODO: Should do this more elegantly
-        if(rank == 0){
-            std::stringstream out;
-            std::string tmpfile = "./nolines";
-            // generate at tem file
-            out << "wc -l " << this->iFaName
-                << " | cut -d' ' -f1 > " << tmpfile;
-            system(out.str().c_str());
-            std::ifstream fin(tmpfile.c_str());
-            std::string line;
-            std::istringstream buf;
-
-            std::getline(fin,line);
-            buf.clear(); buf.str(line);
-            buf >> readCount;
-            assert(readCount > (size-1));
-    #ifdef DEBUG
-            std::cout << "NO OF LINES IS " << readCount << std::endl;
-    #endif
-            readCount /= 2;
-            fin.close();
-        }
-        MPI_Bcast (&readCount, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-    }
-
-void Para::compute_parallelio_params(int fileRecordLength,
-                       long& perprocessor,long& startfrom,
-                       long &offset, long& inLastBatch) {
-        int rank = mpi_env->rank(),
-            size = mpi_env->size();
-        unsigned long n = readCount;
-
-        perprocessor = n/size;
-        short temp = n%size;
-        startfrom = rank * perprocessor;
-
-        if(rank < temp){
-            startfrom += rank;
-            perprocessor += 1;
-        }
-        else
-            startfrom += temp;
-        if(perprocessor % batchSize == 0)
-            inLastBatch  = batchSize;
-        else
-            inLastBatch = perprocessor % batchSize;
-
-        offset = (4+fileRecordLength) * startfrom + 3;
-        long added = 9;
-        temp = startfrom - added;
-
-        while(temp > 0 ){
-            offset += temp;
-            added *= 10;
-            temp -= added;
-        }
-    }
-
-*/
