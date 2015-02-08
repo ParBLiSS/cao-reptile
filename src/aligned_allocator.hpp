@@ -1,6 +1,8 @@
 #ifndef ALIGNED_ALLOCATOR_H
 #define ALIGNED_ALLOCATOR_H
 #include <stdlib.h>
+#include <stdexcept>
+#include <cstddef>
 // Mainly from
 // https://gist.githubusercontent.com/donny-dont/1471329/raw/8f063f5f4326d301b14fe6b781495be54ca48941/aligned_allocator.cpp
 // and
