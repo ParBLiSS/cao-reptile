@@ -23,7 +23,7 @@
  */
 
 #ifndef _LOAD_BALANCE_H
-#define _LOAL_BALANCE_H
+#define _LOAD_BALANCE_H
 
 #include <mpi.h>
 #include <cstdlib>
@@ -44,7 +44,7 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
     }
     int *pcount = new int[size](); // how much each processor has
 
-    MPI_Allgather(&kcount, 1 , MPI_INT, 
+    MPI_Allgather(&kcount, 1 , MPI_INT,
                   pcount, 1 , MPI_INT, MPI_COMM_WORLD);
 
     // Count the total number of elements
@@ -86,14 +86,14 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
 #ifdef DEBUG
     std::stringstream out1;
     out1 << "PROC " << rank << " COUNT : " << pcount[rank]
-         << " : UNDER COUNT : " << under[rank] 
+         << " : UNDER COUNT : " << under[rank]
          << " : OVER COUNT : " << over[rank] << std::endl;
     std::cout << out1.str();
 #endif
 
     underhood[0] = under[0];
     overhood[0] = over[0];
-        
+
     for( i =1; i<size; i++){
         underhood[i] = underhood[i -1] + under[i];
         overhood[i] = overhood[i -1] + over[i];
@@ -131,7 +131,7 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
                             }
                         } // close of if rank < i
                         else{
-                            if(tmp + overhood[i] -j + kcount <= elements_bloc[rank]){   
+                            if(tmp + overhood[i] -j + kcount <= elements_bloc[rank]){
                                 recvcts[i] = overhood[i] - j;
                                 recvdisp[i]=tmp;
                                 tmp += recvcts[i];
@@ -141,8 +141,8 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
                                 recvcts[i] = under[rank] - tmp;
                                 recvdisp[i] = tmp;
                                 tmp = elements_bloc[rank] - kcount;
-                                j = overhood[i]; // need to check - ok . does not matter here as well 
-                            } 
+                                j = overhood[i]; // need to check - ok . does not matter here as well
+                            }
                         }  // close of else of if rank <i
                     }// close of if tmp < elements_bloc[rank]
                     else{
@@ -190,7 +190,7 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
                             }
                         } // close of if rank < i
                         else{
-                            if(tmp + underhood[i] -j + elements_bloc[rank] <= kcount){   
+                            if(tmp + underhood[i] -j + elements_bloc[rank] <= kcount){
                                 sendcts[i] = underhood[i] - j;
                                 senddisp[i]=tmp;
                                 tmp += sendcts[i];
@@ -200,8 +200,8 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
                                 sendcts[i] = over[rank] - tmp;
                                 senddisp[i] = tmp;
                                 tmp = over[rank];
-                                j = underhood[size -1]; // need to check - ok . does not matter here as well 
-                            } 
+                                j = underhood[size -1]; // need to check - ok . does not matter here as well
+                            }
                         }  // close of else of if rank <i
                     }// close of if tmp < elements_bloc[rank]
                     else{
@@ -216,17 +216,17 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
             } //close of i != rank
 
         } //close of for loop
-            
+
     }  // close of under[rank]  =  0
 
 #ifdef DEBUG
-    // just printing to test                        
+    // just printing to test
     for(i = 0 ; i< size; i++){
         std::stringstream sout;
         if(rank == i){
-            sout << "PROC : " << rank << std::endl 
+            sout << "PROC : " << rank << std::endl
                  << "SNDCTS\tSNDDISP\tRCVCTS\tRCVDISP (BY COL)" << std::endl;
-            for(j =0; j< size; j++) 
+            for(j =0; j< size; j++)
                 sout << sendcts[j] << "\t"
                      << senddisp[j] << "\t"
                      << recvcts[j] << "\t"
@@ -256,7 +256,7 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
         //MPI_Barrier(MPI_COMM_WORLD);
     }
 #endif
-    free(karray); 
+    free(karray);
     karray = newarray; ksize = kcount = elements_bloc[rank];
 
     delete[] recvcts;
@@ -282,7 +282,7 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
     }
     int *pcount = new int[size](); // how much each processor has
 
-    MPI_Allgather(&kcount, 1 , MPI_INT, 
+    MPI_Allgather(&kcount, 1 , MPI_INT,
                   pcount, 1 , MPI_INT, MPI_COMM_WORLD);
 
     bool lBalanceReqd = false;
@@ -294,8 +294,11 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
     }
     if(!lBalanceReqd) {
         if (rank == 0) {
-            std::cout << "No load balancing required " << std::endl;
+            std::cout << "load balancing\tNo" << std::endl;
+        } else {
+            std::cout << "load balancing\tYes " << std::endl;
         }
+        std::cout.flush();
         return;
     }
     // Count the total number of elements
@@ -381,7 +384,7 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
             recvdisp[cursndrank] = my_rcvd_offset;
             my_rcvd_offset += xfernow;
         }
-        // Xfer set-up done, now update snd,rcv pts and 
+        // Xfer set-up done, now update snd,rcv pts and
         //  reset sent,recvd if necessary
         sent += xfernow;
         recvd += xfernow;
@@ -395,13 +398,13 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
         }
     }
 #ifdef DEBUG
-    // just printing to test           
+    // just printing to test
     for(i = 0 ; i< size; i++){
         std::stringstream sout;
         if(rank == i){
-            sout << "PROCX : " << rank << std::endl 
+            sout << "PROCX : " << rank << std::endl
                  << "SNDCTS\tSNDDISP\tRCVCTS\tRCVDISP (BY COLX)" << std::endl;
-            for(j =0; j< size; j++) 
+            for(j =0; j< size; j++)
                 sout << sendcts[j] << "\t"
                      << senddisp[j] << "\t"
                      << recvcts[j] << "\t"
@@ -420,7 +423,7 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
     MPI_Alltoallv(karray,sendcts,senddisp,mpi_struct_type,
                   newarray,recvcts,recvdisp,mpi_struct_type,
                   MPI_COMM_WORLD);
-    free(karray); 
+    free(karray);
     karray = newarray; ksize = kcount = elements_bloc[rank];
 
     delete[] recvcts;

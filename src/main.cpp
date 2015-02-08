@@ -96,8 +96,8 @@ int parallelEC( char *inputFile){
     if (mpi_env->rank() == 0) {
         read_sync_start = tstart;
         read_sync_stop = tstop;
-        std::cout << "READING FILE " << tstop-tstart
-                  << " (secs)" << std::endl;
+        //std::cout << "READING FILE " << tstop-tstart
+        //          << " (secs)" << std::endl;
     }
 
      MPI_Barrier(MPI_COMM_WORLD);
@@ -114,10 +114,14 @@ int parallelEC( char *inputFile){
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
         std::stringstream oss;
+        oss << "kmer count\t" << ecdata->m_kcount << std::endl;
+        oss << "tile count\t" << ecdata->m_tilecount << std::endl;
+        std::cout << oss.str();
+        std::cout.flush();
         kmer_sync_start = tstart;
         kmer_sync_stop = tstop;
         oss << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
-                  << " (secs)" << std::endl;
+        //          << " (secs)" << std::endl;
         ofs << oss.str();
         ofs.flush();
     }
@@ -135,7 +139,7 @@ int parallelEC( char *inputFile){
         ec_sync_start = tstart;
         ec_sync_stop = tstop;
         oss << "ERR CORRECTION TIME " << tstop-tstart
-                  << " (secs)" << std::endl;
+                   << " (secs)" << std::endl;
         oss << "TOTAL TIME " << tstop-tstartInit
                   << " (secs)" << std::endl;
         ofs << oss.str();
@@ -150,25 +154,33 @@ int parallelEC( char *inputFile){
     int p = mpi_env->size();
     if(mpi_env->rank() == 0){
         std::stringstream oss;
-        oss << "rank" << "\t" << "phase" << "\t"
-                  << "start" << "\t" << "stop" << "\t"
-                  << "duration"
-                  << std::endl;
-        oss << "0" << "\t" << "read global" << "\t"
+        oss << "--" << std::endl
+            << "nproc" << "\t" << "phase" << "\t"
+            << "start" << "\t" << "stop" << "\t"
+            << "duration" << std::endl;
+        oss << p << "\t" << "read global" << "\t"
                   << read_sync_start << "\t"
                   << read_sync_stop << "\t"
                   << read_sync_stop - read_sync_start
                   << std::endl;
-        oss << "0" << "\t" << "kmer global" << "\t"
+        oss << p << "\t" << "kmer global" << "\t"
                   << kmer_sync_start << "\t"
                   << kmer_sync_stop << "\t"
                   << kmer_sync_stop - kmer_sync_start
                   << std::endl;
-        oss << "0" << "\t" << "ec global" << "\t"
+        oss << p << "\t" << "ec global" << "\t"
                   << ec_sync_start << "\t"
                   << ec_sync_stop << "\t"
                   << ec_sync_stop - ec_sync_start
                   << std::endl;
+        oss << p << "\t" << "final global" << "\t"
+            << tstartInit << "\t" << tstop << "\t"
+            << (tstop - tstartInit) << std::endl;
+        oss << "--" << std::endl;
+        oss << "rank" << "\t" << "phase" << "\t"
+            << "start" << "\t" << "stop" << "\t"
+            << "duration"
+            << std::endl;
         ofs << oss.str();
         ofs.flush();
     }
@@ -200,6 +212,7 @@ int parallelEC( char *inputFile){
 #ifdef QUERY_COUNTS
     if(mpi_env->rank() == 0) {
       std::stringstream oss;
+      oss << "--" << std::endl;
       oss << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
           << "query fails" << "\t" << "query success" << std::endl;
       ofs << oss.str();

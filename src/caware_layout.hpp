@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <fstream>
 
+#include "aligned_allocator.hpp"
 #include "io_util.h"
 #include "cao_util.h"
 #include "implicit_heap_search_c.h"
@@ -104,13 +105,13 @@ class CacheAwareLayoutHelper{
 
 
 template <typename RandomIterator,
-          typename IdType,
-          typename CountType>
+          typename IdIterator,
+          typename CountIterator>
 void caware_layout(RandomIterator srt_begin,
-            RandomIterator srt_end,
-            const size_type& m,
-            std::vector<IdType>& id_tree,
-            std::vector<CountType>& count_tree){
+                   RandomIterator srt_end,
+                   const size_type& m,
+                   IdIterator id_tree,
+                   CountIterator count_tree){
 
     size_type n = std::distance(srt_begin, srt_end);
     assert(m > 2);
@@ -198,8 +199,8 @@ class ECDataCALayout{
 
 public:
     typedef typename std::vector<IdType>::iterator id_iterator;
-    std::vector<IdType> mIds;
-    std::vector<CountType> mCounts;
+    std::vector< IdType, aligned_allocator<IdType, sizeof(IdType)> > mIds;
+    std::vector<CountType, aligned_allocator<CountType, sizeof(CountType)> > mCounts;
     int mDegree;
     ECDataCALayout(){};
     void init(RandomIterator intr,
@@ -210,7 +211,7 @@ public:
         mCounts.resize(nTotal);
         mDegree = kSize + 1;
         caware_layout(intr, intr + nTotal,
-                      kSize, mIds, mCounts);
+                      kSize, mIds.begin(), mCounts.begin());
     };
 
     ECDataCALayout(RandomIterator intr,

@@ -3,7 +3,7 @@ PROG_COUNTS=cao-preptile-counts
 MPICXX=mpicxx
 MPIEXT = ../mpiext
 
-CFLAGS=-c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
+CFLAGS=-v -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
 LDFLAGS=
 SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp
 OBJS=$(SRCS:.cpp=.o)

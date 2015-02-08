@@ -45,7 +45,7 @@ int test_caware(){
             tst[j].count = n - j;
         }
 
-        caware_layout(tst.begin(), tst.end(), m, idt, ct);
+        caware_layout(tst.begin(), tst.end(), m, idt.begin(), ct.begin());
         write_stvector(idt, std::cout);
 
         std::cout << "Search : ";

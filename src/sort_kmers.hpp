@@ -94,7 +94,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     int kvalue = params->K;
     int size = MPI::COMM_WORLD.Get_size(),
         rank = MPI::COMM_WORLD.Get_rank();
-    // sorting of the local k-mers 
+    // sorting of the local k-mers
     //std::sort(karray, karray + kcount, structComparator);
 #ifdef DEBUG
     std::stringstream out1;
@@ -117,12 +117,12 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     if(eliminateDupes) {
         eliminate_dupes(karray,kcount);
     }
-    
+
     // Choosing size-1 splitters (size = no. of processors)
     // Assuming this processor has atleast size - 1 elements
 #ifdef DEBUG
     std::stringstream out;
-    out << "I am processor : " << rank << ". I have " << kcount << " elements with me. \n My elements are as :\n";    
+    out << "I am processor : " << rank << ". I have " << kcount << " elements with me. \n My elements are as :\n";
     for(i=0;i<kcount; i++)
         out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
     std::cout << out.str();
@@ -132,22 +132,22 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     KeyDataType *Splitter = new KeyDataType[size-1];
     for (i=0; i < (size-1); i++){
         Splitter[i] = karray[(kcount/size) * (i+1)].ID;
-    } 
+    }
 
     // Gather all the local splitters at root
     KeyDataType *AllSplitter = new KeyDataType[size*(size-1)];
     MPI_Gather (Splitter, size-1, mpi_key_type,
                 AllSplitter, size-1, mpi_key_type, 0 , MPI_COMM_WORLD);
 
-    KeyDataType *GlobalSplitter =  new KeyDataType[size-1]; 
+    KeyDataType *GlobalSplitter =  new KeyDataType[size-1];
     // Choose the global splitters
     if(rank == 0){
         std::sort(AllSplitter, AllSplitter + (size * (size-1)), keyComparator);
         for (i=0; i<size-1; i++)
             GlobalSplitter[i] = AllSplitter[(size-1)*(i+1)];
-#ifdef DEBUG   
+#ifdef DEBUG
         std::cout << "Global Splitters : ";
-        for(i=0;i<size -1; i++) 
+        for(i=0;i<size -1; i++)
             std::cout << GlobalSplitter[i] << " ";
         std::cout << std::endl;
 #endif
@@ -156,7 +156,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     // Broadcast Global Splitters
     MPI_Bcast (GlobalSplitter, size-1, mpi_key_type, 0, MPI_COMM_WORLD);
 
-    // Calculate the number of elements that I, rank, 
+    // Calculate the number of elements that I, rank,
     // should send and recieve  from every one else
     int *recvcts =  new int[size]();
     int *sendcts = new int[size]();
@@ -170,9 +170,9 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
             else{
                 j++;
                 i--;
-            }   
+            }
         }
-        else 
+        else
             sendcts[j]++;
     }
     // Do an all-to-all to get how much I,rank, will recieve from every one
@@ -181,7 +181,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
 #ifdef DEBUG
     for(i = 0; i < size;i++) {
         std::stringstream out;
-        out << "Proc " << rank << " : sendcts : "  <<  sendcts[i] 
+        out << "Proc " << rank << " : sendcts : "  <<  sendcts[i]
             << " recvcts  : " << recvcts[i] << std::endl;
         std::cout << out.str();
     }
@@ -205,7 +205,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
                   Newlocal,recvcts,recvdisp,mpi_struct_type,MPI_COMM_WORLD);
     std::sort(Newlocal,Newlocal+NewlocalCount,structComparator);
 
-    // Get rid of the memory 
+    // Get rid of the memory
     free(karray); kcount = ksize = 0;
 
     // if not using map-reduce, eliminate dupes and update count
@@ -220,7 +220,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     }
     if (rank == 0) {
         std::stringstream out12;
-        out12 << "PROC : " << rank << " TOTAL BEFORE THRESHOLD " 
+        out12 << "PROC : " << rank << " TOTAL BEFORE THRESHOLD "
               << NoofElements << std::endl;
         std::cout << out12.str();
     }
@@ -240,7 +240,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
 #ifdef DEBUG
     if (rank == 0) {
         std::stringstream out12;
-        out12 << "PROC : " << rank << " TOTAL BEFORE ABSENT IDS " 
+        out12 << "PROC : " << rank << " TOTAL BEFORE ABSENT IDS "
               << NoofElements << std::endl;
         std::cout << out12.str();
     }
@@ -281,10 +281,10 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
         if(max < recvcts[i]) max =  recvcts[i];
     }
 
-#ifdef DEBUG    
+#ifdef DEBUG
     if (rank == 0) {
         std::stringstream out12;
-        out12 << "PROC : " << rank << " TOTAL FINAL " 
+        out12 << "PROC : " << rank << " TOTAL FINAL "
               << NoofElements << std::endl;
         std::cout << out12.str();
     }
@@ -292,7 +292,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
 
     // Use malloc - since ECData uses malloc for now
     AllData = (StructDataType*) malloc(NoofElements * sizeof(StructDataType));
-     
+
     //should be  replaced by Allgatherv if all processors need sorted data
     // Change all gather to gather
 
@@ -300,14 +300,14 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     int *recvcurrentcts =  new int[size]();
     int *recvcurrentdisp = new int[size]();
     int fixednumber = 16000000/size;
-    int iterations  =  (max%fixednumber == 0 ? 
+    int iterations  =  (max%fixednumber == 0 ?
             max/fixednumber : max/fixednumber +1);
     int displacement, currentlocalcount;
 
 #ifdef DEBUG
     if(rank == 0){
         std::stringstream out15;
-        out15 << "PROC : " << rank << " MAX " << max 
+        out15 << "PROC : " << rank << " MAX " << max
               << " FIXED " << fixednumber << " ITERATIONS "
               << iterations << std::endl;
         std::cout << out15.str();
@@ -320,15 +320,15 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
                 displacement = i*fixednumber;
             else
                 displacement = 0;
-          
+
             for(j = 0 ; j< size; j++){
                 recvcurrentcts[j] = recvcts[j] - i*fixednumber > fixednumber ?
-                     fixednumber : (recvcts[j] - i*fixednumber > 0 ? 
+                     fixednumber : (recvcts[j] - i*fixednumber > 0 ?
                                         recvcts[j] - i*fixednumber: 0) ;
                 recvcurrentdisp[j] = recvdisp[j]+ i*fixednumber;
             }
             currentlocalcount = recvcurrentcts[rank];
-            
+
             MPI_Allgatherv(Newlocal + displacement, currentlocalcount, mpi_struct_type,
                         AllData, recvcurrentcts, recvcurrentdisp, mpi_struct_type,
                          MPI_COMM_WORLD);
@@ -345,15 +345,15 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     MPI_Barrier(MPI_COMM_WORLD);
 
     if(rank == 0){
-        std::cout << "SORTED LIST OF KMER AND FREQUENCY: " << 
+        std::cout << "SORTED LIST OF KMER AND FREQUENCY: " <<
             NoofElements << std::endl;
         for(i=0;i < NoofElements; i++)
             std::cout << AllData[i].ID << " " << ((int)AllData[i].count) << std::endl;
     }
 #endif
-    if(rank == 0)
-        std::cout << "SORTED LIST OF KMER AND FREQUENCY: " << 
-            NoofElements << std::endl;
+    //if(rank == 0)
+    //    std::cout << "SORTED LIST OF KMER AND FREQUENCY: " <<
+    //        NoofElements << std::endl;
 
     // DONOT free AllData : AllData is the output!
     delete[] Newlocal;

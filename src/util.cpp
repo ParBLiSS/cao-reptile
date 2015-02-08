@@ -95,30 +95,32 @@ bool Para::validate() {
 
     if(mpi_env->rank() == 0) {
         std::stringstream oss;
-        oss << "Input Parameters:\n----------------------------------\n";
-        oss << "Short Reads file: " << iFaName << "\n";
+        oss << "--" << std::endl
+            << "parameter" << "\t" << "value" << std::endl;
+        oss << "short reads file\t" << iFaName << "\n";
         if (QFlag){
-            oss << "I/QualFile = " << iQName << "\n"
-                      << "Qthreshold = " << qualThreshold << "\n";
+            oss << "qual file\t" << iQName << "\n"
+                << "Qthreshold\t" << qualThreshold << "\n";
         }
-        oss << "O/ErrFile = " << oErrName << "\n";
-        oss << "(K, step, tile) = " << "(" << K << "," << step << ","
+        oss << "O/ErrFile\t" << oErrName << "\n";
+        oss << "(K, step, tile)\t" << "(" << K << "," << step << ","
                   << K + step << ")\n"
-                  << "BatchSize = " << batchSize << "\n"
-                  << "Max Hamming Distance Allowed = " << hdMax << "\n"
-                  << "ExpectSearch = " << eSearch << "\n"
-                  << "T_ratio = " << tRatio << "\n"
-                  << "QThreshold = " << qualThreshold << "\n"
-                  << "MaxBadQPerKmer = " << maxBadQPerKmer << "\n"
-                  << "Qlb = " << Qlb << "\n"
-                  << "T_expGoodCnt = " << tGoodTile << "\n"
-                  << "T_card = " << tCard << "\n"
-                  << "StoreReads = " << storeReads << "\n"
-                  << "CacheOptimizedSearch = " << cacheOptimizedSearch << "\n"
-                  << "Kmer Cache = " << kmerCacheSize << "\n"
-                  << "Tile Cache = " << tileCacheSize << "\n"
-                  << "----------------------------------\n";
-       std::cout << oss.str();
+                  << "BatchSize\t" << batchSize << "\n"
+                  << "Max Hamming Dist\t" << hdMax << "\n"
+                  << "ExpectSearch\t" << eSearch << "\n"
+                  << "T_ratio\t" << tRatio << "\n"
+                  << "QThreshold\t" << qualThreshold << "\n"
+                  << "MaxBadQPerKmer\t" << maxBadQPerKmer << "\n"
+                  << "Qlb\t" << Qlb << "\n"
+                  << "T_expGoodCnt\t" << tGoodTile << "\n"
+                  << "T_card\t" << tCard << "\n"
+                  << "StoreReads\t" << storeReads << "\n"
+                  << "CacheOptimizedSearch\t" << cacheOptimizedSearch << "\n"
+                  << "Kmer Cache\t" << kmerCacheSize << "\n"
+                  << "Tile Cache\t" << tileCacheSize << "\n"
+                  << "--\n";
+        std::cout << oss.str();
+        std::cout.flush();
     }
     return true;
 }
