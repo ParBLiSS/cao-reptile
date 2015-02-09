@@ -121,7 +121,7 @@ int parallelEC( char *inputFile){
         kmer_sync_start = tstart;
         kmer_sync_stop = tstop;
         oss << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
-        //          << " (secs)" << std::endl;
+            << " (secs)" << std::endl;
         ofs << oss.str();
         ofs.flush();
     }
