@@ -198,9 +198,9 @@ class ECDataCALayout{
     }
 
 public:
-    typedef typename std::vector<IdType>::iterator id_iterator;
-    std::vector< IdType, aligned_allocator<IdType, sizeof(IdType)> > mIds;
-    std::vector<CountType, aligned_allocator<CountType, sizeof(CountType)> > mCounts;
+    typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
+    std::vector< IdType, aligned_allocator<IdType, 64> > mIds;
+    std::vector<CountType, aligned_allocator<CountType, 64> > mCounts;
     int mDegree;
     ECDataCALayout(){};
     void init(RandomIterator intr,

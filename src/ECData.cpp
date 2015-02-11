@@ -368,8 +368,8 @@ void ECData::writeSpectrum(){
             m_tileFlatLayout.serialize(tFile);
             break;
         default:
-            kFile.write((char*)m_karray, sizeof(kmer_id_t)*m_kcount);
-            tFile.write((char*)m_tilearray, sizeof(kmer_id_t)*m_tilecount);
+            kFile.write((char*)m_karray, sizeof(kmer_t)*m_kcount);
+            tFile.write((char*)m_tilearray, sizeof(tile_t)*m_tilecount);
             break;
         }
         kFile.close();

@@ -293,12 +293,12 @@ void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
         }
     }
     if(!lBalanceReqd) {
-        if (rank == 0) {
-            std::cout << "load balancing\tNo" << std::endl;
-        } else {
-            std::cout << "load balancing\tYes " << std::endl;
-        }
-        std::cout.flush();
+        //if (rank == 0) {
+        //    std::cout << "load balancing\tNo" << std::endl;
+        //} else {
+        //    std::cout << "load balancing\tYes " << std::endl;
+        //}
+        //std::cout.flush();
         return;
     }
     // Count the total number of elements
