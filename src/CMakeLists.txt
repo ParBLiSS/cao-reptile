@@ -22,12 +22,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_COMPILE_FLAGS}")
 set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
 #
 # verbose for listing the command
-set(CMAKE_VERBOSE_MAKEFILE on)
+# set(CMAKE_VERBOSE_MAKEFILE on)
 #
 # main executable
-add_executable (cao-reptile ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp)
+add_executable (cao-reptile util.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp   sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp ECImpl.cpp main.cpp)
 target_link_libraries(cao-reptile "${MPI_LIBRARIES}")
 #
 # test executable
-add_executable (cao-reptile-test ECData.cpp  find_neighbors.cpp  kmer_count.cpp  test_main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp coblivious_layout.cpp util.cpp)
+add_executable (cao-reptile-test util.cpp ECData.cpp  ECDriver.cpp find_neighbors.cpp count_kmers.cpp sort_kmers.cpp caware_layout.cpp coblivious_layout.cpp ECImpl.cpp test_main.cpp)
 target_link_libraries(cao-reptile-test "${MPI_LIBRARIES}")

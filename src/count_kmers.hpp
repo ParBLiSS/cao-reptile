@@ -3,7 +3,7 @@
 
 #include "ECData.hpp"
 
-void kmer_count(ECData *ecdata);
-bool getReadsFromFile(ECData *ecdata);
+void count_kmers(ECData& ecdata);
+bool getReadsFromFile(ECData& ecdata);
 
 #endif

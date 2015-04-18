@@ -1,6 +1,6 @@
 /***
  **
- *  File: Parser.h
+ *  File: ECDriver.h
  *  Created: Dec 12, 2009
  *
  *  Author: Xiao Yang <isuxyang@gmail.com>
@@ -32,11 +32,11 @@
 #include "fasta_file.hpp"
 #include "ECData.hpp"
 
-class Parser {
+class ECDriver {
 public:
-    Parser(ECData& p, std::string& fn, Para& mpara):
+    ECDriver(ECData& p, std::string& fn, Para& mpara):
         ecdata_(p),outFname_(fn),inPara_(mpara),readID_(0){};
-    virtual ~Parser(){};
+    virtual ~ECDriver(){};
     void load ();
     void reLoad();
     void tableMaker();

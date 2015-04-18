@@ -1,6 +1,6 @@
 /***
  **
- *  File: Parser.cpp
+ *  File: ECDriver.cpp
  *  Created: Dec 12, 2009 4:05 PM
  *
  *  Author: Xiao Yang <isuxyang@gmail.com>
@@ -28,9 +28,9 @@
 
 #include <algorithm>
 
-#include "Parser.h"
 #include "util.h"
-#include "ECFixer.hpp"
+#include "ECImpl.hpp"
+#include "ECDriver.hpp"
 
 void print(int i) {
     std::cout << " " << i;
@@ -40,7 +40,7 @@ void printHex(int i) {
     std::cout << " " << std::hex << i;
 }
 
-void Parser::ec() {
+void ECDriver::ec() {
     readID_  = inPara_.startFromLineNo;
     if(inPara_.writeOutput != 0)
         oHandle_.open(outFname_.c_str());
@@ -56,7 +56,7 @@ void Parser::ec() {
         oHandle_.close();
 }
 
-void Parser::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
+void ECDriver::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
                           const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
     ECImpl ecr(ecdata_, inPara_);
 #ifdef DEBUG
@@ -86,7 +86,7 @@ void Parser::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
         ecr.writeErrors(oHandle_);
 }
 
-void Parser::processReadsFromFile() {
+void ECDriver::processReadsFromFile() {
     std::ifstream read_stream(inPara_.iFaName.c_str());
     assert(read_stream.good() == true);
 
@@ -131,7 +131,7 @@ void Parser::processReadsFromFile() {
 }
 
 
-void Parser::tableMaker() {
+void ECDriver::tableMaker() {
 
     // std::cout << "Constructing Facility Tables ... \n";
     /*
@@ -210,7 +210,7 @@ bool checkPoint(const ivec_t& indices, int dPoint) {
 //
 // This unit neighbor function uses the table of masked lists
 //
-void Parser::tableUnitNeighbor(uvec_t& myNB, int dPoint) {
+void ECDriver::tableUnitNeighbor(uvec_t& myNB, int dPoint) {
 
 #ifdef DEBUG
     std::cout << "DPOINT : " <<  dPoint
@@ -301,7 +301,7 @@ void Parser::tableUnitNeighbor(uvec_t& myNB, int dPoint) {
 #endif
     for (unsigned i = 0; i < nbIDs.size(); ++i) {
 
-        if (ecdata_.findKmerCacheAware(nbIDs[i])){
+        if (ecdata_.findKmer(nbIDs[i])){
 #ifdef DEBUG
             outnbs.push_back(nbIDs[i]);
 #endif

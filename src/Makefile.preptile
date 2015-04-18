@@ -5,7 +5,7 @@ MPIEXT = ../mpiext
 
 CFLAGS=-v -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
 LDFLAGS=
-SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ECImpl.cpp
+SRCS=main.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ECImpl.cpp
 OBJS=$(SRCS:.cpp=.o)
 
 ifeq ($(MAKECMDGOALS),debug)

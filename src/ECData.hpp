@@ -108,7 +108,7 @@ class ECData {
     int m_tilesize, m_tilecount;
 
     // I am only pointing to this parameter object. I don't own it!
-    Para *m_params;
+    Para& m_params;
 
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
@@ -134,9 +134,9 @@ class ECData {
     int currentTileBatchStart;
 
   public:
-    friend void kmer_sort(ECData *ecdata);
-    friend void kmer_count(ECData *ecdata);
-    friend bool getReadsFromFile(ECData *ecdata);
+    friend void sort_kmers(ECData& ecdata);
+    friend void count_kmers(ECData& ecdata);
+    friend bool getReadsFromFile(ECData& ecdata);
 
     void padKmerArray(unsigned kSize);
     void padTileArray(unsigned kSize);
@@ -146,7 +146,7 @@ class ECData {
     void printByteCounters(std::ostream& ots);
     void runCAStats(std::ostream& ots);
 
-    Para& getParams(){return *m_params;}
+    Para& getParams(){return m_params;}
     const int& getKmerCount() const{return m_kcount;}
     const int& getTileCount() const{return m_kcount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
@@ -154,6 +154,12 @@ class ECData {
     const cvec_t& getQuals() const{return m_QualsString;}
     const ivec_t& getReadsOffsets() const{return m_ReadsOffset;}
     const ivec_t& getQualsOffsets() const{return m_QualsOffset;}
+    const uint64_t& getKmerQueries() const{return m_kmerQueries;}
+    const uint64_t& getKmerQueryFails() const{return m_kmerQueryFails;}
+    const uint64_t& getTileQueries() const{return m_tileQueries;}
+    const uint64_t& getTileQueryFails() const{return m_tileQueryFails;}
+    const unsigned* getKmerLevels(){return m_kmerLevels;}
+    const unsigned* getTileLevels(){return m_tileLevels;}
 
     bool addToArray(kmer_id_t &ID,int count);
     bool addToArray(kmer_id_t &ID,unsigned char count);
@@ -186,7 +192,7 @@ class ECData {
     void output(const std::string& filename);
     void writeSpectrum();
 
-    ECData(Para *p);
+    ECData(Para& p);
     virtual ~ECData();
 };
 

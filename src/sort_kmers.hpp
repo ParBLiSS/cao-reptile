@@ -86,12 +86,12 @@ template <typename StructDataType, typename KeyDataType,
 void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
                 MPI_Datatype mpi_struct_type,MPI_Datatype mpi_key_type,
                 StructCompare structComparator,KeyCompare keyComparator,
-                bool eliminateDupes,int threshold,Para *params){
+                bool eliminateDupes,int threshold,Para& params){
 
     int i = 0, j = 0;
     StructDataType *AllData;
     int NoofElements;
-    int kvalue = params->K;
+    int kvalue = params.K;
     int size = MPI::COMM_WORLD.Get_size(),
         rank = MPI::COMM_WORLD.Get_rank();
     // sorting of the local k-mers
@@ -268,7 +268,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
             delete[] Newlocal; Newlocal = 0;
             NewlocalCount = 0;
         }
-        params->absentKmers = true;
+        params.absentKmers = true;
     }
 
     MPI_Allgather (&NewlocalCount, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
@@ -368,6 +368,6 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     delete[] recvcurrentcts;
 }
 
-void kmer_sort(ECData *ecdata);
+void sort_kmers(ECData& ecdata);
 
 #endif

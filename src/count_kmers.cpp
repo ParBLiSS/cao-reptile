@@ -52,9 +52,9 @@ static bool goodQuality(char* qAddr, int kvalue, const Para& myPara){
 
 template <typename KeyIDType>
 void add_kmers(char *line,char *qAddr,
-               bool QFlag,int read_length,int kLength,ECData *ecdata)
+               bool QFlag,int read_length,int kLength,ECData& ecdata)
 {
-    const Para& params = ecdata->getParams();
+    const Para& params = ecdata.getParams();
     int i = 0,failidx = 0;
     KeyIDType ID;
     // Insert the first kmer
@@ -64,7 +64,7 @@ void add_kmers(char *line,char *qAddr,
     if(i < (read_length - kLength)) {
         if(QFlag == false ||
            (QFlag && goodQuality(qAddr+i,kLength,params))) {
-            ecdata->addToArray(ID,1);
+            ecdata.addToArray(ID,1);
         }
     }
 
@@ -91,7 +91,7 @@ void add_kmers(char *line,char *qAddr,
             if(QFlag == false ||
                (QFlag && goodQuality(qAddr+i,kLength,params)))
             {
-                ecdata->addToArray(ID,1);
+                ecdata.addToArray(ID,1);
             }
         }
     }
@@ -99,17 +99,17 @@ void add_kmers(char *line,char *qAddr,
 
 void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
                   ivec_t &ReadsOffset,ivec_t &QualsOffset,
-                  ECData *ecdata)
+                  ECData& ecdata)
 {
     static int _batch = 0;
-    const Para& params = ecdata->getParams();
+    const Para& params = ecdata.getParams();
     int kLength  = params.K,
         tileLength = kLength + params.step;
 
 #ifdef DEBUG
     double tBatchStart = MPI_Wtime();
 #endif
-    ecdata->setBatchStart();
+    ecdata.setBatchStart();
     //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
     //         << " LOADING  BATCH " << _batch << std::endl;
     for(unsigned long i = 0; i < ReadsOffset.size();i++) {
@@ -121,10 +121,10 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
         add_kmers<kmer_id_t>(addr,qAddr,false,read_length,kLength,ecdata);
         add_kmers<tile_id_t>(addr,qAddr,true,read_length,tileLength,ecdata);
     }
-    ecdata->mergeBatchKmers();
+    ecdata.mergeBatchKmers();
 #ifdef DEBUG
 	std::stringstream out;
-    	out << " PROCESS: " << ecdata->m_params.mpi_env->rank()
+    	out << " PROCESS: " << ecdata.m_params.mpi_env->rank()
         << " BATCH " << _batch
         << " LOAD TIME " << MPI_Wtime()-tBatchStart << std::endl;
         std::cout << out.str();
@@ -133,9 +133,9 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
 
 }
 
-void processReadsFromFile(ECData *ecdata){
+void processReadsFromFile(ECData& ecdata){
     // get the parameters
-    const Para& params = ecdata->getParams();
+    const Para& params = ecdata.getParams();
 
     std::ifstream read_stream(params.iFaName.c_str());
     assert(read_stream.good() == true);
@@ -183,13 +183,13 @@ void processReadsFromFile(ECData *ecdata){
 // In general :
 //    emit the key-value pairs
 // ------------------------------------------------------
-void kmer_count(ECData *ecdata){
-    const Para& params = ecdata->getParams();
+void count_kmers(ECData& ecdata){
+    const Para& params = ecdata.getParams();
 
     if(params.storeReads) {
         // reads are already collected and stored
-        processBatch(ecdata->m_ReadsString,ecdata->m_QualsString,
-                     ecdata->m_ReadsOffset,ecdata->m_QualsOffset,
+        processBatch(ecdata.m_ReadsString,ecdata.m_QualsString,
+                     ecdata.m_ReadsOffset,ecdata.m_QualsOffset,
                      ecdata);
     } else {
         // process reads from input file
@@ -199,9 +199,9 @@ void kmer_count(ECData *ecdata){
 
 // Get the reads corresponding to this processor and
 // store it in ECData object
-bool getReadsFromFile(ECData *ecdata){
+bool getReadsFromFile(ECData& ecdata){
 
-    Para& params = ecdata->getParams();
+    Para& params = ecdata.getParams();
 
     // bIO::FASTA_input skips the last ling so using
 
@@ -223,8 +223,8 @@ bool getReadsFromFile(ECData *ecdata){
 
     params.batchSize = INT_MAX; // Get all reads of this processor
 
-    bool lastRead = readBatch(fasta,qual,ecdata->m_ReadsString,
-                              ecdata->m_ReadsOffset,ecdata->m_QualsString,
-                              ecdata->m_QualsOffset,params);
+    bool lastRead = readBatch(fasta,qual,ecdata.m_ReadsString,
+                              ecdata.m_ReadsOffset,ecdata.m_QualsString,
+                              ecdata.m_QualsOffset,params);
     return lastRead;
 }

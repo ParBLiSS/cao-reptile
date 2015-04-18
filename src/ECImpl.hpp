@@ -27,8 +27,8 @@ typedef struct RECORD{
 class ECImpl{
 private:
     std::vector<record_t> records_;
-    ECData& ecdata_;
-    Para& inPara_;
+    const ECData& ecdata_;
+    const Para& inPara_;
     // temporary variables
     evec_t readErr_;
 
@@ -44,7 +44,7 @@ private:
     void unitNeighbor(uvec_t& myNB, int dPoint);
 
 public:
-    ECImpl(ECData& ecd, Para& inp):ecdata_(ecd), inPara_(inp){};
+    ECImpl(const ECData& ecd, const Para& inp):ecdata_(ecd), inPara_(inp){};
     void readEC(int readID, char* addr, char* qAddr);
     void writeErrors(std::ostream& oHandle);
 };
