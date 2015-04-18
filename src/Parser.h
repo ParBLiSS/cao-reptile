@@ -56,14 +56,9 @@ private:
     // Chunk divisonal logic taken from Reptile
     void tableUnitNeighbor(uvec_t& myNB, int dPoint);
 
-    // Find neighbor searching in all kmer list
-    // void neighbors(std::vector<kcvec_t>& nodes,
-    // const uvec_t& repIDs, const Para& myPara);
-    // void errCall (std::vector<kcvec_t>& nodes, std::vector<kcvec_t>& nodes_rv,
-    // const std::string& qual);
+    void processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
+             const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
 
-    void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
-                      ivec_t &ReadsOffset,ivec_t &QualsOffset);
     void processReadsFromFile();
 };
 

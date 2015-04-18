@@ -24,7 +24,7 @@ typedef struct RECORD{
 }record_t;
 
 
-class ErrorCorrector{
+class ECImpl{
 private:
     std::vector<record_t> records_;
     ECData& ecdata_;
@@ -44,7 +44,7 @@ private:
     void unitNeighbor(uvec_t& myNB, int dPoint);
 
 public:
-    ErrorCorrector(ECData& ecd, Para& inp):ecdata_(ecd), inPara_(inp){};
+    ECImpl(ECData& ecd, Para& inp):ecdata_(ecd), inPara_(inp){};
     void readEC(int readID, char* addr, char* qAddr);
     void writeErrors(std::ostream& oHandle);
 };

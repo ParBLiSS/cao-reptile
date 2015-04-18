@@ -199,6 +199,7 @@ class ECDataCALayout{
 
 public:
     typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
+        typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::const_iterator id_const_iterator;
     std::vector< IdType, aligned_allocator<IdType, 64> > mIds;
     std::vector<CountType, aligned_allocator<CountType, 64> > mCounts;
     int mDegree;
@@ -220,7 +221,7 @@ public:
         init_layout(intr, nTotal, kSize);
     };
 
-    bool find(const IdType &rID) {
+    bool find(const IdType &rID) const{
         return (pure_c::implicit_heap_search(mIds.begin(),
                                              mIds.end(),
                                              mDegree,
@@ -228,13 +229,13 @@ public:
                 !=  mIds.end());
     };
 
-    int getCount(const IdType& rID, CountType& count){
-        id_iterator fpos = pure_c::implicit_heap_search(mIds.begin(),
-                                                        mIds.end(),
-                                                        mDegree,
-                                                        rID);
+    int getCount(const IdType& rID, CountType& count) const{
+        id_const_iterator fpos = pure_c::implicit_heap_search(mIds.begin(),
+                                                              mIds.end(),
+                                                              mDegree,
+                                                              rID);
         if(fpos != mIds.end()) {
-            int dist = fpos - mIds.begin();
+            int dist = fpos - mIds.cbegin();
             count = mCounts[dist];
             //std::cout << "count " << (int) count << std::endl;
             return dist;

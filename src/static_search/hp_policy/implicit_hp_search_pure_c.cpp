@@ -16,7 +16,7 @@ namespace pure_c {
  template <typename RandomIterator, typename Tp>
  bool implicit_hp_search(RandomIterator begin,
 			 RandomIterator beyond,
-			 RandomIterator Pos,
+             RandomIterator Pos,
 			 RandomIterator T,
 			 RandomIterator B,
 			 RandomIterator D,

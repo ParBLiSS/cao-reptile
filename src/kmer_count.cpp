@@ -37,15 +37,15 @@
 #include "ECData.hpp"
 
 
-bool goodQuality(char* qAddr, int kvalue, Para* myPara){
+static bool goodQuality(char* qAddr, int kvalue, const Para& myPara){
     if (!qAddr) return false;
     int badpos = 0;
     for (int i = 0; i < kvalue; ++ i){
-        if ((int) qAddr[i] < myPara->qualThreshold){
+        if ((int) qAddr[i] < myPara.qualThreshold){
             badpos++;
         }
     }
-    if (badpos > myPara->maxBadQPerKmer) return false;
+    if (badpos > myPara.maxBadQPerKmer) return false;
     return true;
 }
 
@@ -54,7 +54,7 @@ template <typename KeyIDType>
 void add_kmers(char *line,char *qAddr,
                bool QFlag,int read_length,int kLength,ECData *ecdata)
 {
-    Para *params = ecdata->m_params;
+    const Para& params = ecdata->getParams();
     int i = 0,failidx = 0;
     KeyIDType ID;
     // Insert the first kmer
@@ -102,15 +102,15 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
                   ECData *ecdata)
 {
     static int _batch = 0;
-    Para *params = ecdata->m_params;
-    int kLength  = params->K,
-        tileLength = kLength + params->step;
+    const Para& params = ecdata->getParams();
+    int kLength  = params.K,
+        tileLength = kLength + params.step;
 
 #ifdef DEBUG
     double tBatchStart = MPI_Wtime();
 #endif
     ecdata->setBatchStart();
-    //std::cout << " PROCESS: " << ecdata->m_params->mpi_env->rank()
+    //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
     //         << " LOADING  BATCH " << _batch << std::endl;
     for(unsigned long i = 0; i < ReadsOffset.size();i++) {
         int position = ReadsOffset[i];
@@ -124,7 +124,7 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
     ecdata->mergeBatchKmers();
 #ifdef DEBUG
 	std::stringstream out;
-    	out << " PROCESS: " << ecdata->m_params->mpi_env->rank()
+    	out << " PROCESS: " << ecdata->m_params.mpi_env->rank()
         << " BATCH " << _batch
         << " LOAD TIME " << MPI_Wtime()-tBatchStart << std::endl;
         std::cout << out.str();
@@ -135,16 +135,16 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
 
 void processReadsFromFile(ECData *ecdata){
     // get the parameters
-    Para *params = ecdata->m_params;
+    const Para& params = ecdata->getParams();
 
-    std::ifstream read_stream(params->iFaName.c_str());
+    std::ifstream read_stream(params.iFaName.c_str());
     assert(read_stream.good() == true);
 
-    std::ifstream qual_stream(params->iQName.c_str());
+    std::ifstream qual_stream(params.iQName.c_str());
     assert(qual_stream.good() == true);
 
-    read_stream.seekg(params->offsetStart,std::ios::beg);
-    qual_stream.seekg(params->qOffsetStart,std::ios::beg);
+    read_stream.seekg(params.offsetStart,std::ios::beg);
+    qual_stream.seekg(params.qOffsetStart,std::ios::beg);
     bIO::FASTA_input fasta(read_stream);
     bIO::FASTA_input qual(qual_stream);
     ++fasta;++qual;
@@ -156,10 +156,10 @@ void processReadsFromFile(ECData *ecdata){
 
     while(1){
          bool lastRead = readBatch( fasta,qual,ReadsString,ReadsOffset,
-                                   QualsString,QualsOffset,*params);
+                                   QualsString,QualsOffset,params);
         std::stringstream out ;
 #ifdef DEBUG
-        out << "PROC : " << params->mpi_env->rank()  << " "
+        out << "PROC : " << params.mpi_env->rank()  << " "
             << ReadsOffset.size() << " " << lastRead << " QS: "
             << QualsOffset.size() << std::endl;
         std::cout << out.str();
@@ -183,13 +183,10 @@ void processReadsFromFile(ECData *ecdata){
 // In general :
 //    emit the key-value pairs
 // ------------------------------------------------------
-void fileread(void *payload){
-    // From payload get the parameters
-    ECData *ecdata = (ECData*) payload;
-    Para *params = ecdata->m_params;
-    assert(params != 0);
+void kmer_count(ECData *ecdata){
+    const Para& params = ecdata->getParams();
 
-    if(params->storeReads) {
+    if(params.storeReads) {
         // reads are already collected and stored
         processBatch(ecdata->m_ReadsString,ecdata->m_QualsString,
                      ecdata->m_ReadsOffset,ecdata->m_QualsOffset,
@@ -204,37 +201,30 @@ void fileread(void *payload){
 // store it in ECData object
 bool getReadsFromFile(ECData *ecdata){
 
-    Para *params = ecdata->m_params;
+    Para& params = ecdata->getParams();
 
-    assert(params != 0);
     // bIO::FASTA_input skips the last ling so using
 
-    std::ifstream read_stream(params->iFaName.c_str());
+    std::ifstream read_stream(params.iFaName.c_str());
     if(!read_stream.good()) {
-        std::cout << "open " << params->iFaName << "failed :|\n";
+        std::cout << "open " << params.iFaName << "failed :|\n";
         exit(1);
     }
-    std::ifstream qual_stream(params->iQName.c_str());
+    std::ifstream qual_stream(params.iQName.c_str());
     if(!qual_stream.good()) {
-        std::cout << "open " << params->iQName << "failed :|\n";
+        std::cout << "open " << params.iQName << "failed :|\n";
         exit(1);
     }
-    read_stream.seekg(params->offsetStart,std::ios::beg);
-    qual_stream.seekg(params->qOffsetStart,std::ios::beg);
+    read_stream.seekg(params.offsetStart,std::ios::beg);
+    qual_stream.seekg(params.qOffsetStart,std::ios::beg);
     bIO::FASTA_input fasta(read_stream);
     bIO::FASTA_input qual(qual_stream);
     ++fasta;++qual;
 
-    params->batchSize = INT_MAX; // Get all reads of this processor
+    params.batchSize = INT_MAX; // Get all reads of this processor
 
     bool lastRead = readBatch(fasta,qual,ecdata->m_ReadsString,
                               ecdata->m_ReadsOffset,ecdata->m_QualsString,
-                              ecdata->m_QualsOffset,*params);
+                              ecdata->m_QualsOffset,params);
     return lastRead;
-}
-
-
-int kmer_count(ECData *ecdata){
-    fileread(ecdata);
-    return 0;
 }

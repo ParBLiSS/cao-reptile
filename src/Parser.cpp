@@ -30,7 +30,7 @@
 
 #include "Parser.h"
 #include "util.h"
-#include "ErrorCorrector.hpp"
+#include "ECFixer.hpp"
 
 void print(int i) {
     std::cout << " " << i;
@@ -47,8 +47,8 @@ void Parser::ec() {
 
     if(inPara_.storeReads) {
         // reads are already obtained from input file and stored in ECData
-        processBatch(ecdata_.m_ReadsString,ecdata_.m_QualsString,
-                     ecdata_.m_ReadsOffset,ecdata_.m_QualsOffset);
+        processBatch(ecdata_.getReads(),ecdata_.getQuals(),
+                     ecdata_.getReadsOffsets(),ecdata_.getQualsOffsets());
     } else {
         processReadsFromFile();
     }
@@ -56,9 +56,9 @@ void Parser::ec() {
         oHandle_.close();
 }
 
-void Parser::processBatch(cvec_t &ReadsString,cvec_t &QualsString,
-                          ivec_t &ReadsOffset,ivec_t &QualsOffset) {
-    ErrorCorrector ecr(ecdata_, inPara_);
+void Parser::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
+                          const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+    ECImpl ecr(ecdata_, inPara_);
 #ifdef DEBUG
     std::stringstream out3 ;
 #endif
@@ -183,13 +183,13 @@ void Parser::tableMaker() {
      * 3. Create Tables Then sort according to masks for each table
      */
     for (unsigned i = 0; i < num; ++ i){
-        for(int j = 0; j < ecdata_.m_kcount;j++)
-            table_.insert(table_.end(), ecdata_.m_karray[j].ID);
+        for(int j = 0; j < ecdata_.getKmerCount();j++)
+            table_.insert(table_.end(), ecdata_.getKmerAt(j).ID);
     }
     /*
      * sort tables
      */
-    int tableSize = ecdata_.m_kcount;
+    int tableSize = ecdata_.getKmerCount();
     for (unsigned i = 0; i < num; ++i) {
         std::sort(table_.begin() + i*tableSize,
                 table_.begin() + (i + 1) * tableSize, TComp(masks_[i]));

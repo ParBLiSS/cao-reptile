@@ -27,7 +27,7 @@ public:
         }
     }
 
-    bool find(const IdType &rID) {
+    bool find(const IdType &rID) const{
       int final = -1;
       int lb = 0, ub = mIds.size() - 1, mid;
       while (lb <= ub) {
@@ -44,7 +44,7 @@ public:
       return (final != -1);
     };
 
-   int getCount(const IdType& rID, CountType& count){
+   int getCount(const IdType& rID, CountType& count) const{
       int final = -1;
       int lb = 0, ub = mIds.size() - 1, mid;
       while (lb <= ub) {

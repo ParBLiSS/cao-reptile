@@ -13,6 +13,7 @@ out.txt
 google-*
 install/*
 src/CMakeFiles/*
+build/*
 # switch to regexp syntax.
 #syntax: regexp
 #^\.pc/

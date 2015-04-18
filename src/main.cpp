@@ -120,8 +120,8 @@ int parallelEC( char *inputFile){
     tstop = MPI_Wtime();
     if (mpi_env->rank() == 0) {
         std::stringstream oss;
-        oss << "kmer count\t" << ecdata->m_kcount << std::endl;
-        oss << "tile count\t" << ecdata->m_tilecount << std::endl;
+        oss << "kmer count\t" << ecdata->getKmerCount() << std::endl;
+        oss << "tile count\t" << ecdata->getTileCount() << std::endl;
         std::cout << oss.str();
         std::cout.flush();
         kmer_sync_start = tstart;

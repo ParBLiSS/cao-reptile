@@ -82,7 +82,7 @@ void ECData::registerKmerTypes(){
 
 }
 
-bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
+bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
   if(m_karray == 0){
     return false;
   }
@@ -132,7 +132,7 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
   return final;
 }
 
-bool ECData::findKmerFlat(const kmer_id_t &kmerID) {
+bool ECData::findKmerFlat(const kmer_id_t &kmerID) const {
    bool final = m_kmerFlatLayout.find(kmerID);
    if(m_params->absentKmers == true)
        final = !final;
@@ -143,7 +143,7 @@ bool ECData::findKmerFlat(const kmer_id_t &kmerID) {
    return final;
 }
 
-bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) {
+bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) const{
 
     bool final = m_kmerCALayout.find(kmerID);
 
@@ -156,7 +156,7 @@ bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) {
     return final;
 }
 
-bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) {
+bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) const{
     bool final = m_kmerCOLayout.find(kmerID);
    if(m_params->absentKmers == true)
        final = !final;
@@ -167,7 +167,7 @@ bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) {
     return final;
 }
 
-bool ECData::findKmer(const kmer_id_t &kmerID) {
+bool ECData::findKmer(const kmer_id_t &kmerID) const{
     switch(m_params->cacheOptimizedSearch){
         case 1:
             return findKmerCacheAware(kmerID);
@@ -180,7 +180,7 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
     }
 }
 
-int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
+int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
   int lb = 0, ub = m_tilecount - 1, mid;
   int final = -1;
 #ifdef QUERY_COUNTS
@@ -218,7 +218,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
 }
 
 
-int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) {
+int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileFlatLayout.getCount(tileID, count);
     if( final != -1 ) {
@@ -229,7 +229,7 @@ int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) {
     return final;
 }
 
-int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
+int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileCALayout.getCount(tileID, count);
 
@@ -242,7 +242,7 @@ int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
     return final;
 }
 
-int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
+int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileCOLayout.getCount(tileID, count);
     if( final != -1 ) {
@@ -254,7 +254,7 @@ int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
     return final;
 }
 
-int ECData::findTile(const tile_id_t &tileID,kc_t& output){
+int ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
    switch(m_params->cacheOptimizedSearch){
         case 1:
             return findTileCacheAware(tileID, output);
@@ -319,7 +319,7 @@ bool ECData::addToArray(tile_id_t &ID,int count){
     return true;
 }
 
-void ECData::printKArray(){
+void ECData::printKArray() const{
 
     std::cout << "Karray " <<
         m_params->mpi_env->rank() << m_kcount << std::endl;
@@ -578,7 +578,7 @@ void ECData::estimateKmerByteCounters(){
 
     for(int i = 1; i < m_kcount;i++){
         std::stringstream out;
-        out << i << " " << m_karray[i].ID << " "; 
+        out << i << " " << m_karray[i].ID << " ";
         for(int j = 0; j < 3; j++){
             kmer_id_t& last_ref = m_byte_kref[j].back();
             int n = count_bytes<kmer_id_t>(m_karray[i].ID - last_ref);
@@ -587,8 +587,8 @@ void ECData::estimateKmerByteCounters(){
             } else {
                 m_byte_kcount[j] += 1;
             }
-            out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref) 
-                << " " << n << " "; 
+            out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref)
+                << " " << n << " ";
         }
 
         out << std::endl;
@@ -634,7 +634,7 @@ void ECData::printByteCounters(std::ostream& ots){
     for(int j = 0; j < 3; j++){
         std::stringstream oss2;
         oss2 << "kmer" << "\t" << (j+1) << "\t"
-             << m_byte_kref[j].size() << "\t" 
+             << m_byte_kref[j].size() << "\t"
              << m_byte_kcount[j] << std::endl;
         ots << oss2.str();
         ots.flush();
@@ -643,7 +643,7 @@ void ECData::printByteCounters(std::ostream& ots){
     for(int j = 0; j < 7; j++){
         std::stringstream oss2;
         oss2 << "tile" << "\t" << (j+1) << "\t"
-              << m_byte_tref[j].size() << "\t" 
+              << m_byte_tref[j].size() << "\t"
              << m_byte_tcount[j] << std::endl;
         ots << oss2.str();
         ots.flush();

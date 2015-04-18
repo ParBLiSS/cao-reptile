@@ -1,6 +1,6 @@
 #include "util.h"
 #include "find_neighbors.h"
-#include "ErrorCorrector.hpp"
+#include "ECImpl.hpp"
 
 void candidates(ivec_t& candies, const kcvec_t& tiles, int threshold) {
     for (unsigned i = 1; i < tiles.size(); ++i) {
@@ -40,7 +40,7 @@ bool unicpy(const kc_t& e1, const kc_t& e2) {
     return (e1.ID == e2.ID);
 }
 
-void ErrorCorrector::readEC(int readID, char* addr, char* qAddr) {
+void ECImpl::readEC(int readID, char* addr, char* qAddr) {
 
 
     ipair_t hdUb(inPara_.hdMax, inPara_.hdMax);
@@ -109,7 +109,7 @@ void ErrorCorrector::readEC(int readID, char* addr, char* qAddr) {
     }
 }
 
-bool ErrorCorrector::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
+bool ECImpl::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
         const ipair_t& hdUb, char* qAddr) {
 
     upair_t rvMosaic(
@@ -181,7 +181,7 @@ bool ErrorCorrector::errorCall(const upair_t& mosaic, const ipair_t& dPoints,
     return false;
 }
 
-void ErrorCorrector::updateRead(int readID, std::string& myRead, int shift) {
+void ECImpl::updateRead(int readID, std::string& myRead, int shift) {
 
     if (readErr_.size()) {
         // 1. adding shift to err positions w.r.t read & update read
@@ -203,7 +203,7 @@ void ErrorCorrector::updateRead(int readID, std::string& myRead, int shift) {
     }
 }
 
-bool ErrorCorrector::correctTile(const kcvec_t& tiles, const char* qAddr) {
+bool ECImpl::correctTile(const kcvec_t& tiles, const char* qAddr) {
     /*
      * Error Calling Current Tile
      * tiles.size() may equal to 0 due to error correction
@@ -277,7 +277,7 @@ bool ErrorCorrector::correctTile(const kcvec_t& tiles, const char* qAddr) {
 /*
  * flag: true -- forward    flase--reverse
  */
-void ErrorCorrector::tiling(kcvec_t& tiles, const uvec_t& N1,
+void ECImpl::tiling(kcvec_t& tiles, const uvec_t& N1,
         const uvec_t& N2) {
 
     if (N1.size() == 0 || N2.size() == 0) return;
@@ -311,7 +311,7 @@ void ErrorCorrector::tiling(kcvec_t& tiles, const uvec_t& N1,
     }
 }
 
-bool ErrorCorrector::overlay(uint64_t& rslt, uint32_t n1, uint32_t n2) {
+bool ECImpl::overlay(uint64_t& rslt, uint32_t n1, uint32_t n2) {
 
     int shift = 2 * inPara_.step;
     uint64_t a = n1, b = n2;
@@ -324,7 +324,7 @@ bool ErrorCorrector::overlay(uint64_t& rslt, uint32_t n1, uint32_t n2) {
     return false;
 }
 
-void ErrorCorrector::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom) {
+void ECImpl::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom) {
     /*
      *  convert IDs in [tileFrom] to revcompl IDs and insert to [tileTo]
      *  then sort and merge (remove duplicates); keep the repID in place
@@ -384,7 +384,7 @@ void ErrorCorrector::mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom) {
     }
 }
 
-void ErrorCorrector::unitNeighbor(uvec_t& myNB, int dPoint) {
+void ECImpl::unitNeighbor(uvec_t& myNB, int dPoint) {
 
     // Commented as it is no longer used
     // if(inPara_.useMaskedLists){
@@ -396,7 +396,7 @@ void ErrorCorrector::unitNeighbor(uvec_t& myNB, int dPoint) {
 
 //
 // Finds the unit neighbor by generating each possible neighbor
-void ErrorCorrector::genericUnitNeighbor(uvec_t& myNB, int dPoint){
+void ECImpl::genericUnitNeighbor(uvec_t& myNB, int dPoint){
 
     // Parallel Reptile ::
     //    Replaced this function with the query mechanism
@@ -447,7 +447,7 @@ void ErrorCorrector::genericUnitNeighbor(uvec_t& myNB, int dPoint){
 #endif
 }
 
-void ErrorCorrector::writeErrors(std::ostream& oHandle) {
+void ECImpl::writeErrors(std::ostream& oHandle) {
     /*
      * Resulting file format:
      * ReadID (sorted)  ErrNum  [pos from to qual] [pos from to qual]...

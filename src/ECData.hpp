@@ -85,14 +85,6 @@ typedef std::vector<unsigned char> kcount_vector;
 class ECData {
   private:
     void registerKmerTypes();
-  public:
-    // I own karray, ksize and kcount. So, Please be nice to them!
-    kmer_t *m_karray;
-    int m_ksize, m_kcount;
-    // I own tilearray, tilesize and tilecount. So, Please be nice to them!
-    tile_t *m_tilearray;
-    int m_tilesize, m_tilecount;
-
     ECDataCOLayout<kmer_t*, kmer_id_t,
                    unsigned char> m_kmerCOLayout;
     ECDataCOLayout<tile_t*, tile_id_t,
@@ -108,6 +100,16 @@ class ECData {
     ECDataFlatLayout<tile_t*, tile_id_t,
                      unsigned char> m_tileFlatLayout;
 
+    // I own karray, ksize and kcount. So, Please be nice to them!
+    kmer_t *m_karray;
+    int m_ksize, m_kcount;
+    // I own tilearray, tilesize and tilecount. So, Please be nice to them!
+    tile_t *m_tilearray;
+    int m_tilesize, m_tilecount;
+
+    // I am only pointing to this parameter object. I don't own it!
+    Para *m_params;
+
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
     uint64_t m_kmerQueries;
@@ -117,20 +119,24 @@ class ECData {
     unsigned m_kmerLevels[MAX_LEVELS];
     unsigned m_tileLevels[MAX_LEVELS];
 
-
     // Store Reads if reqd.
     cvec_t m_ReadsString;
     cvec_t m_QualsString;
     ivec_t m_ReadsOffset;
     ivec_t m_QualsOffset;
 
-    int currentKmerBatchStart;
-    int currentTileBatchStart;
-
     std::vector<kmer_id_t> m_byte_kref[3];
     unsigned m_byte_kcount[3];
     std::vector<tile_id_t> m_byte_tref[7];
     unsigned m_byte_tcount[7];
+
+    int currentKmerBatchStart;
+    int currentTileBatchStart;
+
+  public:
+    friend void kmer_sort(ECData *ecdata);
+    friend void kmer_count(ECData *ecdata);
+    friend bool getReadsFromFile(ECData *ecdata);
 
     void padKmerArray(unsigned kSize);
     void padTileArray(unsigned kSize);
@@ -140,29 +146,34 @@ class ECData {
     void printByteCounters(std::ostream& ots);
     void runCAStats(std::ostream& ots);
 
-  public:
-    // I am only pointing to this parameter object. I don't own it!
-    Para *m_params;
+    Para& getParams(){return *m_params;}
+    const int& getKmerCount() const{return m_kcount;}
+    const int& getTileCount() const{return m_kcount;}
+    const kmer_t& getKmerAt(int j) const{return m_karray[j];}
+    const cvec_t& getReads() const{return m_ReadsString;}
+    const cvec_t& getQuals() const{return m_QualsString;}
+    const ivec_t& getReadsOffsets() const{return m_ReadsOffset;}
+    const ivec_t& getQualsOffsets() const{return m_QualsOffset;}
 
     bool addToArray(kmer_id_t &ID,int count);
     bool addToArray(kmer_id_t &ID,unsigned char count);
     bool addToArray(tile_id_t &ID,int count);
 
-    void printKArray();
+    void printKArray() const;
     void replaceKArray(kmer_t* allData,int allDataCount,int allDataSize);
     void replaceTileArray(tile_t *newTileArray,int newTileCount,
                           int newTileSize);
-    bool findKmer(const kmer_id_t &kmerID);
-    bool findKmerDefault(const kmer_id_t &kmerID);
-    bool findKmerFlat(const kmer_id_t &kmerID);
-    bool findKmerCacheAware(const kmer_id_t &kmerID);
-    bool findKmerCacheOblivious(const kmer_id_t &kmerID);
+    bool findKmer(const kmer_id_t &kmerID) const;
+    bool findKmerDefault(const kmer_id_t &kmerID) const;
+    bool findKmerFlat(const kmer_id_t &kmerID) const;
+    bool findKmerCacheAware(const kmer_id_t &kmerID) const;
+    bool findKmerCacheOblivious(const kmer_id_t &kmerID) const;
 
-    int findTile(const tile_id_t &tileID,kc_t& output);
-    int findTileFlat(const tile_id_t &tileID,kc_t& output);
-    int findTileDefault(const tile_id_t &tileID,kc_t& output);
-    int findTileCacheAware(const tile_id_t &tileID,kc_t& output);
-    int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output);
+    int findTile(const tile_id_t &tileID,kc_t& output) const;
+    int findTileFlat(const tile_id_t &tileID,kc_t& output) const;
+    int findTileDefault(const tile_id_t &tileID,kc_t& output) const;
+    int findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
+    int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
 
     void mergeBatchKmers();
     void setBatchStart();
