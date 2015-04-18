@@ -25,6 +25,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_COMPILE_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_COMPILE_FLAGS}")
 set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
 #
+# adding threads
+#
+find_package(Threads REQUIRED)
+#
 # main executable
 add_executable (cao-reptile util.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp   sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp ECImpl.cpp main.cpp)
 target_link_libraries(cao-reptile "${MPI_LIBRARIES}")
