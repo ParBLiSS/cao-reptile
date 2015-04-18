@@ -38,9 +38,20 @@ double elapsed(clock_t& end, clock_t& start){
 }
 
 void run_reptile(ECData *ecdata,Para *params){
+    std::stringstream out;
+    out << params->oErrName << params->mpi_env->rank() ;
+    std::string filename = out.str();
+    if(params->writeOutput != 0){
+        std::ofstream oHandle(filename.c_str());
+        if (!oHandle.good()) {
+            std::cout << "open " << filename << " failed, correct path?\n";
+            return;
+        }
+        oHandle.close();
+    }
 
     // Run reptile
-    Parser myParser(ecdata);
+    Parser myParser(*ecdata, filename, *params);
     // Commented since it is no longer used
     // if(params->useMaskedLists) {
     //     myParser.tableMaker(*params);
@@ -53,12 +64,7 @@ void run_reptile(ECData *ecdata,Para *params){
     //     }
     //     tstart = tstop;
     // }
-
-    myParser.ec(*params);
-    std::stringstream out;
-    out << params->oErrName << params->mpi_env->rank() ;
-    if(params->writeOutput != 0)
-      myParser.output(out.str());
+    myParser.ec();
     return;
 }
 

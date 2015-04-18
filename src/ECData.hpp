@@ -39,6 +39,8 @@ typedef struct KC{
     KC(uint64_t myID, int c1, int c2): ID(myID), goodCnt(c1), cnt(c2){};
 }kc_t;
 
+typedef std::vector<kc_t> kcvec_t;
+
 struct Knumcomp {
     bool operator() (const kc_t& e1, const kc_t& e2) const {
         return  (e1.ID < e2.ID);

@@ -245,105 +245,11 @@ inline bool toID(T& ID, int &failidx, char* addr, int len) {
     return true;
 }
 
-
-inline std::string toString(kmer_id_t ID, int len){
-
-    std::string kmer = "";
-    for (int i = 0; i < len; ++ i){
-        int last = (ID & 0x3);
-        char c;
-        switch (last){
-            case 0: c = 'a';
-            break;
-            case 1: c = 'c';
-            break;
-            case 2: c = 'g';
-            break;
-            case 3: c = 't';
-            break;
-        }
-        kmer += c;
-        ID = ID >> 2;
-    }
-    std::reverse(kmer.begin(), kmer.end());
-
-    return kmer;
-}
-
-inline double get_time() {
-      timeval t;
-      gettimeofday(&t, 0);
-      return t.tv_sec + (0.000001 * t.tv_usec);
-} // get_time
-
-inline void print_time (const std::string& msg, double& timing){
-    double cur_time = get_time();
-    std::cout << msg << "(" << cur_time - timing << " secs)\n\n";
-    timing = cur_time;
-}
-
-inline bool readBatch(bIO::FASTA_input& fasta,bIO::FASTA_input& qual,
-                      cvec_t &ReadsString,ivec_t &ReadsOffset,
-                      cvec_t &QualsString,ivec_t &QualsOffset,const Para &myPara)
-{
-    unsigned long position = 0;
-    typedef bIO::FASTA_input::value_type value_type;
-
-
-    bool lastRead = false;
-    unsigned long curLine = 0;
-    for(long j=0; j < myPara.batchSize ; j++){
-
-        const value_type& v = *fasta;
-
-        std::string posstr = v.first;
-        std::string read_str = v.second;
-        curLine = strtoul(v.first.c_str(),NULL,0);
-
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)  {
-            lastRead = true;
-            break;
-        }
-        int read_length = read_str.length();
-
-        ReadsString.resize(ReadsString.size() + read_length + 1);
-        memcpy(&ReadsString[position], read_str.c_str(), read_length + 1);
-        ReadsOffset.push_back(position);
-
-        position += read_length + 1;
-        if(++fasta == false){
-            lastRead = true;
-            break;
-        }
-    }
-#ifdef DEBUG
-    std::stringstream out;
-    out << "READ PROC : " << myPara.mpi_env->rank() << " " << curLine << std::endl;
-    std::cout << out.str();
-#endif
-    position = 0;
-    for(long j = 0; j < myPara.batchSize; j++){
-        const value_type& v = *qual;
-
-        std::string posstr = v.first;
-        std::string quals_str = v.second;
-        quals_str.erase(0,1);
-        int read_length = quals_str.length();
-
-        unsigned long curLine = strtoul(v.first.c_str(),NULL,0);
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)
-            break;
-
-        QualsString.resize(QualsString.size() + read_length + 1);
-        memcpy(&QualsString[position], quals_str.c_str(), read_length + 1);
-        QualsOffset.push_back(position);
-
-        position += read_length + 1;
-        if(++qual == false) break;
-    }
-    return lastRead;
-}
-
+std::string toString(kmer_id_t ID, int len);
+double get_time();
+void print_time (const std::string& msg, double& timing);
+bool readBatch(bIO::FASTA_input& fasta,bIO::FASTA_input& qual,
+               cvec_t &ReadsString,ivec_t &ReadsOffset,
+               cvec_t &QualsString,ivec_t &QualsOffset,const Para &myPara);
+bool goodQuals(const char* qAddr, int len, int threshold);
 #endif	/* _UTIL_H */

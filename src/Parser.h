@@ -32,74 +32,39 @@
 #include "fasta_file.hpp"
 #include "ECData.hpp"
 
-
-typedef std::vector<kc_t> kcvec_t;
-
-typedef struct ERRINFO{
-    int pos;
-    int from;
-    int to;
-    int qual;
-    ERRINFO (int p, int f, int t, int q): pos(p), from(f), to(t), qual(q) {}
-    ERRINFO() {};
-}e_t;
-typedef std::vector<e_t> evec_t;
-
-typedef struct RECORD{
-    int readID;
-    evec_t evec;
-    RECORD (int ID, evec_t vec): readID(ID), evec(vec) {}
-}record_t;
-
-
 class Parser {
 public:
-    Parser(ECData *p){ readID_ = 0; ecdata = p;};
+    Parser(ECData& p, std::string& fn, Para& mpara):
+        ecdata_(p),outFname_(fn),inPara_(mpara),readID_(0){};
     virtual ~Parser(){};
-    void load (const Para& myPara);
-    void reLoad(const Para& myPara);
-    void tableMaker(const Para& myPara);
-    void ec(const Para& myPara);
-    void output (const std::string& filename);
+    void load ();
+    void reLoad();
+    void tableMaker();
+    void ec();
 private:
-    std::vector<record_t> records_;
-    ECData *ecdata;
+    ECData& ecdata_;
+    std::string outFname_;
+    Para& inPara_;
+    int readID_;
+    std::ofstream oHandle_;
 
     // Variables for tables
     iivec_t maskIdx_;
     uvec_t masks_;
     uvec_t table_;
 
-    // temporary variables
-    int readID_;
-    evec_t readErr_;
-
-    void readEC(char* addr, char* qAddr, const Para& myPara);
-    bool errorCall(const upair_t& mosaic, const ipair_t& dPoints,
-                const ipair_t& hdUb, char* qAddr, const Para& myPara);
-    bool correctTile(const kcvec_t& tiles, const char* qAddr, const Para& myPara);
-
     // Chunk divisonal logic taken from Reptile
-    void tableMaker();
-    void tableUnitNeighbor(uvec_t& myNB, int dPoint,const Para& myPara);
+    void tableUnitNeighbor(uvec_t& myNB, int dPoint);
 
     // Find neighbor searching in all kmer list
-    void genericUnitNeighbor(uvec_t& myNB, int dPoint,const Para& myPara);
-
-    void unitNeighbor(uvec_t& myNB, int dPoint, const Para& myPara);
-    void updateRead(std::string& myRead, int shift);
-    void neighbors(std::vector<kcvec_t>& nodes,
-        const uvec_t& repIDs, const Para& myPara);
-    void errCall (std::vector<kcvec_t>& nodes, std::vector<kcvec_t>& nodes_rv,
-        const std::string& qual, const Para& myPara);
-    void tiling(kcvec_t& tiles, const uvec_t& N1, const uvec_t& N2, const Para& myPara);
-    void mergeTiles(kcvec_t& tileTo, kcvec_t& tileFrom, const Para& myPara);
-    bool overlay(uint64_t& rslt, uint32_t n1, uint32_t n2, const Para& myPara);
+    // void neighbors(std::vector<kcvec_t>& nodes,
+    // const uvec_t& repIDs, const Para& myPara);
+    // void errCall (std::vector<kcvec_t>& nodes, std::vector<kcvec_t>& nodes_rv,
+    // const std::string& qual);
 
     void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
-                      ivec_t &ReadsOffset,ivec_t &QualsOffset,
-                      const Para& myPara);
-    void processReadsFromFile(const Para& myPara);
+                      ivec_t &ReadsOffset,ivec_t &QualsOffset);
+    void processReadsFromFile();
 };
 
 void updateNodes(kcvec_t& N, kcvec_t& N_rv, const kcvec_t& tiles, int len);
