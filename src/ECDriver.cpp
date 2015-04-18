@@ -118,28 +118,28 @@ void ec_thread(int tid, int nthreads, ECImpl& ecr,
 
 void ECDriver::processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsString,
                               const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
-  std::thread t[inPara_.numThreads];
-  std::vector<ECImpl> threadEC(inPara_.numThreads, 
-                               ECImpl(ecdata_, inPara_));
+    std::vector<std::thread> tvx(inPara_.numThreads);
+    std::vector<ECImpl> threadEC(inPara_.numThreads,
+                                 ECImpl(ecdata_, inPara_));
 
-  //Launch a group of threads
-  for (int i = 0; i < inPara_.numThreads; ++i) {
-    t[i] = std::thread(ec_thread, i, inPara_.numThreads, std::ref(threadEC[i]),
-                       std::cref(ReadsString), std::cref(QualsString),
-                       std::cref(ReadsOffset), std::cref(QualsOffset));
-  }
+    //Launch a group of threads
+    for (int i = 0; i < inPara_.numThreads; ++i) {
+        tvx[i] = std::thread(ec_thread, i, inPara_.numThreads,
+                             std::ref(threadEC[i]),
+                             std::cref(ReadsString), std::cref(QualsString),
+                             std::cref(ReadsOffset), std::cref(QualsOffset));
+    }
 
-  std::cout << "Launched from the main" << std::endl;
+    std::cout << "Launched from the main" << std::endl;
 
-  //Join the threads with the main thread
-  for (int i = 0; i < inPara_.numThreads; ++i) 
-      t[i].join();
+    //Join the threads with the main thread
+    for (int i = 0; i < inPara_.numThreads; ++i)
+        tvx[i].join();
 
-  // output is written serially
-  for (int i = 0; i < inPara_.numThreads; ++i) 
-      if(oHandle_.good())
-        threadEC[i].writeErrors(oHandle_);
-
+    // output is written serially
+    for (int i = 0; i < inPara_.numThreads; ++i)
+        if(oHandle_.good())
+            threadEC[i].writeErrors(oHandle_);
 }
 
 void ECDriver::processReadsFromFile() {
