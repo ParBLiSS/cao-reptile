@@ -1,7 +1,11 @@
 #
 #
 cmake_minimum_required(VERSION 2.8.11)
-project(cao-reptile)
+set(PROJECT_NAME_STR cao-reptile)
+PROJECT(${PROJECT_NAME_STR} C CXX)
+#
+# verbose for listing the command
+set(CMAKE_VERBOSE_MAKEFILE on)
 #
 # set of c++ 11 and add warnings
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -O3 -ffast-math -funroll-loops")
@@ -20,9 +24,6 @@ message(STATUS "    link flags: ${MPI_LINK_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_COMPILE_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_COMPILE_FLAGS}")
 set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
-#
-# verbose for listing the command
-# set(CMAKE_VERBOSE_MAKEFILE on)
 #
 # main executable
 add_executable (cao-reptile util.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp   sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp ECImpl.cpp main.cpp)

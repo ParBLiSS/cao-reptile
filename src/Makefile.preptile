@@ -4,6 +4,7 @@ MPICXX=mpicxx
 MPIEXT = ../mpiext
 
 CFLAGS=-v -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
+CFLAGS= -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
 LDFLAGS=
 SRCS=main.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ECImpl.cpp
 OBJS=$(SRCS:.cpp=.o)

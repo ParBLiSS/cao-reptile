@@ -235,7 +235,7 @@ public:
                                                               mDegree,
                                                               rID);
         if(fpos != mIds.end()) {
-            int dist = fpos - mIds.cbegin();
+            int dist = fpos - mIds.begin();
             count = mCounts[dist];
             //std::cout << "count " << (int) count << std::endl;
             return dist;
