@@ -10,6 +10,7 @@ void Para::setPara(const char *configFile) {
     kmerCacheSize = tileCacheSize = 4;
     writeOutput = 1;
     writeSpectrum = -1;
+    numThreads = 1;
     while(getline(input, line)){
         buf.clear();
         buf.str(line);
@@ -61,6 +62,8 @@ void Para::setPara(const char *configFile) {
                 buf >> kmerSpectrumOutFile;
             else if (s1 == "TileSpectrumOutFile")
                 buf >> tileSpectrumOutFile;
+            else if (s1 == "Threads")
+                buf >> numThreads;
         }
     }
 }

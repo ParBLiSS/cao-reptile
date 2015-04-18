@@ -57,8 +57,12 @@ private:
     void tableUnitNeighbor(uvec_t& myNB, int dPoint);
 
     void processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
-             const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
+                      const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
 
+    void processBatchST(const cvec_t &ReadsString,const cvec_t &QualsString,
+                        const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
+    void processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsString,
+                        const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
     void processReadsFromFile();
 };
 

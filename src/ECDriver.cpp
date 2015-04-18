@@ -27,7 +27,7 @@
 
 
 #include <algorithm>
-
+#include <thread>
 #include "util.h"
 #include "ECImpl.hpp"
 #include "ECDriver.hpp"
@@ -57,7 +57,16 @@ void ECDriver::ec() {
 }
 
 void ECDriver::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
-                          const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+                            const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+  if(inPara_.numThreads > 1){
+    processBatchST(ReadsString, QualsString, ReadsOffset, QualsOffset);
+  } else {
+    processBatchMT(ReadsString, QualsString, ReadsOffset, QualsOffset);
+  }
+}
+
+void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsString,
+                              const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
     ECImpl ecr(ecdata_, inPara_);
 #ifdef DEBUG
     std::stringstream out3 ;
@@ -84,6 +93,53 @@ void ECDriver::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
 #endif
     if(oHandle_.good())
         ecr.writeErrors(oHandle_);
+}
+
+void ec_thread(int tid, int nthreads, ECImpl& ecr,
+               const cvec_t &ReadsString,const cvec_t &QualsString,
+               const ivec_t &ReadsOffset,const ivec_t &QualsOffset)
+{
+  std::cout << "Launched by thread" << tid << std::endl;
+  // block decomposition of work.
+  unsigned long ntotal =  ReadsOffset.size();
+  unsigned long nbegin = BLOCK_LOW(tid, nthreads, ntotal);
+  unsigned long nend = BLOCK_HIGH(tid, nthreads, ntotal);
+  int rID = nbegin; // rID is NOT the same as nbegin, but for our expts, it is OK
+  for(unsigned long i = nbegin; i <= nend;i++) {
+    int position = ReadsOffset[i];
+    int qposition = QualsOffset[i];
+    char* addr = const_cast<char*> (&ReadsString[position]);
+    char* qAddr = const_cast<char*> (&QualsString[qposition]);
+    ecr.readEC(rID, addr, qAddr);
+    rID++;
+  }
+
+}
+
+void ECDriver::processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsString,
+                              const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+  std::thread t[inPara_.numThreads];
+  std::vector<ECImpl> threadEC(inPara_.numThreads, 
+                               ECImpl(ecdata_, inPara_));
+
+  //Launch a group of threads
+  for (int i = 0; i < inPara_.numThreads; ++i) {
+    t[i] = std::thread(ec_thread, i, inPara_.numThreads, std::ref(threadEC[i]),
+                       std::cref(ReadsString), std::cref(QualsString),
+                       std::cref(ReadsOffset), std::cref(QualsOffset));
+  }
+
+  std::cout << "Launched from the main" << std::endl;
+
+  //Join the threads with the main thread
+  for (int i = 0; i < inPara_.numThreads; ++i) 
+      t[i].join();
+
+  // output is written serially
+  for (int i = 0; i < inPara_.numThreads; ++i) 
+      if(oHandle_.good())
+        threadEC[i].writeErrors(oHandle_);
+
 }
 
 void ECDriver::processReadsFromFile() {

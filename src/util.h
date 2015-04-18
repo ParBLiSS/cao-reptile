@@ -63,6 +63,12 @@ typedef uint64_t tile_id_t;
 //typedef MPI_UNSIGNED_LONG_LONG mpi_kmer_id_t;
 #define mpi_kmer_id_t MPI_UNSIGNED // MPI_UNSIGNED_LONG_LONG
 #define mpi_tile_id_t MPI_UNSIGNED_LONG_LONG // MPI_UNSIGNED_LONG_LONG
+/// macros for block decomposition
+#define BLOCK_LOW(i,p,n) ( (i*n) / p)
+#define BLOCK_HIGH(i,p,n) ( (((i+1)*n)/p) - 1)
+#define BLOCK_SIZE(i,p,n) (BLOCK_LOW((i+1),p,n) - BLOCK_LOW(i,p,n))
+#define BLOCK_OWNER(j,p,n) (((p) * ((j)+1)-1)/(n))
+
 
 class Para {
 public:
@@ -91,6 +97,7 @@ public:
     int writeOutput;
 
     int writeSpectrum;
+    int numThreads;
     std::string kmerSpectrumOutFile;
     std::string tileSpectrumOutFile;
 
