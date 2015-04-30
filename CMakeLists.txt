@@ -12,7 +12,7 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra  -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -std=c++11 -DDEBUG_EMIT")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -std=c++11")
-include_directories(../mpiext)
+include_directories(mpiext)
 #
 # add MPI includes and libraries
 find_package(MPI REQUIRED)
@@ -30,9 +30,14 @@ set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
 find_package(Threads REQUIRED)
 #
 # main executable
-add_executable (cao-reptile util.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp   sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp ECImpl.cpp main.cpp)
+add_executable (cao-reptile src/util.cpp src/ECData.cpp src/ECDriver.cpp src/find_neighbors.cpp  src/count_kmers.cpp   src/sort_kmers.cpp src/caware_layout.cpp  src/coblivious_layout.cpp src/ECImpl.cpp src/main.cpp)
 target_link_libraries(cao-reptile "${MPI_LIBRARIES}")
 #
 # test executable
-add_executable (cao-reptile-test util.cpp ECData.cpp  ECDriver.cpp find_neighbors.cpp count_kmers.cpp sort_kmers.cpp caware_layout.cpp coblivious_layout.cpp ECImpl.cpp test_main.cpp)
+add_executable (cao-reptile-test src/util.cpp src/ECData.cpp  src/ECDriver.cpp src/find_neighbors.cpp src/count_kmers.cpp src/sort_kmers.cpp src/caware_layout.cpp src/coblivious_layout.cpp src/ECImpl.cpp src/test_main.cpp)
 target_link_libraries(cao-reptile-test "${MPI_LIBRARIES}")
+#
+#
+#
+add_executable(tsample src/WorkDistribution.cpp)
+target_link_libraries(tsample "${MPI_LIBRARIES}")

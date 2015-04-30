@@ -187,8 +187,8 @@ class WorkDistribution{
             if(wrkQueue.size() < 2 * num_threads){
                 std::vector<int> threadWork(num_threads);
                 assign_work(threadWork, wrkAssigned);
-                if(!update_wqueue(threadWork))
-                    distState = PENDING_WORK;
+                if(!update_wqueue(threadWork)) // if assigned 'zero work'
+                    distState = PENDING_WORK; // update state
             }
             // Assign work to remote processes, if they are asking for it
             if(!assign_work_remote(wrkAssigned)){
@@ -198,7 +198,7 @@ class WorkDistribution{
             }
             break;
         case PENDING_WORK:
-            // I, root, haven't recieved message from every one
+            // I, root, haven't recieved message from every one:
             //   Assign 'zero work', to any remote process asking for work
             if(nwrkZero < size && !assign_work_remote(wrkAssigned)) {
                 nwrkZero += 1;
