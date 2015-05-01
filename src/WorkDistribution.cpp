@@ -174,7 +174,7 @@ class WorkDistribution{
     }
 
 
-    void send_work(){
+    void master_coord(){
         // This function is not thread safe, only one thread can call this fn.
         static int nwrkZero = 1;
         static int wrkAssigned = size * work_chunk;
@@ -218,7 +218,7 @@ class WorkDistribution{
         }
     }
 
-    int recv_work(){
+    int slave_coord(){
         // This function is not thread safe, only one thread can call this fn.
         static WState distState = ASSIGN_WORK;
         switch(distState){
@@ -255,7 +255,7 @@ public:
         wrkFinished.store(false, std::memory_order_relaxed);
         start_workers(workers);
         do {
-            send_work();
+            master_coord();
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         } while(true);
@@ -268,7 +268,7 @@ public:
         wrkFinished.store(false, std::memory_order_relaxed);
         start_workers(workers);
         do {
-            recv_work();
+            slave_coord();
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         } while(true);
