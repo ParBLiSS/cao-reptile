@@ -5,15 +5,15 @@ syntax: glob
 *.pyc
 *~
 *.o
-preptile*
 *.a
-src/test/*
-out.txt
 *.d
-google-*
-install/*
-src/CMakeFiles/*
+*.log
 build/*
+src/cao-preptile
+src/cao-test
+test/reptile-output*
+scripts/vpn-script
+
 # switch to regexp syntax.
 #syntax: regexp
 #^\.pc/
