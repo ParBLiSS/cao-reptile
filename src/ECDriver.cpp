@@ -59,9 +59,9 @@ void ECDriver::ec() {
 void ECDriver::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
                             const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
   if(inPara_.numThreads > 1){
-    processBatchST(ReadsString, QualsString, ReadsOffset, QualsOffset);
-  } else {
     processBatchMT(ReadsString, QualsString, ReadsOffset, QualsOffset);
+  } else {
+    processBatchST(ReadsString, QualsString, ReadsOffset, QualsOffset);
   }
 }
 
@@ -76,6 +76,7 @@ void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsStrin
         int qposition = QualsOffset[i];
         char* addr = const_cast<char*> (&ReadsString[position]);
         char* qAddr = const_cast<char*> (&QualsString[qposition]);
+        std::cout << addr << std::endl;
 #ifdef DEBUG
         out3 << addr << std::endl;
 #endif
@@ -99,7 +100,7 @@ void ec_thread(int tid, int nthreads, ECImpl& ecr,
                const cvec_t &ReadsString,const cvec_t &QualsString,
                const ivec_t &ReadsOffset,const ivec_t &QualsOffset)
 {
-  std::cout << "Launched by thread" << tid << std::endl;
+  //std::cout << "Launched by thread" << tid << std::endl;
   // block decomposition of work.
   unsigned long ntotal =  ReadsOffset.size();
   unsigned long nbegin = BLOCK_LOW(tid, nthreads, ntotal);
