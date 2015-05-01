@@ -25,11 +25,13 @@
  *
  */
 
-#ifndef _PARSER_H
-#define	_PARSER_H
+#ifndef _ECDRIVER_H
+#define	_ECDRIVER_H
+
+#include <iostream>
+#include <string>
 
 #include "util.h"
-#include "fasta_file.hpp"
 #include "ECData.hpp"
 
 class ECDriver {
@@ -92,4 +94,4 @@ inline void print_kcvec (const std::string& msg, const kcvec_t& myvec, int len){
     std::cout << "--------------------------------\n";
 }
 
-#endif	/* _PARSER_H */
+#endif	/* _ECDRIVER_H */

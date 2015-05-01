@@ -28,24 +28,11 @@
 #ifndef _UTIL_H
 #define	_UTIL_H
 
-#include <MPI_env.hpp>
 #include <iostream>
 #include <fstream>
-#include <map>
 #include <vector>
-#include <set>
-#include <complex> //pow
-#include <ctype.h>
-#include <cmath>
-#include <string.h>
-#include <stdlib.h>
-#include <algorithm>
-#include <iomanip>
-#include <stdint.h>
-
-#include <sys/time.h>
-#include <cassert>
-#include "fasta_file.hpp"
+#include <string>
+#include <utility>
 
 typedef std::vector<int> ivec_t;
 typedef std::vector<ivec_t> iivec_t;
@@ -54,8 +41,7 @@ typedef std::vector<uvec_t> uuvec_t;
 typedef std::vector<char> cvec_t;
 typedef std::vector<bool> bvec_t;
 typedef std::vector<std::string> strvec_t;
-typedef std::map<int, int> imap_t;
-typedef std::set<int> iset_t;
+
 typedef std::pair<int, int> ipair_t;
 typedef std::pair<uint32_t, uint32_t> upair_t;
 typedef uint32_t kmer_id_t;
@@ -73,8 +59,7 @@ typedef uint64_t tile_id_t;
 class Para {
 public:
     std::string iFaName;
-    int QFlag;
-    std::string iQName;
+    bool QFlag;
     int batchSize;  //specify number of reads to be loaded
     int K;
     std::string oErrName;
@@ -101,47 +86,37 @@ public:
     std::string kmerSpectrumOutFile;
     std::string tileSpectrumOutFile;
 
+    // size and rank of the MPI world
+    int m_size;
+    int m_rank;
+
     Para(const char *configFile) {
         setPara(configFile);
         load_parallel_params();
     };
 
-    virtual ~Para(){
-        delete mpi_env;
-    };
+    virtual ~Para(){ };
 
 private:
 
     void setPara(const char *configFile);
 
   public:
-    empi::MPI_env *mpi_env;
-    long readsPerProcessor;
-    unsigned long startFromLineNo;
-    unsigned long endTillLineNo;
+    //long readsPerProcessor;
+    //unsigned long startFromLineNo;
+    //unsigned long endTillLineNo;
     unsigned long offsetStart;
-    unsigned long qOffsetStart;
-    long inLastBatch;
+    // unsigned long qOffsetStart;
+    // long inLastBatch;
 
     unsigned long long offsetEnd;
-    unsigned long long qOffsetEnd;
+    //unsigned long long qOffsetEnd;
     unsigned long long fileSize;
 
-    void load_parallel_params() {
-        mpi_env = new empi::MPI_env();
-        compute_parallelio_params();
-    };
-
+    void load_parallel_params();
     bool validate();
-    //void compute_readcount();
-    //void compute_parallelio_params(int fileRecordLength,
-    //     long& perprocessor,long& startfrom,long &offset,
-    //     long& inLastBatch);
-    void compute_parallelio_params(){
-        compute_offsets();
-    }
 
-   void compute_offsets();
+    void compute_offsets();
 };
 
 
@@ -252,11 +227,35 @@ inline bool toID(T& ID, int &failidx, char* addr, int len) {
     return true;
 }
 
+// UTILITY FUNCTIONS -------------------------------------------------
+// trim taken from stack overflow
+// http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+static inline std::string &ltrim(std::string &s) {
+    s.erase(s.begin(),
+            std::find_if(s.begin(), s.end(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
+}
+
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
+    return s;
+}
+
+// trim from both ends
+static inline std::string &trim(std::string &s) {
+    return ltrim(rtrim(s));
+}
+
 std::string toString(kmer_id_t ID, int len);
 double get_time();
 void print_time (const std::string& msg, double& timing);
-bool readBatch(bIO::FASTA_input& fasta,bIO::FASTA_input& qual,
+bool readBatch(std::ifstream* fqfs, const long& batchSize,
+               const unsigned long long& offsetEnd,
                cvec_t &ReadsString,ivec_t &ReadsOffset,
-               cvec_t &QualsString,ivec_t &QualsOffset,const Para &myPara);
+               cvec_t &QualsString,ivec_t &QualsOffset, int& readid);
 bool goodQuals(const char* qAddr, int len, int threshold);
 #endif	/* _UTIL_H */

@@ -1,4 +1,15 @@
 #include "util.h"
+#include <algorithm>
+#include <cassert>
+#include <sstream>
+#include <string.h>
+#include <stdlib.h>
+#include <iomanip>
+#include <stdint.h>
+
+#include <ctype.h>
+#include <sys/time.h>
+#include <mpi.h>
 
 void Para::setPara(const char *configFile) {
     cacheOptimizedSearch = 0;
@@ -11,6 +22,7 @@ void Para::setPara(const char *configFile) {
     writeOutput = 1;
     writeSpectrum = -1;
     numThreads = 1;
+    QFlag = true;
     while(getline(input, line)){
         buf.clear();
         buf.str(line);
@@ -20,8 +32,6 @@ void Para::setPara(const char *configFile) {
                 buf >> iFaName;
             else if (s1 == "QFlag")
                 buf >> QFlag;
-            else if (s1 == "IQFile")
-                buf >> iQName;
             else if (s1 == "OErrFile")
                 buf >> oErrName;
             else if (s1 == "BatchSize")
@@ -70,17 +80,17 @@ void Para::setPara(const char *configFile) {
 
 bool Para::validate() {
     if (iFaName.empty()) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout << "Err: InFaFile is not specified!\n";
         return false;
     }
     if (oErrName.empty()) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout << "Err: Output file is not specified!\n";
         return false;
     }
     if (K > 16 || (K + step) > 32) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout <<
                 "Set K in the range of (0, 16] and K+step in the range of (2, 32]\n";
         return false;
@@ -90,21 +100,11 @@ bool Para::validate() {
         std::cout << "open " << iFaName << "failed :|\n";
         return false;
     }
-    std::ifstream qual_stream(iQName.c_str());
-    if(!qual_stream.good()) {
-        std::cout << "open " << iQName << "failed :|\n";
-        return false;
-    }
-
-    if(mpi_env->rank() == 0) {
+    if(m_rank == 0) {
         std::stringstream oss;
         oss << "--" << std::endl
             << "parameter" << "\t" << "value" << std::endl;
         oss << "short reads file\t" << iFaName << "\n";
-        if (QFlag){
-            oss << "qual file\t" << iQName << "\n"
-                << "Qthreshold\t" << qualThreshold << "\n";
-        }
         oss << "O/ErrFile\t" << oErrName << "\n";
         oss << "(K, step, tile)\t" << "(" << K << "," << step << ","
                   << K + step << ")\n"
@@ -128,83 +128,19 @@ bool Para::validate() {
     return true;
 }
 
+void Para::load_parallel_params(){
+    m_size = MPI::COMM_WORLD.Get_size();
+    m_rank = MPI::COMM_WORLD.Get_rank();
+    compute_offsets();
+}
+
 void Para::compute_offsets(){
+    // offset computation for static work load
     std::ifstream fin(iFaName.c_str());
     fin.seekg(0,std::ios::end);
     fileSize = fin.tellg();
-    offsetStart = (fileSize/mpi_env->size()) * mpi_env->rank();
-    offsetEnd = (fileSize/mpi_env->size()) * (mpi_env->rank()+1);
-    fin.seekg(offsetStart, std::ios::beg);
-
-
-    bIO::FASTA_input fasta_sr(fin);
-    ++fasta_sr;
-    std::string lineNo = (*fasta_sr).first;
-
-    fin.seekg(offsetEnd, std::ios::beg);
-    bIO::FASTA_input fastaend(fin);
-    ++fastaend;
-    std::string endLineNo = (*fastaend).first;
-
-    startFromLineNo = strtoul (lineNo.c_str(),NULL,0);
-    endTillLineNo = strtoul (endLineNo.c_str(),NULL,0) - 1;
-    qOffsetStart = offsetStart + startFromLineNo ;
-    qOffsetEnd = offsetEnd + endTillLineNo ;
-
-    // Print the qual size for debug purposes
-    std::ifstream qfin(iQName.c_str());
-    qfin.seekg(0,std::ios::end);
-#ifdef DEBUG
-    long long qfileSize = qfin.tellg();
-#endif
-
-    std::string curline,nextline;
-    qfin.seekg(qOffsetStart,std::ios::beg);
-    if(qfin.good()) {
-        std::getline(qfin,curline);
-        if(qfin.good()) {
-            std::getline(qfin,nextline);
-            if( curline[0] == '>' && nextline[0] == '>') {
-                qOffsetStart += curline.size();
-            }
-        }
-    }
-
-    qfin.seekg(qOffsetStart,std::ios::beg);
-    bIO::FASTA_input qfasta_sr(qfin);
-    ++qfasta_sr;
-    std::string qlineNo = (*qfasta_sr).first;
-
-
-    qfin.seekg(qOffsetEnd,std::ios::beg);
-    bIO::FASTA_input qfastaend(qfin);
-    ++qfastaend;
-    std::string qendLineNo = (*qfastaend).first;
-#ifdef DEBUG
-    long quendTillLineNo = strtoul (qendLineNo.c_str(),NULL,0) - 1;
-#endif
-
-    if(readsPerProcessor % batchSize == 0)
-        inLastBatch  = batchSize;
-    else
-        inLastBatch = readsPerProcessor % batchSize;
-#ifdef DEBUG
-    std::stringstream out;
-    std::string testStr;
-    unsigned long qualstartFromLineNo = strtoul (qlineNo.c_str(),NULL,0);
-
-    out << "PROC : " << mpi_env->rank() << " FILE SIZE : "
-        <<  fileSize <<   " START FROM : "
-        << startFromLineNo << " START OFFSET : " << offsetStart
-        << " UP TO : " << endTillLineNo << std::endl;
-    out << "PROC : " << mpi_env->rank() << " QUAL FILE SIZE : "
-        <<  qfileSize << " QUAL START FROM : "
-        << qlineNo  << " START OFFSET : " << qOffsetStart
-        << " UP TO : " << quendTillLineNo
-        << (( qualstartFromLineNo ==  startFromLineNo ) ? " TRUE" : " FALSE")
-        << std::endl;
-    std::cout << out.str();
-#endif
+    offsetStart = (fileSize/m_size) * m_rank;
+    offsetEnd = (fileSize/m_size) * (m_rank + 1);
 }
 
 std::string toString(kmer_id_t ID, int len){
@@ -231,67 +167,111 @@ std::string toString(kmer_id_t ID, int len){
     return kmer;
 }
 
-bool readBatch(bIO::FASTA_input& fasta,bIO::FASTA_input& qual,
-               cvec_t &ReadsString,ivec_t &ReadsOffset,
-               cvec_t &QualsString,ivec_t &QualsOffset,const Para &myPara)
+bool readFastqRecord(std::ifstream* fqfs,
+                     std::string fRecord[4])
 {
-    unsigned long position = 0;
-    typedef bIO::FASTA_input::value_type value_type;
+    if(!fqfs->good())
+        return false;
 
+    for(int i = 0; i < 4; i++) {
+        fRecord[i] = "";
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
 
+    return true;
+ }
+
+bool readFirstFastqRecord(std::ifstream* fqfs,
+                          std::string fRecord[4])
+{
+    // read strings
+    for(int i = 0; i < 4; i++)
+        fRecord[i] = "";
+
+    for(int i = 0; i < 4; i++) {
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
+
+    int sdelta = 4, sread = 4;
+    // unless, the record is good, we can't turst the first line's first char
+    if(fRecord[2][0] == '+' && fRecord[0][0] == '@'){
+        return true; // record is good!
+    } else if(fRecord[1][0] == '@' && fRecord[3][0] == '+'){
+        sdelta = 1; sread = 3; // have three lines of a 'good' record
+    } else if(fRecord[2][0] == '@') {
+        sdelta = 2; sread = 2; // have two lines of a 'good' record
+    } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
+        sdelta = 3; sread = 1; // have only one line of a 'good' record
+    } else {
+        return false; // bad record!
+    }
+    // bubble up by swapping
+    assert(sdelta >= 0);
+    for(int i = 0;(i + sdelta) < 4; i++)
+        std::swap(fRecord[i], fRecord[i + sdelta]);
+    // read extra lines to fill up the record
+    for(int i = sread; i < 4; i++) {
+        fRecord[i] = "";
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
+    return true;
+}
+
+void updateStrStore(const std::string& in_str,
+                    cvec_t &StrStore,ivec_t &Offset,
+                    unsigned long& position){
+    StrStore.resize(StrStore.size() + in_str.length() + 1);
+    memcpy(&StrStore[position], in_str.c_str(), in_str.length() + 1);
+    Offset.push_back(position);
+    position += in_str.length() + 1;
+}
+
+bool readBatch(std::ifstream* fqfs, const long& batchSize,
+               const unsigned long long& offsetEnd,
+               cvec_t &ReadsString,ivec_t &ReadsOffset,
+               cvec_t &QualsString,ivec_t &QualsOffset,
+               int& readid)
+{
+    unsigned long position = 0, qpos = 0;
     bool lastRead = false;
-    unsigned long curLine = 0;
-    for(long j=0; j < myPara.batchSize ; j++){
+    std::string fqRecord[4] = {std::string(""), std::string(""),
+                               std::string(""), std::string("")};
+    // 1. read first record : for handling special case
+    if(!readFirstFastqRecord(fqfs, fqRecord))
+        return false;
 
-        const value_type& v = *fasta;
+    updateStrStore(fqRecord[1], ReadsString, ReadsOffset, position);
+    updateStrStore(fqRecord[3], QualsString, QualsOffset, qpos);
+    readid = std::stoi(fqRecord[0].substr(1).c_str());
 
-        std::string posstr = v.first;
-        std::string read_str = v.second;
-        curLine = strtoul(v.first.c_str(),NULL,0);
+    // 2. read as much as batch size
+    for(long j=1; j < batchSize ; j++){
+        for(int i = 0; i < 4; i++)
+            fqRecord[i] = "";
 
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)  {
+        if(!readFastqRecord(fqfs, fqRecord)){
             lastRead = true;
             break;
         }
-        int read_length = read_str.length();
 
-        ReadsString.resize(ReadsString.size() + read_length + 1);
-        memcpy(&ReadsString[position], read_str.c_str(), read_length + 1);
-        ReadsOffset.push_back(position);
+        updateStrStore(fqRecord[1], ReadsString, ReadsOffset, position);
+        updateStrStore(fqRecord[3], QualsString, QualsOffset, qpos);
 
-        position += read_length + 1;
-        if(++fasta == false){
+        if(!fqfs->good() || fqfs->tellg() >= (std::streamoff) offsetEnd){
             lastRead = true;
             break;
         }
     }
-#ifdef DEBUG
-    std::stringstream out;
-    out << "READ PROC : " << myPara.mpi_env->rank() << " " << curLine << std::endl;
-    std::cout << out.str();
-#endif
-    position = 0;
-    for(long j = 0; j < myPara.batchSize; j++){
-        const value_type& v = *qual;
 
-        std::string posstr = v.first;
-        std::string quals_str = v.second;
-        quals_str.erase(0,1);
-        int read_length = quals_str.length();
-
-        unsigned long curLine = strtoul(v.first.c_str(),NULL,0);
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)
-            break;
-
-        QualsString.resize(QualsString.size() + read_length + 1);
-        memcpy(&QualsString[position], quals_str.c_str(), read_length + 1);
-        QualsOffset.push_back(position);
-
-        position += read_length + 1;
-        if(++qual == false) break;
-    }
     return lastRead;
 }
 

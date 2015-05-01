@@ -322,13 +322,13 @@ bool ECData::addToArray(tile_id_t &ID,int count){
 void ECData::printKArray() const{
 
     std::cout << "Karray " <<
-        m_params.mpi_env->rank() << m_kcount << std::endl;
+        m_params.m_rank << m_kcount << std::endl;
 
     for(int i = 0; i < m_kcount;i++){
         // just to print
         std::stringstream out;
 
-        out << m_params.mpi_env->rank() << " " << m_karray[i].count << " "
+        out << m_params.m_rank << " " << m_karray[i].count << " "
             << m_karray[i].ID << std::endl;
         std::cout << out.str();
     }
@@ -347,7 +347,7 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
 }
 
 void ECData::writeSpectrum(){
-    if(m_params.writeSpectrum > 0 && (m_params.mpi_env->rank() == 0)){
+    if(m_params.writeSpectrum > 0 && (m_params.m_rank == 0)){
         assert(m_params.kmerSpectrumOutFile.length() > 0);
         assert(m_params.tileSpectrumOutFile.length() > 0);
 
@@ -437,7 +437,7 @@ void ECData::padKmerArray(unsigned kSize){
     unsigned rSize = (m_kcount % kSize);
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
-        if(m_params.mpi_env->rank() == 0) {
+        if(m_params.m_rank == 0) {
             std::stringstream out;
             out << "Padding kmer array : " << fillIn << std::endl;
             std::cout << out.str();
@@ -453,7 +453,7 @@ void ECData::padTileArray(unsigned kSize){
     unsigned rSize = (m_tilecount % kSize);
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
-        if(m_params.mpi_env->rank() == 0) {
+        if(m_params.m_rank == 0) {
             std::stringstream out;
             out << "Padding tile array : " << fillIn << std::endl;
             std::cout << out.str();
@@ -467,7 +467,7 @@ void ECData::padTileArray(unsigned kSize){
 
 void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
-    int rank = m_params.mpi_env->rank();
+    int rank = m_params.m_rank;
     if(rank == 0) {
        std::stringstream out;
        out << "Build Kmer Cache Aware Layout : " << m_kcount
@@ -494,7 +494,7 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
 }
 
 void ECData::buildCacheObliviousLayout(){
-    int rank = m_params.mpi_env->rank();
+    int rank = m_params.m_rank;
 
     padKmerArray(1024);
     if(rank == 0){
@@ -516,7 +516,7 @@ void ECData::buildCacheObliviousLayout(){
 }
 
 void ECData::buildFlatLayout(){
-    int rank = m_params.mpi_env->rank();
+    int rank = m_params.m_rank;
     if(rank == 0) {
        std::stringstream out;
        out << "Build Kmer Flat Layout : "

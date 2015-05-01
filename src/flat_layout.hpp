@@ -4,6 +4,7 @@
 #include <iterator>
 #include <algorithm>
 #include <fstream>
+#include <cassert>
 #include "cao_util.h"
 
 template <typename RandomIterator,

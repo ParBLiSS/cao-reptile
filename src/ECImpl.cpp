@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "util.h"
 #include "find_neighbors.h"
 #include "ECImpl.hpp"

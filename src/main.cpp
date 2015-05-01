@@ -56,7 +56,7 @@ struct ECStats{
 
 void run_reptile(ECData& ecdata,Para& params){
     std::stringstream out;
-    out << params.oErrName << params.mpi_env->rank() ;
+    out << params.oErrName << params.m_rank ;
     std::string filename = out.str();
     if(params.writeOutput != 0){
         std::ofstream oHandle(filename.c_str());
@@ -75,7 +75,7 @@ void run_reptile(ECData& ecdata,Para& params){
 
     //     tstop = MPI_Wtime();
     //     MPI_Barrier(MPI_COMM_WORLD);
-    //     if (params.mpi_env->rank() == 0) {
+    //     if (params.m_rank == 0) {
     //         std::cout << "TIME TO BUILD TABLE " << tstop-tstart
     //                   << " (secs)" << std::endl;
     //     }
@@ -87,11 +87,11 @@ void run_reptile(ECData& ecdata,Para& params){
 
 int parallelEC( char *inputFile){
     Para params(inputFile);
-    empi::MPI_env *mpi_env = params.mpi_env;
+
     std::ostream& ofs = std::cout;
     // Validations on the parameters given in config file
     if(params.validate() == false) {
-        if(mpi_env->rank() == 0)
+        if(params.m_rank == 0)
             std::cout << "Validation Failed" << std::endl;
         MPI::COMM_WORLD.Abort(1);
     }
@@ -107,7 +107,7 @@ int parallelEC( char *inputFile){
     ecstx.tstop_read_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
-    if (mpi_env->rank() == 0) {
+    if (params.m_rank == 0) {
         ecstx.updateFileReadTime(ofs);
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -120,7 +120,7 @@ int parallelEC( char *inputFile){
     ecstx.tstop_kmer_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
-    if (mpi_env->rank() == 0) {
+    if (params.m_rank == 0) {
         ecstx.updateSpectrumTime(ecdata, ofs);
     }
 
@@ -132,7 +132,7 @@ int parallelEC( char *inputFile){
     ecstx.tstop_ec_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
-    if (mpi_env->rank() == 0) {
+    if (params.m_rank == 0) {
         ecstx.updateECTime(ofs);
     }
 
@@ -147,11 +147,11 @@ int parallelEC( char *inputFile){
 void ECStats::reportTimings(Para& params, std::ostream& ofs){
     // Output for counting the number of failures and success
     //std::stringstream out;
-    //out << params.oErrName << params.mpi_env->rank() ;
+    //out << params.oErrName << params.m_rank ;
     //ecdata.output(out.str());
-    empi::MPI_env *mpi_env = params.mpi_env;
-    int p = params.mpi_env->size();
-    if(mpi_env->rank() == 0){
+
+    int p = params.m_size;
+    if(params.m_rank == 0){
         std::stringstream oss;
         oss << "--" << std::endl
             << "nproc" << "\t" << "phase" << "\t"
@@ -185,7 +185,7 @@ void ECStats::reportTimings(Para& params, std::ostream& ofs){
     }
     for(int i = 0; i < p; i++){
         MPI_Barrier(MPI_COMM_WORLD);
-        if(i == mpi_env->rank()){
+        if(i == params.m_rank){
             std::stringstream oss;
             oss << i << "\t" << "read local" << "\t"
                 << elapsed(tstart_read_p, tstart_read_p) << "\t"
@@ -210,8 +210,9 @@ void ECStats::reportTimings(Para& params, std::ostream& ofs){
 }
 
 void ECStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
-    empi::MPI_env *mpi_env = ecdata.getParams().mpi_env;
-    if(mpi_env->rank() == 0) {
+    Para& params = ecdata.getParams();
+
+    if(params.m_rank == 0) {
       std::stringstream oss;
       oss << "--" << std::endl;
       oss << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
@@ -219,11 +220,11 @@ void ECStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
       ofs << oss.str();
       ofs.flush();
     }
-    int p = mpi_env->size();
+    int p = params.m_size;
     MPI_Barrier(MPI_COMM_WORLD);
     for(int i = 0; i < p; i++){
       MPI_Barrier(MPI_COMM_WORLD);
-      if(i == mpi_env->rank()){
+      if(i == params.m_rank){
         std::stringstream oss;
         oss << i << "\t" << "kmer" << "\t" << ecdata.getKmerQueries()
             << "\t" << ecdata.getKmerQueryFails() << "\t"
@@ -240,7 +241,7 @@ void ECStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if(mpi_env->rank() == 0) {
+    if(params.m_rank == 0) {
         std::stringstream oss;
         oss << "proc" << "\t" << "type" << "\t" ;
         for(unsigned j = 0; j < MAX_LEVELS; j++)
@@ -253,7 +254,7 @@ void ECStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
 
     for(int i = 0; i < p; i++){
       MPI_Barrier(MPI_COMM_WORLD);
-      if(i == mpi_env->rank()){
+      if(i == params.m_rank){
         std::stringstream oss;
         oss << i << "\t" << "kmer";
         for(unsigned j = 0; j < MAX_LEVELS; j++)
@@ -277,16 +278,17 @@ void ECStats::updateFileReadTime(std::ostream&){
 }
 
 void ECStats::updateSpectrumTime(ECData& ecdata, std::ostream& ofs){
-    std::stringstream oss;
+    std::stringstream oss, oss2;
     oss << "kmer count\t" << ecdata.getKmerCount() << std::endl;
     oss << "tile count\t" << ecdata.getTileCount() << std::endl;
     std::cout << oss.str();
     std::cout.flush();
+
     kmer_sync_start = tstart;
     kmer_sync_stop = tstop;
-    oss << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
+    oss2 << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
         << " (secs)" << std::endl;
-    ofs << oss.str();
+    ofs << oss2.str();
     ofs.flush();
 }
 

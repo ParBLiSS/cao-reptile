@@ -25,6 +25,10 @@
 #ifndef _ECDATA_H
 #define _ECDATA_H
 
+#include <vector>
+#include <mpi.h>
+#include <stdint.h>
+
 #include "util.h"
 #include "flat_layout.hpp"
 #include "caware_layout.hpp"
@@ -81,7 +85,7 @@ typedef KeyIDComp<kmer_id_t> KmerIDComp;
 typedef std::vector<kmer_id_t> kmer_id_vector;
 typedef std::vector<tile_id_t> tile_id_vector;
 typedef std::vector<unsigned char> kcount_vector;
-#define MAX_LEVELS 64
+static const unsigned MAX_LEVELS = 64;
 class ECData {
   private:
     void registerKmerTypes();
@@ -148,7 +152,7 @@ class ECData {
 
     Para& getParams(){return m_params;}
     const int& getKmerCount() const{return m_kcount;}
-    const int& getTileCount() const{return m_kcount;}
+    const int& getTileCount() const{return m_tilecount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
     const cvec_t& getReads() const{return m_ReadsString;}
     const cvec_t& getQuals() const{return m_QualsString;}

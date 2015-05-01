@@ -5,8 +5,8 @@
 # Example 'reptile-v1.1' configuration file
 # ------------------------------------------------------------------------------
 
-# File containing short read sequences (must be in fasta format)
-InFaFile        ./test-fa/Testing.fa
+# File containing short read sequences (must be in fastq format)
+InFaFile        ./test-fa/Testing.fq
 
 # Use quality score information? (for current version, must be set to 1)
 QFlag           1
@@ -29,7 +29,7 @@ KmerLen         7
 # Maximum Hamming distance per k-mer
 hd_max          2
 
-# Tile length = 'KmerLen' + 'Step'    
+# Tile length = 'KmerLen' + 'Step'
 Step            1
 
 # This controls the run-time and memory,  set to 4^c (1 <= c <= 4); to reduce
@@ -51,7 +51,7 @@ T_ratio         0.5
 # A base call > 'QThreshold' is considered high-quality
 QThreshold      50
 
-# Maximum number of bases < 'QThreshold' allowed per k-mer. If a k-mer contains    
+# Maximum number of bases < 'QThreshold' allowed per k-mer. If a k-mer contains
 # <= 'MaxBadQPerKmer' bases having quality < 'QThreshold', it is considered as a
 # high quality k-mer. Default value is 0
 MaxBadQPerKmer  1
@@ -81,7 +81,7 @@ T_expGoodCnt    8
 # that T_card < T_expGoodCnt.
 T_card          1
 
-# If set to 1, the program will store the reads and then 
+# If set to 1, the program will store the reads and then
 #  process the reads - Applicable only if run with out map reduce
 StoreReads      0
 # Whether to write the output to the filesystem.
@@ -90,15 +90,14 @@ WriteOutput     1
 # Cache Optimized search will layout the memory to optimize k-mer search
 # IF CacheOptimizedSearch == 0,
 #   sorted layout of list of "{kmer, count}" is used k-spectrum search
-# If CacheOptimizedSearch == 1, 
-#   cache aware layout list of "kmer" is used for k-spectrum search 
+# If CacheOptimizedSearch == 1,
+#   cache aware layout list of "kmer" is used for k-spectrum search
 # If CacheOptimizedSearch == 2,
-#   cache oblivious layout "kmer" is used for k-spectrum search 
-# If CacheOptimizedSearch == 3, 
-#   sorted layout "kmer" list is used for k-spectrum search 
+#   cache oblivious layout "kmer" is used for k-spectrum search
+# If CacheOptimizedSearch == 3,
+#   sorted layout "kmer" list is used for k-spectrum search
 CacheOptimizedSearch      0
 # KmerCacheSize and TileCacheSize are paramters used for cache
 # aware layout
 KmerCacheSize      4
 TileCacheSize      4
-

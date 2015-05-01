@@ -47,6 +47,7 @@ public:
     ECImpl(const ECData& ecd, const Para& inp):ecdata_(ecd), inPara_(inp){};
     void readEC(int readID, char* addr, char* qAddr);
     void writeErrors(std::ostream& oHandle);
+    size_t getSize(){ return records_.size(); };
 };
 
 #endif /* ERRORCORRECTOR_H */

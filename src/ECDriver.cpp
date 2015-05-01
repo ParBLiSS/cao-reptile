@@ -26,8 +26,11 @@
  */
 
 
+#include <set>
+#include <cmath>
 #include <algorithm>
 #include <thread>
+
 #include "util.h"
 #include "ECImpl.hpp"
 #include "ECDriver.hpp"
@@ -41,7 +44,6 @@ void printHex(int i) {
 }
 
 void ECDriver::ec() {
-    readID_  = inPara_.startFromLineNo;
     if(inPara_.writeOutput != 0)
         oHandle_.open(outFname_.c_str());
 
@@ -76,7 +78,6 @@ void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsStrin
         int qposition = QualsOffset[i];
         char* addr = const_cast<char*> (&ReadsString[position]);
         char* qAddr = const_cast<char*> (&QualsString[qposition]);
-        std::cout << addr << std::endl;
 #ifdef DEBUG
         out3 << addr << std::endl;
 #endif
@@ -96,7 +97,7 @@ void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsStrin
         ecr.writeErrors(oHandle_);
 }
 
-void ec_thread(int tid, int nthreads, ECImpl& ecr,
+void ec_thread(int tid, int nthreads, int grid, ECImpl& ecr,
                const cvec_t &ReadsString,const cvec_t &QualsString,
                const ivec_t &ReadsOffset,const ivec_t &QualsOffset)
 {
@@ -105,7 +106,7 @@ void ec_thread(int tid, int nthreads, ECImpl& ecr,
   unsigned long ntotal =  ReadsOffset.size();
   unsigned long nbegin = BLOCK_LOW(tid, nthreads, ntotal);
   unsigned long nend = BLOCK_HIGH(tid, nthreads, ntotal);
-  int rID = nbegin; // rID is NOT the same as nbegin, but for our expts, it is OK
+  int rID = grid + nbegin; // global read id + the id we start with
   for(unsigned long i = nbegin; i <= nend;i++) {
     int position = ReadsOffset[i];
     int qposition = QualsOffset[i];
@@ -125,7 +126,7 @@ void ECDriver::processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsStrin
 
     //Launch a group of threads
     for (int i = 0; i < inPara_.numThreads; ++i) {
-        tvx[i] = std::thread(ec_thread, i, inPara_.numThreads,
+        tvx[i] = std::thread(ec_thread, i, readID_, inPara_.numThreads,
                              std::ref(threadEC[i]),
                              std::cref(ReadsString), std::cref(QualsString),
                              std::cref(ReadsOffset), std::cref(QualsOffset));
@@ -147,14 +148,7 @@ void ECDriver::processReadsFromFile() {
     std::ifstream read_stream(inPara_.iFaName.c_str());
     assert(read_stream.good() == true);
 
-    std::ifstream qual_stream(inPara_.iQName.c_str());
-    assert(qual_stream.good() == true);
-
-    read_stream.seekg(inPara_.offsetStart,std::ios::beg);
-    qual_stream.seekg(inPara_.qOffsetStart,std::ios::beg);
-    bIO::FASTA_input fasta(read_stream);
-    bIO::FASTA_input qual(qual_stream);
-    ++fasta;++qual;
+    read_stream.seekg(inPara_.offsetStart, std::ios::beg);
 
     cvec_t ReadsString;   // full string
     cvec_t QualsString;   // full quality score
@@ -162,8 +156,9 @@ void ECDriver::processReadsFromFile() {
     ivec_t QualsOffset;
 
     while(1){
-        bool lastRead = readBatch( fasta,qual,ReadsString,ReadsOffset,
-                                   QualsString,QualsOffset,inPara_);
+        bool lastRead = readBatch(&read_stream, inPara_.batchSize,
+                                  inPara_.offsetEnd, ReadsString, ReadsOffset,
+                                  QualsString, QualsOffset, readID_);
 #ifdef DEBUG
         {
             std::stringstream out ;

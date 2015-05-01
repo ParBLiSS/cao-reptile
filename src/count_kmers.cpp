@@ -22,17 +22,16 @@
  *
  */
 
-#include "mpi.h"
+#include <mpi.h>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
 #include <stdint.h>
 #include <limits.h>
 
-#include <MPI_env.hpp>
-#include "fasta_file.hpp"
 #include "util.h"
 #include "ECData.hpp"
 
@@ -140,14 +139,7 @@ void processReadsFromFile(ECData& ecdata){
     std::ifstream read_stream(params.iFaName.c_str());
     assert(read_stream.good() == true);
 
-    std::ifstream qual_stream(params.iQName.c_str());
-    assert(qual_stream.good() == true);
-
     read_stream.seekg(params.offsetStart,std::ios::beg);
-    qual_stream.seekg(params.qOffsetStart,std::ios::beg);
-    bIO::FASTA_input fasta(read_stream);
-    bIO::FASTA_input qual(qual_stream);
-    ++fasta;++qual;
 
     cvec_t ReadsString;   // full string
     cvec_t QualsString;   // full quality score
@@ -155,8 +147,10 @@ void processReadsFromFile(ECData& ecdata){
     ivec_t QualsOffset;
 
     while(1){
-         bool lastRead = readBatch( fasta,qual,ReadsString,ReadsOffset,
-                                   QualsString,QualsOffset,params);
+        int readid = 0;
+        bool lastRead = readBatch(&read_stream, params.batchSize,
+                                  params.offsetEnd, ReadsString, ReadsOffset,
+                                  QualsString, QualsOffset, readid);
         std::stringstream out ;
 #ifdef DEBUG
         out << "PROC : " << params.mpi_env->rank()  << " "
@@ -203,28 +197,17 @@ bool getReadsFromFile(ECData& ecdata){
 
     Para& params = ecdata.getParams();
 
-    // bIO::FASTA_input skips the last ling so using
-
     std::ifstream read_stream(params.iFaName.c_str());
     if(!read_stream.good()) {
         std::cout << "open " << params.iFaName << "failed :|\n";
         exit(1);
     }
-    std::ifstream qual_stream(params.iQName.c_str());
-    if(!qual_stream.good()) {
-        std::cout << "open " << params.iQName << "failed :|\n";
-        exit(1);
-    }
     read_stream.seekg(params.offsetStart,std::ios::beg);
-    qual_stream.seekg(params.qOffsetStart,std::ios::beg);
-    bIO::FASTA_input fasta(read_stream);
-    bIO::FASTA_input qual(qual_stream);
-    ++fasta;++qual;
-
     params.batchSize = INT_MAX; // Get all reads of this processor
-
-    bool lastRead = readBatch(fasta,qual,ecdata.m_ReadsString,
+    int readid = 0;
+    bool lastRead = readBatch(&read_stream, params.batchSize,
+                              params.offsetEnd, ecdata.m_ReadsString,
                               ecdata.m_ReadsOffset,ecdata.m_QualsString,
-                              ecdata.m_QualsOffset,params);
+                              ecdata.m_QualsOffset, readid);
     return lastRead;
 }
