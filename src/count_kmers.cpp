@@ -171,12 +171,6 @@ void processReadsFromFile(ECData& ecdata){
     }
 }
 
-// ------------------------------------------------------
-// For map reduce :
-//    map function to emit the reads
-// In general :
-//    emit the key-value pairs
-// ------------------------------------------------------
 void count_kmers(ECData& ecdata){
     const Para& params = ecdata.getParams();
 
@@ -189,25 +183,4 @@ void count_kmers(ECData& ecdata){
         // process reads from input file
         processReadsFromFile(ecdata);
     }
-}
-
-// Get the reads corresponding to this processor and
-// store it in ECData object
-bool getReadsFromFile(ECData& ecdata){
-
-    Para& params = ecdata.getParams();
-
-    std::ifstream read_stream(params.iFaName.c_str());
-    if(!read_stream.good()) {
-        std::cout << "open " << params.iFaName << "failed :|\n";
-        exit(1);
-    }
-    read_stream.seekg(params.offsetStart,std::ios::beg);
-    params.batchSize = INT_MAX; // Get all reads of this processor
-    int readid = 0;
-    bool lastRead = readBatch(&read_stream, params.batchSize,
-                              params.offsetEnd, ecdata.m_ReadsString,
-                              ecdata.m_ReadsOffset,ecdata.m_QualsString,
-                              ecdata.m_QualsOffset, readid);
-    return lastRead;
 }

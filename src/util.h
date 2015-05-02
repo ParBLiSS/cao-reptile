@@ -33,6 +33,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <cstdint>
 
 typedef std::vector<int> ivec_t;
 typedef std::vector<ivec_t> iivec_t;
@@ -59,10 +60,13 @@ typedef uint64_t tile_id_t;
 class Para {
 public:
     std::string iFaName;
+    std::string oErrName;
+    std::string outputFilename;
+    double tRatio;
     bool QFlag;
+    bool absentKmers;
     int batchSize;  //specify number of reads to be loaded
     int K;
-    std::string oErrName;
     int step;
     int qualThreshold;
     int Qlb;
@@ -70,12 +74,10 @@ public:
     int eSearch;
     int tGoodTile;
     int tCard;
-    //int tConst;
     int hdMax;
-    double tRatio;
     int storeReads;
-    bool absentKmers;
-    // cache additions
+
+    // cache optimizations
     int kmerCacheSize;
     int tileCacheSize;
     int cacheOptimizedSearch;
@@ -90,31 +92,18 @@ public:
     int m_size;
     int m_rank;
 
-    Para(const char *configFile) {
-        setPara(configFile);
-        load_parallel_params();
-    };
-
-    virtual ~Para(){ };
-
-private:
-
-    void setPara(const char *configFile);
-
-  public:
-    //long readsPerProcessor;
-    //unsigned long startFromLineNo;
-    //unsigned long endTillLineNo;
+    // input file offsets
     unsigned long offsetStart;
-    // unsigned long qOffsetStart;
-    // long inLastBatch;
-
     unsigned long long offsetEnd;
-    //unsigned long long qOffsetEnd;
     unsigned long long fileSize;
 
-    void load_parallel_params();
+    Para(const char *configFile);
     bool validate();
+
+ private:
+
+    void setPara(const char *configFile);
+    void load_parallel_params();
 
     void compute_offsets();
 };

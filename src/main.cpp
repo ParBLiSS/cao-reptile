@@ -22,67 +22,66 @@
  *
  */
 
-#include "mpi.h"
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <time.h>
+#include <mpi.h>
+
 #include "ECData.hpp"
 #include "ECDriver.hpp"
-#include "find_neighbors.h"
 #include "count_kmers.hpp"
 #include "sort_kmers.hpp"
-#include <time.h>
+#include "ECRunStats.hpp"
 
-double elapsed(clock_t& end, clock_t& start){
-  return (double (end - start))/ ((double) CLOCKS_PER_SEC);
-}
-
-struct ECStats{
-    double tstartInit, tstart, tstop;
-    double read_sync_start, read_sync_stop,
-        kmer_sync_start, kmer_sync_stop,
-        ec_sync_start, ec_sync_stop;
-    clock_t tstart_read_p, tstop_read_p,
-        tstart_kmer_p, tstop_kmer_p,
-        tstart_ec_p, tstop_ec_p;
-    // update global timings
-    void updateFileReadTime(std::ostream& ofs);
-    void updateSpectrumTime(ECData& ecd, std::ostream& ofs);
-    void updateECTime(std::ostream& ofs);
-    // report timigs
-    void reportTimings(Para& params, std::ostream& ofs);
-    void reportQueryCounts(ECData& ecd, std::ostream& ofs);
-};
-
-void run_reptile(ECData& ecdata,Para& params){
-    std::stringstream out;
-    out << params.oErrName << params.m_rank ;
-    std::string filename = out.str();
-    if(params.writeOutput != 0){
-        std::ofstream oHandle(filename.c_str());
-        if (!oHandle.good()) {
-            std::cout << "open " << filename << " failed, correct path?\n";
-            return;
-        }
-        oHandle.close();
+void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    ecstx.tstart_read_p = clock();
+    // If we have to store the reads, we read and store the reads
+    if(ecdata.getParams().storeReads) {
+        ecdata.getReadsFromFile();
     }
 
-    // Run reptile
-    ECDriver ecdr(ecdata, filename, params);
-    // Commented since it is no longer used
-    // if(params.useMaskedLists) {
-    //     ecdr.tableMaker(*params);
+    ecstx.tstop_read_p = clock();
+    MPI_Barrier(MPI_COMM_WORLD);
+    ecstx.tstop = MPI_Wtime();
+    if (ecdata.getParams().m_rank == 0) {
+        ecstx.updateFileReadTime(ofs);
+    }
+}
 
-    //     tstop = MPI_Wtime();
-    //     MPI_Barrier(MPI_COMM_WORLD);
-    //     if (params.m_rank == 0) {
-    //         std::cout << "TIME TO BUILD TABLE " << tstop-tstart
-    //                   << " (secs)" << std::endl;
-    //     }
-    //     tstart = tstop;
-    // }
+void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+
+    // counts the k-mers and loads them in the ECData object
+    count_kmers(ecdata);
+    // sort kmers and tiles
+    sort_kmers(ecdata);
+
+    ecstx.tstop_kmer_p = clock();
+    MPI_Barrier(MPI_COMM_WORLD);
+    ecstx.tstop = MPI_Wtime();
+    if (ecdata.getParams().m_rank == 0) {
+        ecstx.updateSpectrumTime(ecdata, ofs);
+    }
+}
+
+void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    ecstx.tstart = MPI_Wtime(); ecstx.tstart_ec_p = clock();
+
+    // Cache Optimized layout construction
+    ecdata.buildCacheOptimizedLayout();
+
+    // Run reptile
+    ECDriver ecdr(ecdata, ecdata.getParams().outputFilename,
+                  ecdata.getParams());
     ecdr.ec();
-    return;
+
+    ecstx.tstop_ec_p = clock();
+    MPI_Barrier(MPI_COMM_WORLD);
+    ecstx.tstop = MPI_Wtime();
+    if (ecdata.getParams().m_rank == 0) {
+        ecstx.updateECTime(ofs);
+    }
 }
 
 int parallelEC( char *inputFile){
@@ -96,212 +95,23 @@ int parallelEC( char *inputFile){
         MPI::COMM_WORLD.Abort(1);
     }
 
-    // Object to encapsulate error-correction data
     ECData ecdata(params);
-    ECStats ecstx;
-    ecstx.tstart = ecstx.tstartInit = MPI_Wtime(); ecstx.tstart_read_p = clock();
-    // If we have to store the reads, we read and store the reads
-    if(params.storeReads) {
-        getReadsFromFile(ecdata);
-    }
-    ecstx.tstop_read_p = clock();
-    MPI_Barrier(MPI_COMM_WORLD);
-    ecstx.tstop = MPI_Wtime();
-    if (params.m_rank == 0) {
-        ecstx.updateFileReadTime(ofs);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
+    ECRunStats ecstx;
 
-    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
-    // counts the k-mers and loads them in the ECData object
-    count_kmers(ecdata);
-    // sort kmers and tiles
-    sort_kmers(ecdata);
-    ecstx.tstop_kmer_p = clock();
-    MPI_Barrier(MPI_COMM_WORLD);
-    ecstx.tstop = MPI_Wtime();
-    if (params.m_rank == 0) {
-        ecstx.updateSpectrumTime(ecdata, ofs);
-    }
+    load_reads(ecdata, ecstx, ofs);
 
-    ecstx.tstart = MPI_Wtime(); ecstx.tstart_ec_p = clock();
-    // Cache Optimized layout construction
-    ecdata.buildCacheOptimizedLayout();
-    // run reptile
-    run_reptile(ecdata, params);
-    ecstx.tstop_ec_p = clock();
-    MPI_Barrier(MPI_COMM_WORLD);
-    ecstx.tstop = MPI_Wtime();
-    if (params.m_rank == 0) {
-        ecstx.updateECTime(ofs);
-    }
+    construct_spectrum(ecdata, ecstx, ofs);
+
+    run_reptile(ecdata, ecstx, ofs);
 
     ecstx.reportTimings(params, ofs);
+
 #ifdef QUERY_COUNTS
     ecstx.reportQueryCounts(ecdata, ofs);
 #endif
+
     ecdata.writeSpectrum();
     return 0;
-}
-
-void ECStats::reportTimings(Para& params, std::ostream& ofs){
-    // Output for counting the number of failures and success
-    //std::stringstream out;
-    //out << params.oErrName << params.m_rank ;
-    //ecdata.output(out.str());
-
-    int p = params.m_size;
-    if(params.m_rank == 0){
-        std::stringstream oss;
-        oss << "--" << std::endl
-            << "nproc" << "\t" << "phase" << "\t"
-            << "start" << "\t" << "stop" << "\t"
-            << "duration" << std::endl;
-        oss << p << "\t" << "read global" << "\t"
-            << read_sync_start << "\t"
-            << read_sync_stop << "\t"
-            << read_sync_stop - read_sync_start
-            << std::endl;
-        oss << p << "\t" << "kmer global" << "\t"
-            << kmer_sync_start << "\t"
-            << kmer_sync_stop << "\t"
-            << kmer_sync_stop - kmer_sync_start
-            << std::endl;
-        oss << p << "\t" << "ec global" << "\t"
-            << ec_sync_start << "\t"
-            << ec_sync_stop << "\t"
-            << ec_sync_stop - ec_sync_start
-            << std::endl;
-        oss << p << "\t" << "final global" << "\t"
-            << tstartInit << "\t" << tstop << "\t"
-            << (tstop - tstartInit) << std::endl;
-        oss << "--" << std::endl;
-        oss << "rank" << "\t" << "phase" << "\t"
-            << "start" << "\t" << "stop" << "\t"
-            << "duration"
-            << std::endl;
-        ofs << oss.str();
-        ofs.flush();
-    }
-    for(int i = 0; i < p; i++){
-        MPI_Barrier(MPI_COMM_WORLD);
-        if(i == params.m_rank){
-            std::stringstream oss;
-            oss << i << "\t" << "read local" << "\t"
-                << elapsed(tstart_read_p, tstart_read_p) << "\t"
-                << elapsed(tstop_read_p, tstart_read_p) << "\t"
-                << elapsed(tstop_read_p, tstart_read_p)
-                << std::endl;
-            oss << i << "\t" << "kmer local" << "\t"
-                << elapsed(tstart_kmer_p, tstart_read_p) << "\t"
-                << elapsed(tstop_kmer_p, tstart_read_p) << "\t"
-                << elapsed(tstop_kmer_p, tstart_kmer_p)
-                << std::endl;
-            oss << i << "\t" << "ec local" << "\t"
-                << elapsed(tstart_ec_p, tstart_read_p) << "\t"
-                << elapsed(tstop_ec_p, tstart_read_p) << "\t"
-                << elapsed(tstop_ec_p, tstart_ec_p)
-                << std::endl;
-            ofs << oss.str();
-            ofs.flush();
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-}
-
-void ECStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
-    Para& params = ecdata.getParams();
-
-    if(params.m_rank == 0) {
-      std::stringstream oss;
-      oss << "--" << std::endl;
-      oss << "proc" << "\t" << "type" << "\t" << "query counts"  << "\t"
-          << "query fails" << "\t" << "query success" << std::endl;
-      ofs << oss.str();
-      ofs.flush();
-    }
-    int p = params.m_size;
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int i = 0; i < p; i++){
-      MPI_Barrier(MPI_COMM_WORLD);
-      if(i == params.m_rank){
-        std::stringstream oss;
-        oss << i << "\t" << "kmer" << "\t" << ecdata.getKmerQueries()
-            << "\t" << ecdata.getKmerQueryFails() << "\t"
-            << (ecdata.getKmerQueries()) - (ecdata.getKmerQueryFails())
-            << std::endl;
-        oss << i << "\t" << "tile" <<  "\t" << ecdata.getTileQueries()
-            << "\t" << ecdata.getTileQueryFails() << "\t"
-            << (ecdata.getTileQueries()) - (ecdata.getTileQueryFails())
-            << std::endl;
-        ofs << oss.str();
-        ofs.flush();
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(params.m_rank == 0) {
-        std::stringstream oss;
-        oss << "proc" << "\t" << "type" << "\t" ;
-        for(unsigned j = 0; j < MAX_LEVELS; j++)
-            oss << "L" << j << "\t" ;
-        oss <<  std::endl;
-        ofs << oss.str();
-        ofs.flush();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    for(int i = 0; i < p; i++){
-      MPI_Barrier(MPI_COMM_WORLD);
-      if(i == params.m_rank){
-        std::stringstream oss;
-        oss << i << "\t" << "kmer";
-        for(unsigned j = 0; j < MAX_LEVELS; j++)
-          oss << "\t" << ecdata.getKmerLevels()[j];
-        oss << std::endl;
-        oss << i << "\t" << "tile";
-        for(unsigned j = 0; j < MAX_LEVELS; j++)
-          oss << "\t" << ecdata.getTileLevels()[j];
-        oss << std::endl;
-        ofs << oss.str();
-        ofs.flush();
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-void ECStats::updateFileReadTime(std::ostream&){
-    read_sync_start = tstart;
-    read_sync_stop = tstop;
-}
-
-void ECStats::updateSpectrumTime(ECData& ecdata, std::ostream& ofs){
-    std::stringstream oss, oss2;
-    oss << "kmer count\t" << ecdata.getKmerCount() << std::endl;
-    oss << "tile count\t" << ecdata.getTileCount() << std::endl;
-    std::cout << oss.str();
-    std::cout.flush();
-
-    kmer_sync_start = tstart;
-    kmer_sync_stop = tstop;
-    oss2 << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
-        << " (secs)" << std::endl;
-    ofs << oss2.str();
-    ofs.flush();
-}
-
-void ECStats::updateECTime(std::ostream& ofs){
-    std::stringstream oss;
-    ec_sync_start = tstart;
-    ec_sync_stop = tstop;
-    oss << "ERR CORRECTION TIME " << tstop-tstart
-        << " (secs)" << std::endl;
-    oss << "TOTAL TIME " << tstop-tstartInit
-        << " (secs)" << std::endl;
-    ofs << oss.str();
-    ofs.flush();
 }
 
 int main(int argc,char *argv[]){
@@ -321,12 +131,7 @@ int main(int argc,char *argv[]){
         }
         MPI::COMM_WORLD.Abort(1);
     }
-    /*
-    if(MPI::COMM_WORLD.Get_size() < 2) {
-        std::cout << "ERROR:Requires at least two process" << std::endl;
-        MPI::COMM_WORLD.Abort(1);
-    }
-    */
+
     std::ifstream input(argv[1]);
     if(!input) {
         if(MPI::COMM_WORLD.Get_rank() == 0){

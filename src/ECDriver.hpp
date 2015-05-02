@@ -28,35 +28,26 @@
 #ifndef _ECDRIVER_H
 #define	_ECDRIVER_H
 
-#include <iostream>
-#include <string>
 
 #include "util.h"
 #include "ECData.hpp"
 
+#include <fstream>
+#include <string>
+
 class ECDriver {
 public:
     ECDriver(ECData& p, std::string& fn, Para& mpara):
-        ecdata_(p),outFname_(fn),inPara_(mpara),readID_(0){};
+         ecdata_(p),inPara_(mpara),outFname_(fn),readID_(0){};
     virtual ~ECDriver(){};
-    void load ();
-    void reLoad();
-    void tableMaker();
+
     void ec();
 private:
     ECData& ecdata_;
-    std::string outFname_;
     Para& inPara_;
+    std::string outFname_;
     int readID_;
     std::ofstream oHandle_;
-
-    // Variables for tables
-    iivec_t maskIdx_;
-    uvec_t masks_;
-    uvec_t table_;
-
-    // Chunk divisonal logic taken from Reptile
-    void tableUnitNeighbor(uvec_t& myNB, int dPoint);
 
     void processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
                       const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
@@ -67,31 +58,5 @@ private:
                         const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
     void processReadsFromFile();
 };
-
-void updateNodes(kcvec_t& N, kcvec_t& N_rv, const kcvec_t& tiles, int len);
-
-// used for sorting tables
-struct TComp {
-    uint32_t mask;
-    TComp (uint32_t mvalue): mask(mvalue) {};
-
-    bool operator() (uint32_t e1, uint32_t e2) const {
-        return ((e1 & mask) < (e2 & mask));
-    }
-};
-
-/*
- * for debugging purpose, print out std::vector<kc_t>
- */
-inline void print_kcvec (const std::string& msg, const kcvec_t& myvec, int len){
-
-    std::cout << msg << "\n";
-    std::cout << "\n--------------------------------\n";
-    for (unsigned int j = 0; j < myvec.size(); ++ j){
-        std::cout << toString(myvec[j].ID, len)
-        << "\t" << myvec[j].goodCnt << "\t" << myvec[j].cnt << "\n";
-    }
-    std::cout << "--------------------------------\n";
-}
 
 #endif	/* _ECDRIVER_H */

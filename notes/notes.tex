@@ -1,4 +1,4 @@
-% Created 2014-09-30 Tue 15:54
+% Created 2015-05-02 Sat 19:43
 \documentclass[integrals, nointegrals, article, 12pt, a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -29,7 +29,7 @@
 \hypersetup{
   pdfkeywords={},
   pdfsubject={},
-  pdfcreator={Emacs 24.3.1 (Org mode 8.0)}}
+  pdfcreator={Emacs 24.5.1 (Org mode 8.2.8)}}
 \begin{document}
 
 \maketitle
@@ -123,6 +123,7 @@ multiple of $m$ and $m \geq 3$.
 \li \Return $ST$
 \end{codebox}
 
+
 \section{Experimental Results}
 \label{sec-2}
 
@@ -159,6 +160,7 @@ datasets D2 and D3 with the three different -- sorted order layout,
 cache aware layout and cache oblivious layout.
 
 
+
 \section{Results}
 \label{sec-3}
 \subsection{Kmer Table Sizes}
@@ -176,6 +178,7 @@ D3 & 6092949 & 240045877\\
 \hline
 \end{tabular}
 \end{table}
+
 
 \subsection{Dataset D2 (Hamming Distance 1)}
 \label{sec-3-2}
@@ -205,6 +208,7 @@ Procs & Construction & Correction & Error Correction & Speedup & Error Correctio
 \end{table}
 
 
+
 \subsubsection{Default run results}
 \label{sec-3-2-2}
 
@@ -227,6 +231,7 @@ Procs & Construction & Error Correction & Total\\
 \end{tabular}
 \end{center}
 
+
 \subsubsection{Cache Aware results}
 \label{sec-3-2-3}
 
@@ -248,6 +253,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Oblivious results}
 \label{sec-3-2-4}
 
@@ -269,6 +275,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsection{Dataset D2 (Hamming Distance = 2)}
 \label{sec-3-3}
 
@@ -291,6 +298,7 @@ Procs & Construction & Correction & Error Correction & Speedup & Error Correctio
 \hline
 \end{tabular}
 \end{table}
+
 \subsubsection{Default run results}
 \label{sec-3-3-2}
 
@@ -307,6 +315,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Aware results}
 \label{sec-3-3-3}
 
@@ -323,6 +332,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Oblivious results}
 \label{sec-3-3-4}
 
@@ -339,6 +349,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsection{Dataset D3 (Hamming Distance 1)}
 \label{sec-3-4}
 \subsubsection{Default run results}
@@ -360,6 +371,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Aware results}
 \label{sec-3-4-2}
 
@@ -379,6 +391,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Oblivious results}
 \label{sec-3-4-3}
 
@@ -398,6 +411,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsection{Dataset D3 (Hamming Distance = 2)}
 \label{sec-3-5}
 \subsubsection{Summary}
@@ -417,6 +431,7 @@ Procs & Construction & Correction & Error Correction & Speedup & Error Correctio
 \hline
 \end{tabular}
 \end{table}
+
 \subsubsection{Default run results}
 \label{sec-3-5-2}
 
@@ -432,6 +447,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Aware run results}
 \label{sec-3-5-3}
 
@@ -447,6 +463,7 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
+
 \subsubsection{Cache Oblivious run results}
 \label{sec-3-5-4}
 
@@ -462,5 +479,74 @@ Procs & Construction & Error Correction & Total\\
 \hline
 \end{tabular}
 \end{center}
-% Emacs 24.3.1 (Org mode 8.0)
+
+\section{Work Distribution Notes}
+\label{sec-4}
+
+We will use a master-slave pattern to dynamically distribute
+work. Suppose, we use p processes for the error correction, and each
+process uses k + 1 shared memory threads.  In each process, we allocate
+one thread completely dedicated to handle all the inter-process
+communincations and work assignment. I call this thread 'the
+co-ordination thread'. This thread doesn't do any error correction (EC)
+work. The rest of the k worker threads will only do the EC work. In our
+implementation, we will use the the root process for the master process.
+
+In the mater process, the following are the reponsibilities of a
+co-ordination thread:
+\begin{enumerate}
+\item Assign work to k local worker threads.
+\item Poll for any work request from slave process. If any slave process
+asks for work, assign work for them.
+\item When there is no more work to assign, notify every one.
+\end{enumerate}
+
+In the slave process, a co-ordination thread's responsibilities are as
+follows:
+\begin{enumerate}
+\item If we are running low on work assignment, ask work from master
+process.
+\item Recieve work from master process and distribute it to the local
+worker threads.
+\end{enumerate}
+
+An EC work-item is represented by an offset in the input file. This is
+position starting from which a worker thread starts reading and
+continues to do error correction for a predifined chunk. Communication
+between the co-ordination thread and the worker threads with in a
+process is accomplished via a shared queue. The co-ordination thread
+loads the work-item to queue, from which the worker threads pops the
+item and proceeds to do the error correction. When the queue size is
+below a given threshold, the co-ordination threads pre-emptively
+requests work from the master process. The master process always sends k
+work-items. Right now the threshold is kept as 2k, and hence the work
+queue size is always bounded by 3k work items.
+
+Worker thread is dumb in the sense that it goes on an infinite loop : it
+does error correction, looks at the work queue for the next chunk and so
+on. Worker processes break out of the loop, when a shared boolean
+variable is set to true.
+
+The state transitions of the co-ordination thread is as follows:
+Initially, the co-ordination thread is at "ASSIGN$_{\text{WORK}}$" state. In this
+state this thread in a slave process monitors the work queue, and if its
+size falls below 2k, it requests work-items from the master
+process. After receiving the work items, it pushes them into the work
+queue. In the master process, this thread fulfills the slaves' requests,
+and performs work-item assignment for local worker threads. When there
+is no more work available for assignment, we move to the next state :
+"PENDING$_{\text{WORK}}$". This state represents the situation that there is no
+more work to assign, but the work-queue is not empty i.e., there are
+still work-items left to be claimed by the dumb workers. In this state,
+the co-ord thread in a slave process will just monitor the work queue
+and wait for it to become empty. In the master process, the co-ord
+thread at this state will poll for any slave requests, while monitoring
+the work queue. This thread also sends the "No more work is available to
+assign" signal by sending assigning 'zero work'. This thread can move to
+next state only if it has sent 'zero work' signal to all the slave
+processes. The next state is 'FINISHED$_{\text{WORK'}}$. At this state, there is
+nothing more to do for the co-ord threads. It sets the shared boolean
+variable to true and waits for the worker threads to finish the last
+error correction work items.
+% Emacs 24.5.1 (Org mode 8.2.8)
 \end{document}

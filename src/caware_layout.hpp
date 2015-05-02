@@ -4,7 +4,7 @@
 #include <iostream>
 #include <iterator>
 #include <cassert>
-#include <stdint.h>
+#include <cstdint>
 #include <fstream>
 
 #include "aligned_allocator.hpp"
@@ -274,7 +274,7 @@ public:
         avg_bytes = (avg_bytes * m)/mIds.size();
     }
 
-    void serialize(std::ofstream& ofs){
+    void serialize(std::ofstream& ofs) const{
         ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
         ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }

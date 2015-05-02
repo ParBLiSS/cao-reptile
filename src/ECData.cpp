@@ -82,6 +82,25 @@ void ECData::registerKmerTypes(){
 
 }
 
+// Get the reads corresponding to this processor and
+// store it in ECData object
+bool ECData::getReadsFromFile(){
+    std::ifstream read_stream(m_params.iFaName.c_str());
+    if(!read_stream.good()) {
+        std::cout << "open " << m_params.iFaName << "failed :|\n";
+        exit(1);
+    }
+    read_stream.seekg(m_params.offsetStart, std::ios::beg);
+    m_params.batchSize = INT_MAX; // Get all reads of this processor
+    int readid = 0;
+    bool lastRead = readBatch(&read_stream, m_params.batchSize,
+                              m_params.offsetEnd, m_ReadsString,
+                              m_ReadsOffset,m_QualsString,
+                              m_QualsOffset, readid);
+    return lastRead;
+}
+
+
 bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
   if(m_karray == 0){
     return false;
@@ -346,7 +365,7 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
     m_tilesize = newTileSize;
 }
 
-void ECData::writeSpectrum(){
+void ECData::writeSpectrum() const{
     if(m_params.writeSpectrum > 0 && (m_params.m_rank == 0)){
         assert(m_params.kmerSpectrumOutFile.length() > 0);
         assert(m_params.tileSpectrumOutFile.length() > 0);
@@ -557,7 +576,7 @@ void ECData::buildCacheOptimizedLayout(){
    }
 }
 
-void ECData::output(const std::string& filename){
+void ECData::writeQueryStats(const std::string& filename) const{
     std::ofstream oHandle(filename.c_str(), ios::out | ios::app );
     if (!oHandle.good()) {
         std::cout << "open " << filename << " failed, correct path?\n";
@@ -621,7 +640,7 @@ void ECData::estimateByteCounters(){
     estimateKmerByteCounters();
 }
 
-void ECData::printByteCounters(std::ostream& ots){
+void ECData::printByteCounters(std::ostream& ots) const{
    if(m_params.cacheOptimizedSearch != 0)
        return;
 

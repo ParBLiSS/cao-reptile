@@ -6,7 +6,7 @@
 #include <iterator>
 #include <cassert>
 #include <algorithm>
-#include <stdint.h>
+#include <cstdint>
 #include "build_hp_tree.hpp"
 #include "hp_precomputed_table.h"
 #include "implicit_hp_search_pure_c.hpp"
@@ -166,7 +166,7 @@ public:
         return (getPosition(val) != mIds.end());
     }
 
-    void serialize(std::ofstream& ofs){
+    void serialize(std::ofstream& ofs) const{
         ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
         ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }

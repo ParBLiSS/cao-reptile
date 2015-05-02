@@ -26,8 +26,9 @@
 #define _ECDATA_H
 
 #include <vector>
+#include <string>
+#include <cstdint>
 #include <mpi.h>
-#include <stdint.h>
 
 #include "util.h"
 #include "flat_layout.hpp"
@@ -86,6 +87,7 @@ typedef std::vector<kmer_id_t> kmer_id_vector;
 typedef std::vector<tile_id_t> tile_id_vector;
 typedef std::vector<unsigned char> kcount_vector;
 static const unsigned MAX_LEVELS = 64;
+
 class ECData {
   private:
     void registerKmerTypes();
@@ -137,20 +139,22 @@ class ECData {
     int currentKmerBatchStart;
     int currentTileBatchStart;
 
-  public:
-    friend void sort_kmers(ECData& ecdata);
-    friend void count_kmers(ECData& ecdata);
-    friend bool getReadsFromFile(ECData& ecdata);
-
     void padKmerArray(unsigned kSize);
     void padTileArray(unsigned kSize);
     void estimateKmerByteCounters();
     void estimateTileByteCounters();
-    void estimateByteCounters();
-    void printByteCounters(std::ostream& ots);
-    void runCAStats(std::ostream& ots);
+
+    void buildCacheAwareLayout(const unsigned& kmerCacheSize,
+                               const unsigned& tileCacheSize);
+
+    void buildCacheObliviousLayout();
+    void buildFlatLayout();
+  public:
+    friend void sort_kmers(ECData& ecdata);
+    friend void count_kmers(ECData& ecdata);
 
     Para& getParams(){return m_params;}
+
     const int& getKmerCount() const{return m_kcount;}
     const int& getTileCount() const{return m_tilecount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
@@ -162,17 +166,24 @@ class ECData {
     const uint64_t& getKmerQueryFails() const{return m_kmerQueryFails;}
     const uint64_t& getTileQueries() const{return m_tileQueries;}
     const uint64_t& getTileQueryFails() const{return m_tileQueryFails;}
-    const unsigned* getKmerLevels(){return m_kmerLevels;}
-    const unsigned* getTileLevels(){return m_tileLevels;}
+    const unsigned* getKmerLevels() const {return m_kmerLevels;}
+    const unsigned* getTileLevels() const {return m_tileLevels;}
 
+    bool getReadsFromFile();
     bool addToArray(kmer_id_t &ID,int count);
     bool addToArray(kmer_id_t &ID,unsigned char count);
     bool addToArray(tile_id_t &ID,int count);
 
-    void printKArray() const;
     void replaceKArray(kmer_t* allData,int allDataCount,int allDataSize);
     void replaceTileArray(tile_t *newTileArray,int newTileCount,
                           int newTileSize);
+
+    void mergeBatchKmers();
+    void setBatchStart();
+    void buildCacheOptimizedLayout();
+    void estimateByteCounters();
+    void runCAStats(std::ostream& ots);
+
     bool findKmer(const kmer_id_t &kmerID) const;
     bool findKmerDefault(const kmer_id_t &kmerID) const;
     bool findKmerFlat(const kmer_id_t &kmerID) const;
@@ -185,16 +196,10 @@ class ECData {
     int findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
     int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
 
-    void mergeBatchKmers();
-    void setBatchStart();
-    void buildCacheOptimizedLayout();
-    void buildCacheAwareLayout(const unsigned& kmerCacheSize,
-                               const unsigned& tileCacheSize);
-
-    void buildCacheObliviousLayout();
-    void buildFlatLayout();
-    void output(const std::string& filename);
-    void writeSpectrum();
+    void printByteCounters(std::ostream& ots) const;
+    void printKArray() const;
+    void writeQueryStats(const std::string& filename) const;
+    void writeSpectrum() const;
 
     ECData(Para& p);
     virtual ~ECData();

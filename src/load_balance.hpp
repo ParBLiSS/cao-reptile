@@ -273,8 +273,8 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
 
 template <typename StructDataType>
 void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
-                  MPI_Datatype mpi_struct_type,
-                  int size,int rank){
+                   MPI_Datatype mpi_struct_type,
+                   int size,int rank){
     int i, j;
     unsigned totalelements = 0;
     if(size == 1){

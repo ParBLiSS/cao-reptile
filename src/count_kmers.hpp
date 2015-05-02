@@ -4,6 +4,5 @@
 #include "ECData.hpp"
 
 void count_kmers(ECData& ecdata);
-bool getReadsFromFile(ECData& ecdata);
 
 #endif

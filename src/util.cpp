@@ -1,15 +1,15 @@
 #include "util.h"
-#include <algorithm>
+
 #include <cassert>
 #include <sstream>
-#include <string.h>
-#include <stdlib.h>
-#include <iomanip>
-#include <stdint.h>
 
-#include <ctype.h>
 #include <sys/time.h>
 #include <mpi.h>
+
+Para::Para(const char *configFile){
+    setPara(configFile);
+    load_parallel_params();
+}
 
 void Para::setPara(const char *configFile) {
     cacheOptimizedSearch = 0;
@@ -89,6 +89,19 @@ bool Para::validate() {
             std::cout << "Err: Output file is not specified!\n";
         return false;
     }
+    if(writeOutput != 0){
+        //  each process validates its ouput path
+        std::stringstream outs;
+        outs << oErrName << "-" << m_rank ;
+        outputFilename = outs.str();
+        std::ofstream oHandle(outputFilename.c_str());
+        if (!oHandle.good()) {
+            std::cout << "open " << outputFilename << " failed, correct path?\n";
+            return false;
+        }
+        oHandle.close();
+    }
+
     if (K > 16 || (K + step) > 32) {
         if(m_rank == 0)
             std::cout <<
