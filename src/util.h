@@ -47,7 +47,7 @@ typedef std::pair<int, int> ipair_t;
 typedef std::pair<uint32_t, uint32_t> upair_t;
 typedef uint32_t kmer_id_t;
 typedef uint64_t tile_id_t;
-//typedef MPI_UNSIGNED_LONG_LONG mpi_kmer_id_t;
+
 #define mpi_kmer_id_t MPI_UNSIGNED // MPI_UNSIGNED_LONG_LONG
 #define mpi_tile_id_t MPI_UNSIGNED_LONG_LONG // MPI_UNSIGNED_LONG_LONG
 /// macros for block decomposition
@@ -94,8 +94,8 @@ public:
 
     // input file offsets
     unsigned long offsetStart;
-    unsigned long long offsetEnd;
-    unsigned long long fileSize;
+    unsigned long offsetEnd;
+    unsigned long fileSize;
 
     Para(const char *configFile);
     bool validate();
@@ -108,6 +108,28 @@ public:
     void compute_offsets();
 };
 
+struct ReadStore {
+    cvec_t readsString;
+    ivec_t readsOffset;
+    cvec_t qualsString;
+    ivec_t qualsOffset;
+    int readId;
+
+    void reset(){
+        readsString.resize(0);
+        readsOffset.resize(0);
+        qualsString.resize(0);
+        qualsOffset.resize(0);
+    }
+
+    void swap(ReadStore& other){
+        std::swap(readsString, other.readsString);
+        std::swap(qualsString, other.qualsString);
+        std::swap(readsOffset, other.readsOffset);
+        std::swap(qualsOffset, other.qualsOffset);
+        std::swap(readId, other.readId);
+    }
+};
 
 inline int char_to_bits(char c) {
     static bool flag = false;
@@ -243,8 +265,7 @@ std::string toString(kmer_id_t ID, int len);
 double get_time();
 void print_time (const std::string& msg, double& timing);
 bool readBatch(std::ifstream* fqfs, const long& batchSize,
-               const unsigned long long& offsetEnd,
-               cvec_t &ReadsString,ivec_t &ReadsOffset,
-               cvec_t &QualsString,ivec_t &QualsOffset, int& readid);
+               const unsigned long& offsetEnd,
+               ReadStore& rbatch);
 bool goodQuals(const char* qAddr, int len, int threshold);
 #endif	/* _UTIL_H */

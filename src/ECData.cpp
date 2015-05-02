@@ -92,11 +92,9 @@ bool ECData::getReadsFromFile(){
     }
     read_stream.seekg(m_params.offsetStart, std::ios::beg);
     m_params.batchSize = INT_MAX; // Get all reads of this processor
-    int readid = 0;
+
     bool lastRead = readBatch(&read_stream, m_params.batchSize,
-                              m_params.offsetEnd, m_ReadsString,
-                              m_ReadsOffset,m_QualsString,
-                              m_QualsOffset, readid);
+                              m_params.offsetEnd, m_reads);
     return lastRead;
 }
 

@@ -96,9 +96,7 @@ void add_kmers(char *line,char *qAddr,
     }
 }
 
-void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
-                  ivec_t &ReadsOffset,ivec_t &QualsOffset,
-                  ECData& ecdata)
+void processBatch(ReadStore& rbatch, ECData& ecdata)
 {
     static int _batch = 0;
     const Para& params = ecdata.getParams();
@@ -111,11 +109,11 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
     ecdata.setBatchStart();
     //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
     //         << " LOADING  BATCH " << _batch << std::endl;
-    for(unsigned long i = 0; i < ReadsOffset.size();i++) {
-        int position = ReadsOffset[i];
-        int qposition = QualsOffset[i];
-        char* addr = const_cast<char*> (&ReadsString[position]);
-        char* qAddr = const_cast<char*> (&QualsString[qposition]);
+    for(unsigned long i = 0; i < rbatch.readsOffset.size();i++) {
+        int position = rbatch.readsOffset[i];
+        int qposition = rbatch.qualsOffset[i];
+        char* addr = const_cast<char*> (&(rbatch.readsString[position]));
+        char* qAddr = const_cast<char*> (&(rbatch.qualsString[qposition]));
         int read_length = strlen(addr);
         add_kmers<kmer_id_t>(addr,qAddr,false,read_length,kLength,ecdata);
         add_kmers<tile_id_t>(addr,qAddr,true,read_length,tileLength,ecdata);
@@ -123,7 +121,7 @@ void processBatch(cvec_t &ReadsString,cvec_t &QualsString,
     ecdata.mergeBatchKmers();
 #ifdef DEBUG
 	std::stringstream out;
-    	out << " PROCESS: " << ecdata.m_params.mpi_env->rank()
+    	out << " PROCESS: " << ecdata.m_params.m_rank
         << " BATCH " << _batch
         << " LOAD TIME " << MPI_Wtime()-tBatchStart << std::endl;
         std::cout << out.str();
@@ -141,32 +139,22 @@ void processReadsFromFile(ECData& ecdata){
 
     read_stream.seekg(params.offsetStart,std::ios::beg);
 
-    cvec_t ReadsString;   // full string
-    cvec_t QualsString;   // full quality score
-    ivec_t ReadsOffset;
-    ivec_t QualsOffset;
-
+    ReadStore rbatch;
     while(1){
-        int readid = 0;
         bool lastRead = readBatch(&read_stream, params.batchSize,
-                                  params.offsetEnd, ReadsString, ReadsOffset,
-                                  QualsString, QualsOffset, readid);
-        std::stringstream out ;
+                                  params.offsetEnd, rbatch);
 #ifdef DEBUG
-        out << "PROC : " << params.mpi_env->rank()  << " "
-            << ReadsOffset.size() << " " << lastRead << " QS: "
-            << QualsOffset.size() << std::endl;
+        std::stringstream out ;
+        out << "PROC : " << params.m_rank  << " "
+            << rbatch.readsOffset.size() << " " << lastRead << " QS: "
+            << rbatch.qualsOffset.size() << std::endl;
         std::cout << out.str();
 #endif
-        assert(ReadsOffset.size() == QualsOffset.size());
+        assert(rbatch.readsOffset.size() == rbatch.qualsOffset.size());
 
-        processBatch(ReadsString,QualsString,
-                     ReadsOffset,QualsOffset,ecdata);
+        processBatch(rbatch, ecdata);
 
-        ReadsString.resize(0);
-        QualsString.resize(0);
-        ReadsOffset.resize(0);
-        QualsOffset.resize(0);
+        rbatch.reset();
         if(lastRead) break;
     }
 }
@@ -176,9 +164,7 @@ void count_kmers(ECData& ecdata){
 
     if(params.storeReads) {
         // reads are already collected and stored
-        processBatch(ecdata.m_ReadsString,ecdata.m_QualsString,
-                     ecdata.m_ReadsOffset,ecdata.m_QualsOffset,
-                     ecdata);
+        processBatch(ecdata.m_reads, ecdata);
     } else {
         // process reads from input file
         processReadsFromFile(ecdata);

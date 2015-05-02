@@ -126,10 +126,7 @@ class ECData {
     unsigned m_tileLevels[MAX_LEVELS];
 
     // Store Reads if reqd.
-    cvec_t m_ReadsString;
-    cvec_t m_QualsString;
-    ivec_t m_ReadsOffset;
-    ivec_t m_QualsOffset;
+    ReadStore m_reads;
 
     std::vector<kmer_id_t> m_byte_kref[3];
     unsigned m_byte_kcount[3];
@@ -158,16 +155,17 @@ class ECData {
     const int& getKmerCount() const{return m_kcount;}
     const int& getTileCount() const{return m_tilecount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
-    const cvec_t& getReads() const{return m_ReadsString;}
-    const cvec_t& getQuals() const{return m_QualsString;}
-    const ivec_t& getReadsOffsets() const{return m_ReadsOffset;}
-    const ivec_t& getQualsOffsets() const{return m_QualsOffset;}
+    const cvec_t& getReads() const{return m_reads.readsString;}
+    const cvec_t& getQuals() const{return m_reads.qualsString;}
+    const ivec_t& getReadsOffsets() const{return m_reads.readsOffset;}
+    const ivec_t& getQualsOffsets() const{return m_reads.qualsOffset;}
     const uint64_t& getKmerQueries() const{return m_kmerQueries;}
     const uint64_t& getKmerQueryFails() const{return m_kmerQueryFails;}
     const uint64_t& getTileQueries() const{return m_tileQueries;}
     const uint64_t& getTileQueryFails() const{return m_tileQueryFails;}
     const unsigned* getKmerLevels() const {return m_kmerLevels;}
     const unsigned* getTileLevels() const {return m_tileLevels;}
+    const ReadStore& getReadStore() const {return m_reads;}
 
     bool getReadsFromFile();
     bool addToArray(kmer_id_t &ID,int count);

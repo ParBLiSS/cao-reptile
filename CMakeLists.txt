@@ -38,5 +38,5 @@ target_link_libraries(cao-reptile-test "${MPI_LIBRARIES}")
 #
 #
 #
-add_executable(tsample src/WorkDistribution.cpp)
+add_executable(tsample src/WorkDistribution.cpp src/util.cpp)
 target_link_libraries(tsample "${MPI_LIBRARIES}")

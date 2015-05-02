@@ -49,35 +49,33 @@ void ECDriver::ec() {
 
     if(inPara_.storeReads) {
         // reads are already obtained from input file and stored in ECData
-        processBatch(ecdata_.getReads(),ecdata_.getQuals(),
-                     ecdata_.getReadsOffsets(),ecdata_.getQualsOffsets());
+        correctBatch(ecdata_.getReadStore());
     } else {
-        processReadsFromFile();
+        correctReadsFromFile();
     }
+
     if(oHandle_.good())
         oHandle_.close();
 }
 
-void ECDriver::processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
-                            const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+void ECDriver::correctBatch(const ReadStore& rbatch) {
   if(inPara_.numThreads > 1){
-    processBatchMT(ReadsString, QualsString, ReadsOffset, QualsOffset);
+      correctBatchMT(rbatch);
   } else {
-    processBatchST(ReadsString, QualsString, ReadsOffset, QualsOffset);
+      correctBatchST(rbatch);
   }
 }
 
-void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsString,
-                              const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+void ECDriver::correctBatchST(const ReadStore& rbatch) {
     ECImpl ecr(ecdata_, inPara_);
 #ifdef DEBUG
     std::stringstream out3 ;
 #endif
-    for(unsigned long i = 0; i < ReadsOffset.size();i++) {
-        int position = ReadsOffset[i];
-        int qposition = QualsOffset[i];
-        char* addr = const_cast<char*> (&ReadsString[position]);
-        char* qAddr = const_cast<char*> (&QualsString[qposition]);
+    for(unsigned long i = 0; i < rbatch.readsOffset.size();i++) {
+        int position = rbatch.readsOffset[i];
+        int qposition = rbatch.qualsOffset[i];
+        char* addr = const_cast<char*> (&(rbatch.readsString[position]));
+        char* qAddr = const_cast<char*> (&(rbatch.qualsString[qposition]));
 #ifdef DEBUG
         out3 << addr << std::endl;
 #endif
@@ -97,42 +95,37 @@ void ECDriver::processBatchST(const cvec_t &ReadsString,const cvec_t &QualsStrin
         ecr.writeErrors(oHandle_);
 }
 
-void ec_thread(int tid, int nthreads, int grid, ECImpl& ecr,
-               const cvec_t &ReadsString,const cvec_t &QualsString,
-               const ivec_t &ReadsOffset,const ivec_t &QualsOffset)
+void ec_thread(int tid, int nthreads, const ReadStore& rbatch, ECImpl& ecr)
 {
   //std::cout << "Launched by thread" << tid << std::endl;
   // block decomposition of work.
-  unsigned long ntotal =  ReadsOffset.size();
+  unsigned long ntotal =  rbatch.readsOffset.size();
   unsigned long nbegin = BLOCK_LOW(tid, nthreads, ntotal);
   unsigned long nend = BLOCK_HIGH(tid, nthreads, ntotal);
-  int rID = grid + nbegin; // global read id + the id we start with
+  int rID = rbatch.readId + nbegin; // global read id + the id we start with
   for(unsigned long i = nbegin; i <= nend;i++) {
-    int position = ReadsOffset[i];
-    int qposition = QualsOffset[i];
-    char* addr = const_cast<char*> (&ReadsString[position]);
-    char* qAddr = const_cast<char*> (&QualsString[qposition]);
+    int position = rbatch.readsOffset[i];
+    int qposition = rbatch.qualsOffset[i];
+    char* addr = const_cast<char*> (&(rbatch.readsString[position]));
+    char* qAddr = const_cast<char*> (&(rbatch.qualsString[qposition]));
     ecr.readEC(rID, addr, qAddr);
     rID++;
   }
-
 }
 
-void ECDriver::processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsString,
-                              const ivec_t &ReadsOffset,const ivec_t &QualsOffset) {
+void ECDriver::correctBatchMT(const ReadStore& rbatch) {
     std::vector<std::thread> tvx(inPara_.numThreads);
     std::vector<ECImpl> threadEC(inPara_.numThreads,
                                  ECImpl(ecdata_, inPara_));
 
     //Launch a group of threads
     for (int i = 0; i < inPara_.numThreads; ++i) {
-        tvx[i] = std::thread(ec_thread, i, readID_, inPara_.numThreads,
-                             std::ref(threadEC[i]),
-                             std::cref(ReadsString), std::cref(QualsString),
-                             std::cref(ReadsOffset), std::cref(QualsOffset));
+        tvx[i] = std::thread(ec_thread, i, inPara_.numThreads,
+                             std::cref(rbatch),
+                             std::ref(threadEC[i]));
     }
 
-    std::cout << "Launched from the main" << std::endl;
+    //std::cout << "Launched from the main" << std::endl;
 
     //Join the threads with the main thread
     for (int i = 0; i < inPara_.numThreads; ++i)
@@ -144,38 +137,30 @@ void ECDriver::processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsStrin
             threadEC[i].writeErrors(oHandle_);
 }
 
-void ECDriver::processReadsFromFile() {
+void ECDriver::correctReadsFromFile() {
     std::ifstream read_stream(inPara_.iFaName.c_str());
     assert(read_stream.good() == true);
 
     read_stream.seekg(inPara_.offsetStart, std::ios::beg);
 
-    cvec_t ReadsString;   // full string
-    cvec_t QualsString;   // full quality score
-    ivec_t ReadsOffset;
-    ivec_t QualsOffset;
-
-    while(1){
+    ReadStore rbatch;
+    while(1) {
         bool lastRead = readBatch(&read_stream, inPara_.batchSize,
-                                  inPara_.offsetEnd, ReadsString, ReadsOffset,
-                                  QualsString, QualsOffset, readID_);
+                                  inPara_.offsetEnd, rbatch);
 #ifdef DEBUG
         {
             std::stringstream out ;
-            out << "PROC : " << inPara_.mpi_env->rank()  << " "
-                << ReadsOffset.size() << std::endl;
+            out << "PROC : " << inPara_.m_rank  << " "
+                << rbatch.readsOffset.size() << std::endl;
             std::cout << out.str();
         }
 #endif
-        assert(ReadsOffset.size() == QualsOffset.size());
+        assert(rbatch.readsOffset.size() == rbatch.qualsOffset.size());
 
-        processBatch(ReadsString,QualsString,ReadsOffset,QualsOffset);
+        correctBatch(rbatch);
 
-       // std::cout << out3.str();
-        ReadsString.resize(0);
-        QualsString.resize(0);
-        ReadsOffset.resize(0);
-        QualsOffset.resize(0);
+        rbatch.reset();
+
         if(lastRead) break;
     }
 

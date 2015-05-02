@@ -49,14 +49,13 @@ private:
     int readID_;
     std::ofstream oHandle_;
 
-    void processBatch(const cvec_t &ReadsString,const cvec_t &QualsString,
-                      const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
+    void correctBatch(const ReadStore& rbatch);
 
-    void processBatchST(const cvec_t &ReadsString,const cvec_t &QualsString,
-                        const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
-    void processBatchMT(const cvec_t &ReadsString,const cvec_t &QualsString,
-                        const ivec_t &ReadsOffset,const ivec_t &QualsOffset);
-    void processReadsFromFile();
+    void correctBatchST(const ReadStore& rbatch);
+
+    void correctBatchMT(const ReadStore& rbatch);
+
+    void correctReadsFromFile();
 };
 
 #endif	/* _ECDRIVER_H */

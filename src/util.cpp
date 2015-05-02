@@ -249,22 +249,22 @@ void updateStrStore(const std::string& in_str,
 }
 
 bool readBatch(std::ifstream* fqfs, const long& batchSize,
-               const unsigned long long& offsetEnd,
-               cvec_t &ReadsString,ivec_t &ReadsOffset,
-               cvec_t &QualsString,ivec_t &QualsOffset,
-               int& readid)
+               const unsigned long& offsetEnd, ReadStore& rbatch)
 {
-    unsigned long position = 0, qpos = 0;
+    unsigned long rpos = 0, qpos = 0;
     bool lastRead = false;
     std::string fqRecord[4] = {std::string(""), std::string(""),
                                std::string(""), std::string("")};
+    if(batchSize == 0)
+        return true;
+
     // 1. read first record : for handling special case
     if(!readFirstFastqRecord(fqfs, fqRecord))
         return false;
 
-    updateStrStore(fqRecord[1], ReadsString, ReadsOffset, position);
-    updateStrStore(fqRecord[3], QualsString, QualsOffset, qpos);
-    readid = std::stoi(fqRecord[0].substr(1).c_str());
+    updateStrStore(fqRecord[1], rbatch.readsString, rbatch.readsOffset, rpos);
+    updateStrStore(fqRecord[3], rbatch.qualsString, rbatch.qualsOffset, qpos);
+    rbatch.readId = std::stoi(fqRecord[0].substr(1).c_str());
 
     // 2. read as much as batch size
     for(long j=1; j < batchSize ; j++){
@@ -276,8 +276,8 @@ bool readBatch(std::ifstream* fqfs, const long& batchSize,
             break;
         }
 
-        updateStrStore(fqRecord[1], ReadsString, ReadsOffset, position);
-        updateStrStore(fqRecord[3], QualsString, QualsOffset, qpos);
+        updateStrStore(fqRecord[1], rbatch.readsString, rbatch.readsOffset, rpos);
+        updateStrStore(fqRecord[3], rbatch.qualsString, rbatch.qualsOffset, qpos);
 
         if(!fqfs->good() || fqfs->tellg() >= (std::streamoff) offsetEnd){
             lastRead = true;
