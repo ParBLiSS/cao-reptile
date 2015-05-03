@@ -1,36 +1,44 @@
 #include "util.h"
 #include "WorkDistribution.hpp"
+#include <chrono>
 
-struct MyInt{
+struct WInt{
     int value;
+    int sz;
+    WInt(){
+        sz = 50;
+    }
     size_t size(){
-        return 2;
+        return sz;
     }
     void reset(){
         value = 0;
+        sz = 0;
     }
 };
 
-struct MyIntLoader{
-    void operator()(const std::string& fname, unsigned long woffStart,
-                    unsigned long woffEnd, MyInt& tmp){
+struct WIntLoader{
+    void operator()(const int& , int woffStart, int, WInt& tmp){
         tmp.value = woffStart;
     }
 };
 
 struct BatchIntWork{
-    void operator()(int tid, int rank, const MyInt& rbatch, int& ecr){
+    void operator()(const WInt& rbatch, int& ecr, int tid, int rank){
         int x = tid + rank * rbatch.value + ecr;
         x = 1;
-        // TODO: sleep ?
+        // sleep for quite a while
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::cout << rank ;
     }
 };
 
 struct UnitIntWork{
-    void operator()(unsigned ipos, const MyInt& rbatch, int& ecr){
+    void operator()(const WInt& rbatch, int& ecr, unsigned ipos){
         int x = ipos * rbatch.value + ecr;
         x = x + 12;
-        // TODO: sleep
+        // sleep for a long while
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 };
 
@@ -45,12 +53,6 @@ void check_file(const char* fname, int rank){
     }
 }
 
-unsigned long getTotalWork(const std::string& fileName){
-    std::ifstream fin(fileName.c_str());
-    fin.seekg(0,std::ios::end);
-    return fin.tellg();
-}
-
 int main(int argc, char *argv[]){
     int provided, rs, rank, size;
     rs = MPI_Init_thread(&argc, &argv,
@@ -62,15 +64,15 @@ int main(int argc, char *argv[]){
         std::cout << provided << " " << MPI_THREAD_FUNNELED << std::endl;
 
 
-    check_file(argv[1], rank);
+    //check_file(argv[1], rank);
+    //auto tWork = getTotalWork(argv[1]);
 
+    int tWork = 5000;
     std::vector<int> pload;
     pload.resize(3);
 
-    auto tWork = getTotalWork(argv[1]);
-
-    WorkDistribution<MyInt, unsigned long, int,
-                     MyIntLoader, BatchIntWork, UnitIntWork> wds(tWork, pload);
+    WorkDistribution<WInt, int, int, WIntLoader, BatchIntWork,
+                     UnitIntWork> wds(tWork, pload, 2, 100);
     if(rank == 0) {
         wds.masterMain();
     } else {

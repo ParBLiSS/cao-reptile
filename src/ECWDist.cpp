@@ -6,17 +6,14 @@
 #include <string>
 #include <mpi.h>
 
-
 // Make ReadStore swappable
 static void swap(ReadStore& left, ReadStore& right){
     left.swap(right);
 }
 
-
 // Error correction for a batch of reads
 struct BatchEC{
-    void operator()(int tid, int rank, const ReadStore& rbatch, ECImpl& ecr)
-    {
+    void operator()(const ReadStore& rbatch, ECImpl& ecr, int, int) {
         int rID = rbatch.readId;
         for(unsigned i = 0; i < rbatch.size(); i++){
             int position = rbatch.readsOffset[i];
@@ -32,7 +29,7 @@ struct BatchEC{
 
 // Error correction for a single read within the batch
 struct UnitEC{
-    void operator()(unsigned ipos, const ReadStore& rbatch, ECImpl& ecr){
+    void operator()(const ReadStore& rbatch, ECImpl& ecr, unsigned ipos) {
         if(ipos > rbatch.size())
             return;
         int position = rbatch.readsOffset[ipos];
@@ -53,3 +50,28 @@ struct ReadBatchLoader{
         readBatch(&fin, UINT_MAX, woffEnd, tmp);
     }
 };
+
+int getTotalWork(const std::string& fileName){
+    std::ifstream fin(fileName.c_str());
+    fin.seekg(0,std::ios::end);
+    return fin.tellg();
+}
+
+void ec_wdist(ECData& ecdata){
+    Para& params = ecdata.getParams();
+    unsigned nThreads = (unsigned) params.numThreads;
+    std::vector<ECImpl> threadEC(nThreads + 1,
+                                 ECImpl(ecdata, params));
+    unsigned tWork = getTotalWork(params.iFaName);
+    unsigned nWorkers = params.m_size * params.numThreads;
+    unsigned tChunk = tWork / (nWorkers * params.workFactor);
+    WorkDistribution<ReadStore, unsigned long, ECImpl,
+                     ReadBatchLoader, BatchEC, UnitEC> wdist(tWork, threadEC,
+                                                             params.numThreads,
+                                                             tChunk);
+    if(params.m_rank == 0){
+        wdist.masterMain();
+    } else{
+        wdist.slaveMain();
+    }
+}

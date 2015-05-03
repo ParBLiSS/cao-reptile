@@ -118,12 +118,12 @@ class ECData {
 
     MPI_Datatype m_mpi_kmer_t;
     MPI_Datatype m_mpi_tile_t;
-    uint64_t m_kmerQueries;
-    uint64_t m_kmerQueryFails;
-    uint64_t m_tileQueries;
-    uint64_t m_tileQueryFails;
-    unsigned m_kmerLevels[MAX_LEVELS];
-    unsigned m_tileLevels[MAX_LEVELS];
+    mutable uint64_t m_kmerQueries;
+    mutable uint64_t m_kmerQueryFails;
+    mutable uint64_t m_tileQueries;
+    mutable uint64_t m_tileQueryFails;
+    mutable unsigned m_kmerLevels[MAX_LEVELS];
+    mutable unsigned m_tileLevels[MAX_LEVELS];
 
     // Store Reads if reqd.
     ReadStore m_reads;
@@ -152,20 +152,25 @@ class ECData {
 
     Para& getParams(){return m_params;}
 
-    const int& getKmerCount() const{return m_kcount;}
-    const int& getTileCount() const{return m_tilecount;}
+    int getKmerCount() const{return m_kcount;}
+    int getTileCount() const{return m_tilecount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
     const cvec_t& getReads() const{return m_reads.readsString;}
     const cvec_t& getQuals() const{return m_reads.qualsString;}
     const ivec_t& getReadsOffsets() const{return m_reads.readsOffset;}
     const ivec_t& getQualsOffsets() const{return m_reads.qualsOffset;}
-    const uint64_t& getKmerQueries() const{return m_kmerQueries;}
-    const uint64_t& getKmerQueryFails() const{return m_kmerQueryFails;}
-    const uint64_t& getTileQueries() const{return m_tileQueries;}
-    const uint64_t& getTileQueryFails() const{return m_tileQueryFails;}
-    const unsigned* getKmerLevels() const {return m_kmerLevels;}
-    const unsigned* getTileLevels() const {return m_tileLevels;}
     const ReadStore& getReadStore() const {return m_reads;}
+
+    uint64_t getKmerQueries() const {return m_kmerQueries;}
+    uint64_t getKmerQueryFails() const {return m_kmerQueryFails;}
+    uint64_t getTileQueries() const {return m_tileQueries;}
+    uint64_t getTileQueryFails() const {return m_tileQueryFails;}
+    unsigned getKmerLevels(const int& j) const {
+        return j < (int)MAX_LEVELS ? m_kmerLevels[j] : 0;
+    }
+    unsigned getTileLevels(const int& j) const {
+        return j < (int)MAX_LEVELS ? m_tileLevels[j]: 0;
+    }
 
     bool getReadsFromFile();
     bool addToArray(kmer_id_t &ID,int count);

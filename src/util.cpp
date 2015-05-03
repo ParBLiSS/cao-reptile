@@ -22,6 +22,8 @@ void Para::setPara(const char *configFile) {
     writeOutput = 1;
     writeSpectrum = -1;
     numThreads = 1;
+    dynamicWorkDist = 0;
+    workFactor = 40;
     QFlag = true;
     while(getline(input, line)){
         buf.clear();
@@ -74,6 +76,8 @@ void Para::setPara(const char *configFile) {
                 buf >> tileSpectrumOutFile;
             else if (s1 == "Threads")
                 buf >> numThreads;
+            else if (s1 == "WorkDistribution")
+                buf >> dynamicWorkDist;
         }
     }
 }

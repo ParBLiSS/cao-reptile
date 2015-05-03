@@ -34,6 +34,7 @@
 #include "util.h"
 #include "ECImpl.hpp"
 #include "ECDriver.hpp"
+#include "ECWDist.hpp"
 
 void print(int i) {
     std::cout << " " << i;
@@ -43,7 +44,11 @@ void printHex(int i) {
     std::cout << " " << std::hex << i;
 }
 
-void ECDriver::ec() {
+void ECDriver::ecDynamic(){
+    ec_wdist(ecdata_);
+}
+
+void ECDriver::ecStatic() {
     if(inPara_.writeOutput != 0)
         oHandle_.open(outFname_.c_str());
 
@@ -56,6 +61,14 @@ void ECDriver::ec() {
 
     if(oHandle_.good())
         oHandle_.close();
+}
+
+void ECDriver::ec(){
+    if(inPara_.dynamicWorkDist == 0){
+        ecStatic();
+    } else {
+        ecDynamic();
+    }
 }
 
 void ECDriver::correctBatch(const ReadStore& rbatch) {

@@ -56,6 +56,10 @@ private:
     void correctBatchMT(const ReadStore& rbatch);
 
     void correctReadsFromFile();
+
+    void ecStatic();
+
+    void ecDynamic();
 };
 
 #endif	/* _ECDRIVER_H */

@@ -126,11 +126,11 @@ void ECRunStats::reportQueryCounts(ECData& ecdata, std::ostream& ofs){
         std::stringstream oss;
         oss << i << "\t" << "kmer";
         for(unsigned j = 0; j < MAX_LEVELS; j++)
-          oss << "\t" << ecdata.getKmerLevels()[j];
+            oss << "\t" << ecdata.getKmerLevels(j);
         oss << std::endl;
         oss << i << "\t" << "tile";
         for(unsigned j = 0; j < MAX_LEVELS; j++)
-          oss << "\t" << ecdata.getTileLevels()[j];
+            oss << "\t" << ecdata.getTileLevels(j);
         oss << std::endl;
         ofs << oss.str();
         ofs.flush();

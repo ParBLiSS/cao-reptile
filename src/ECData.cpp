@@ -130,7 +130,7 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
 
 #ifdef QUERY_COUNTS
   if(final){
-      assert(nlevels < MAX_LEVELS);
+      assert(nlevels < (int)MAX_LEVELS);
       m_kmerLevels[nlevels] += 1;
   }
   m_kmerQueries += 1;
@@ -222,7 +222,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
   }
 #ifdef QUERY_COUNTS
   if(final){
-      assert(nlevels < MAX_LEVELS);
+      assert(nlevels < (int)MAX_LEVELS);
       m_tileLevels[nlevels] += 1;
   }
   m_tileQueries += 1;

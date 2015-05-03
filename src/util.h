@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <cstdint>
+#include <mpi.h>
 
 typedef std::vector<int> ivec_t;
 typedef std::vector<ivec_t> iivec_t;
@@ -85,6 +86,8 @@ public:
 
     int writeSpectrum;
     int numThreads;
+    int dynamicWorkDist;
+    int workFactor;
     std::string kmerSpectrumOutFile;
     std::string tileSpectrumOutFile;
 

@@ -1,12 +1,11 @@
 PROG=cao-preptile
 PROG_COUNTS=cao-preptile-counts
 MPICXX=mpicxx
-MPIEXT = ../mpiext
 
-CFLAGS=-v -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
-CFLAGS= -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops -std=c++11
+CFLAGS=-v -c -Wall -Wextra -O3 -ffast-math -funroll-loops
+CFLAGS= -c  -Wall -Wextra -O3 -ffast-math -funroll-loops -std=c++11
 LDFLAGS=
-SRCS=main.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ECImpl.cpp
+SRCS=main.cpp ECData.cpp ECDriver.cpp find_neighbors.cpp  count_kmers.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ECImpl.cpp ECWDist.cpp ECRunStats.cpp
 OBJS=$(SRCS:.cpp=.o)
 
 ifeq ($(MAKECMDGOALS),debug)

@@ -1,10 +1,10 @@
 PROG=cao-test
 MPICXX=mpicxx
-MPIEXT = ../mpiext
 
 CFLAGS=-g -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
+CFLAGS= -c  -Wall -Wextra -O3 -ffast-math -funroll-loops -std=c++11
 LDFLAGS=
-SRCS=ECData.cpp  find_neighbors.cpp  kmer_count.cpp  test_main.cpp  Parser.cpp  sort_kmers.cpp caware_layout.cpp  coblivious_layout.cpp util.cpp ErrorCorrector.cpp
+SRCS=test_main.cpp  caware_layout.cpp  coblivious_layout.cpp util.cpp 
 OBJS=$(SRCS:.cpp=.o)
 
 ifeq ($(MAKECMDGOALS),debug)
