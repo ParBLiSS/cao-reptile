@@ -48,6 +48,7 @@ public:
     void readEC(int readID, char* addr, char* qAddr);
     void writeErrors(std::ostream& oHandle);
     size_t getSize(){ return records_.size(); };
+    const Para& getPara() const{ return inPara_; };
 };
 
 #endif /* ERRORCORRECTOR_H */

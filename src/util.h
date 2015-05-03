@@ -129,6 +129,10 @@ struct ReadStore {
         std::swap(qualsOffset, other.qualsOffset);
         std::swap(readId, other.readId);
     }
+
+    size_t size() const{
+        return readsOffset.size();
+    }
 };
 
 inline int char_to_bits(char c) {

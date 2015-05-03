@@ -1,4 +1,5 @@
-//Create a group of C++11 threads from the main program
+#ifndef WORKDISTRIBUTION_H
+#define WORKDISTRIBUTION_H
 
 #include <mpi.h>
 #include <iostream>
@@ -40,50 +41,49 @@ MPI_Datatype get_mpi_dt<unsigned long>(){
     return MPI_UNSIGNED_LONG;
 }
 
-namespace std{
-    static void swap(ReadStore& left, ReadStore& right){
-        left.swap(right);
-    }
-};
-
 template <typename T>
 class SharedQueue{
+
 public:
     SharedQueue() = default;
     SharedQueue(const SharedQueue&) = delete;
     SharedQueue& operator=(const SharedQueue&) = delete;
     bool pop(T& item){
+        using std::swap;
         std::lock_guard<std::mutex> lock(m_qmut);
         if(m_queue.empty())
             return false;
-        std::swap(item, m_queue.front());
+        swap(m_queue.front(), item);
         m_queue.pop();
         return true;
     }
 
     void push(std::vector<T>& items){
+        using std::swap;
         std::lock_guard<std::mutex> lock(m_qmut);
         for(auto ait = items.begin(); ait != items.end();++ait){
             T tmp;
             m_queue.push(tmp);
-            std::swap(m_queue.back(), *ait);
+            swap(m_queue.back(), *ait);
         }
     }
 
     void push(T* items, int size){
+        using std::swap;
         std::lock_guard<std::mutex> lock(m_qmut);
         for(int i = 0; i< size;i++){
             T tmp;
             m_queue.push(tmp);
-            std::swap(m_queue.back(), items[i]);
+            swap(m_queue.back(), items[i]);
         }
     }
 
     void push(T& item){
+        using std::swap;
         std::lock_guard<std::mutex> lock(m_qmut);
         T tmp;
         m_queue.push(tmp);
-        std::swap(m_queue.back(), item);
+        swap(m_queue.back(), item);
     }
 
     size_t size() const{
@@ -100,76 +100,90 @@ private:
 };
 
 
-enum WState{
+enum WDState{
     ASSIGN_WORK = 1, // ready for work to be assigned
     PENDING_WORK,  // no more work left, but work queue not empty
     FINISHED_WORK // work queue empty, go and wait for thread for
 };
 
+enum WorkRequest{
+    ASK_WORK_TAG = 0x1,
+    SND_WORK_TAG = 0x2
+};
 
-void load_work(const std::string&, unsigned long woffStart,
-               unsigned long , int& tmp){
-    tmp = woffStart;
-}
-
-void load_work(const std::string& fileName, unsigned long woffStart,
-               unsigned long woffEnd, ReadStore& tmp){
-    std::ifstream fin(fileName);
-    fin.seekg(woffStart);
-    readBatch(&fin, UINT_MAX, woffEnd, tmp);
-}
-
-template <typename WorkItemType, typename OffsetType>
+template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+          typename BatchLoaderType, typename BatchWorkerType,
+          typename UnitWorkerType>
 class WorkDistribution{
-    static const int ASK_WORK_TAG = 200;
-    static const int SND_WORK_TAG = 300;
-    static const int num_threads = 2;
-    static const OffsetType workChunk = 100;
     static SharedQueue<WorkItemType> wrkQueue;
     static std::atomic_bool wrkFinished;
     std::string fileName;
     OffsetType totalWork;
-
-    int size;
-    int rank;
+    OffsetType workChunk;
+    unsigned numThreads;
+    std::vector<PayLoadType>& payLoads;
+    BatchLoaderType load_work;
+    UnitWorkerType unit_work;
+    int mpiSize;
+    int mpiRank;
 
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
-    static void worker_thread(int rank) {
+    static void worker_thread(int tid, int rank, PayLoadType& pload) {
         // my first two chunks
-        //  rank * (2 * work_chunk) * num_threads;
+        //  rank * (2 * work_chunk) * numThreads;
         // std::cout << "Launched by thread\n";
         while(true) {
             WorkItemType work;
             if(wrkQueue.pop(work)){
-                // do work
+                // TODO: do a batch of work
                 // Right now, sleep the thread for a while
                 std::stringstream out;
                 //out << rank << " " << work << std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 std::cout << rank ;
+                BatchWorkerType batch_work;
+                batch_work(tid, rank, work, pload);
             }
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         }
     }
 
-    void start_workers(std::vector<std::thread>& workers) {
+    void startWorkers(std::vector<std::thread>& workers) {
         //Launch a group of worker threads
-        for (int i = 0; i < num_threads; ++i) {
-            workers.push_back(std::thread(worker_thread, rank));
+        for (unsigned i = 0; i < numThreads; ++i) {
+            workers.push_back(std::thread(worker_thread, i, mpiRank,
+                                          std::ref(payLoads[i + 1])));
         }
     }
 
-    void join_workers(std::vector<std::thread>& workers) {
+    void joinWorkers(std::vector<std::thread>& workers) {
         // Wait for worker threads to finish it up
         for(auto wit = workers.begin(); wit != workers.end(); wit++){
             wit->join();
         }
     }
 
+    void doWork(){
+        // let coord thread to do some work
+        static WorkItemType localWork;
+        static unsigned workProgress = 0;
+        // get the next work item from queue
+        if(workProgress == 0 && !wrkQueue.pop(localWork)){
+            return;
+        }
+        // TODO: do work of some predefined granularity
+        unit_work(workProgress, localWork, payLoads[0]);
+        workProgress += 1;
+        if(workProgress >= localWork.size()){
+            workProgress = 0;
+            localWork.reset();
+        }
+    }
+
     // construct the work to be assigned as vector of offets
-    void assign_work(std::vector<OffsetType>& wrkOffsets,
+    void assignWork(std::vector<OffsetType>& wrkOffsets,
                      OffsetType& workAssigned){
         for(auto sit = wrkOffsets.begin(); sit != wrkOffsets.end(); sit++){
             if(workAssigned < totalWork){
@@ -181,7 +195,7 @@ class WorkDistribution{
         }
     }
 
-    bool update_wqueue(std::vector<OffsetType>& wrkOffsets){
+    bool updateWorkQueue(std::vector<OffsetType>& wrkOffsets){
         // returns true when the whole of wrkOffsets is actual work!
         //  i.e. returns true when there is no 'zero work' assigned
         auto last = std::find(wrkOffsets.begin(), wrkOffsets.end(), 0);
@@ -190,31 +204,30 @@ class WorkDistribution{
             WorkItemType tmp;
             load_work(fileName, wrkOffsets[i],
                       wrkOffsets[i] + workChunk, tmp);
-            // TODO: load it
             wrkQueue.push(tmp);
-            //std::cout << rank << " " << nwrk << " "
+            //std::cout << mpiRank << " " << nwrk << " "
             //<< wrkQueue.size() << std::endl;
         }
 
         return (nwrk == (long)wrkOffsets.size());
     }
 
-    int probe_query(MPI_Status& status){
+    int probeQuery(MPI_Status& status){
         int flag;
         MPI_Iprobe(MPI_ANY_SOURCE, ASK_WORK_TAG, MPI_COMM_WORLD, &flag, &status);
         return flag;
     }
 
-    bool assign_work_remote(OffsetType& wrkAssigned){
+    bool assignWorkRemote(OffsetType& wrkAssigned){
         // returns true when the whole of threadWork is actual work!
         //   or when nothing is assigned
         int count, recvMsg;
         MPI_Status status;
         MPI_Request request;
-        std::vector<OffsetType> threadWork(num_threads);
+        std::vector<OffsetType> threadWork(numThreads);
         // if anybody asking work,
         //   either assign work to them or tell them there is no more work to do
-        if(!probe_query(status)){
+        if(!probeQuery(status)){
             return true;
         }
         // who is asking for work ?
@@ -222,59 +235,60 @@ class WorkDistribution{
         assert(count == 1);
         MPI_Recv(&recvMsg, 1, MPI_INT, status.MPI_SOURCE,
                  ASK_WORK_TAG, MPI_COMM_WORLD, &status);
-        // assign work proptional to num_threads
-        assign_work(threadWork, wrkAssigned);
+        // assign work proptional to numThreads
+        assignWork(threadWork, wrkAssigned);
         // send the allocated
-        MPI_Isend(&(threadWork[0]), num_threads, get_mpi_dt<OffsetType>(),
+        MPI_Isend(&(threadWork[0]), numThreads, get_mpi_dt<OffsetType>(),
                   status.MPI_SOURCE, SND_WORK_TAG, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, &status); // should I need to wait ?
 
         return (threadWork.back() != 0);
     }
 
-    void recv_work_remote(std::vector<OffsetType>& recvMessage){
+    void recvWorkRemote(std::vector<OffsetType>& recvMessage){
+        // ask and recieve work from the master co-ord process
         MPI_Status status;
         MPI_Request request;
-        int sendMsg = num_threads;
+        int sendMsg = (int) numThreads;
         MPI_Isend(&sendMsg, 1, MPI_INT, 0, ASK_WORK_TAG, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, &status);
-        MPI_Recv(&(recvMessage[0]), num_threads, get_mpi_dt<OffsetType>(), 0,
+        MPI_Recv(&(recvMessage[0]), numThreads, get_mpi_dt<OffsetType>(), 0,
                  SND_WORK_TAG, MPI_COMM_WORLD, &status);
     }
 
-    void master_coord(){
-        // This function is not thread safe, only one thread can call this fn.
+    void masterCoord(){
+        // This function is not thread safe, only one thread in a process
+        //  is allowed to run this function.
         static int nwrkZero = 1;
-        static OffsetType wrkAssigned = size * workChunk;
-        static WState distState = ASSIGN_WORK;
-        bool updWork = true;
+        static OffsetType wrkAssigned = mpiSize * workChunk;
+        static WDState coordState = ASSIGN_WORK;
 
-        switch(distState){
+        switch(coordState){
         case ASSIGN_WORK:
             // Assign to work local threads, if they don't have enough
-            if(wrkQueue.size() < 2 * num_threads){
-                std::vector<OffsetType> threadWork(num_threads);
-                assign_work(threadWork, wrkAssigned);
-                if(!update_wqueue(threadWork)) // if assigned 'zero work'
-                    distState = PENDING_WORK; // update state
+            if(wrkQueue.size() < 2 * numThreads){
+                std::vector<OffsetType> threadWork(numThreads);
+                assignWork(threadWork, wrkAssigned);
+                if(!updateWorkQueue(threadWork)) // if assigned 'zero work'
+                    coordState = PENDING_WORK; // update state
             }
             // Assign work to remote processes, if they are asking for it
-            if(!assign_work_remote(wrkAssigned)){
+            if(!assignWorkRemote(wrkAssigned)){
                 // Update state, if I have assigned 'zero work'
-                distState = PENDING_WORK;
+                coordState = PENDING_WORK;
                 nwrkZero += 1;
             }
             break;
         case PENDING_WORK:
             // I, root, haven't recieved message from every one:
             //   Assign 'zero work', to any remote process asking for work
-            if(nwrkZero < size && !assign_work_remote(wrkAssigned)) {
+            if(nwrkZero < mpiSize && !assignWorkRemote(wrkAssigned)) {
                 nwrkZero += 1;
             }
             // I, root, have assigned 'zero work' to every process;
             //   Also, my queue is empty. I can finish work now.
-            if(nwrkZero == size && wrkQueue.empty()){
-                distState = FINISHED_WORK;
+            if(nwrkZero == mpiSize && wrkQueue.empty()){
+                coordState = FINISHED_WORK;
             }
             break;
         case FINISHED_WORK:
@@ -286,24 +300,25 @@ class WorkDistribution{
         }
     }
 
-    int slave_coord(){
-        // This function is not thread safe, only one thread can call this fn.
-        static WState distState = ASSIGN_WORK;
-        switch(distState){
+    int slaveCoord(){
+        // This function is not thread safe, only one thread in a process
+        //  is allowed to run this function.
+        static WDState coordState = ASSIGN_WORK;
+        switch(coordState){
         case ASSIGN_WORK:
             // If my local threads don't have enough work, ask from the root
-            if(wrkQueue.size() < 2 * num_threads){
-                std::vector<OffsetType> recvMessage(num_threads);
-                recv_work_remote(recvMessage);
+            if(wrkQueue.size() < 2 * numThreads){
+                std::vector<OffsetType> recvMessage(numThreads);
+                recvWorkRemote(recvMessage);
                 // If I have been assigned 'zero work', update state to pending
-                if(!update_wqueue(recvMessage))
-                    distState = PENDING_WORK;
+                if(!updateWorkQueue(recvMessage))
+                    coordState = PENDING_WORK;
             }
             break;
         case PENDING_WORK:
             // No more work available, but work queue might not be empty
             if(wrkQueue.empty()){
-                distState = FINISHED_WORK;
+                coordState = FINISHED_WORK;
             }
             break;
         case FINISHED_WORK:
@@ -317,86 +332,67 @@ class WorkDistribution{
     }
 
 public:
-    void master_main(){
-        // This function is not thread safe, only one thread can call this fn.
+    void masterMain(){
+        // This function is not thread safe, only one thread should be
+        //  allowed to run this function.
         std::vector<std::thread> workers;
         wrkFinished.store(false, std::memory_order_relaxed);
-        start_workers(workers);
+        startWorkers(workers);
         do {
-            master_coord();
+            doWork();
+            masterCoord();
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         } while(true);
-        join_workers(workers);
+        joinWorkers(workers);
     }
 
-    void slave_main(){
-        // This function is not thread safe, only one thread can call this fn.
+    void slaveMain(){
+        // This function is not thread safe, only one thread should be
+        //  allowed to run this function.
         std::vector<std::thread> workers;
         wrkFinished.store(false, std::memory_order_relaxed);
-        start_workers(workers);
+        startWorkers(workers);
         do {
-            slave_coord();
+            doWork();
+            slaveCoord();
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         } while(true);
-        join_workers(workers);
+        joinWorkers(workers);
     }
 
-    void getTotalWork(){
-        std::ifstream fin(fileName.c_str());
-        fin.seekg(0,std::ios::end);
-        totalWork = fin.tellg();
-    }
+    WorkDistribution(OffsetType tWork, std::vector<PayLoadType>& refPayload,
+                     unsigned nThreads = 2, OffsetType wChunk = 0):
+        totalWork(tWork), numThreads(nThreads), payLoads(refPayload)
+    {
+        MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 
-    WorkDistribution(std::string fname){
-        MPI_Comm_size(MPI_COMM_WORLD, &size);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        fileName = fname;
-        getTotalWork();
+        if(wChunk > 0){
+            workChunk = wChunk;
+        } else {
+            workChunk = totalWork/(mpiSize * numThreads);
+        }
+        assert(numThreads > 0);
+        assert(workChunk > 0);
+        assert(payLoads.size() == numThreads + 1);
     }
 };
 
-template <typename WorkItemType, typename OffsetType>
-SharedQueue<WorkItemType> WorkDistribution<WorkItemType, OffsetType>::wrkQueue;
+template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+          typename BatchLoaderType, typename BatchWorkerType,
+          typename UnitWorkerType>
+SharedQueue<WorkItemType> WorkDistribution<WorkItemType, OffsetType, PayLoadType,
+                                           BatchLoaderType, BatchWorkerType,
+                                           UnitWorkerType>::wrkQueue;
 
-template <typename WorkItemType, typename OffsetType>
-std::atomic_bool WorkDistribution<WorkItemType, OffsetType>::wrkFinished;
-
-void check_file(const char* fname, int rank){
-    std::ifstream fin(fname);
-    if(!fin){
-        if(rank == 0){
-            std::cout << "ERROR:Can not open Input File!" << std::endl;
-            std::cout << "Syntax:preptile /path/to/config-file" << std::endl;
-        }
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-}
-
-int main(int argc, char *argv[]){
-    int provided, rs, rank, size;
-    rs = MPI_Init_thread(&argc, &argv,
-                         MPI_THREAD_FUNNELED, &provided );
-
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == 0)
-        std::cout << provided << " " << MPI_THREAD_FUNNELED << std::endl;
+template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+          typename BatchLoaderType, typename BatchWorkerType,
+          typename UnitWorkerType>
+std::atomic_bool WorkDistribution<WorkItemType, OffsetType, PayLoadType,
+                                           BatchLoaderType, BatchWorkerType,
+                                           UnitWorkerType>::wrkFinished;
 
 
-    check_file(argv[1], rank);
-
-    //WorkDistribution<int, unsigned long long> wds(argv[1]);
-    WorkDistribution<ReadStore, unsigned long long> wds(argv[1]);
-    if(rank == 0) {
-        wds.master_main();
-    } else {
-        wds.slave_main();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if(rank == 0)
-        std::cout << std::endl;
-
-    MPI_Finalize();
-}
+#endif // WORKDISTRIBUTION_H
