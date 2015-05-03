@@ -38,7 +38,8 @@ struct UnitIntWork{
         int x = ipos * rbatch.value + ecr;
         x = x + 12;
         // sleep for a long while
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "+" ;
     }
 };
 
@@ -66,13 +67,13 @@ int main(int argc, char *argv[]){
 
     //check_file(argv[1], rank);
     //auto tWork = getTotalWork(argv[1]);
-
+    int nthreads = 2;
     int tWork = 5000;
     std::vector<int> pload;
-    pload.resize(3);
+    pload.resize(nthreads + 1);
 
     WorkDistribution<WInt, int, int, WIntLoader, BatchIntWork,
-                     UnitIntWork> wds(tWork, pload, 2, 100);
+                     UnitIntWork> wds(tWork, pload, nthreads, 100);
     if(rank == 0) {
         wds.masterMain();
     } else {

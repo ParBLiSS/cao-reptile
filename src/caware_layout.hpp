@@ -8,7 +8,6 @@
 #include <fstream>
 
 #include "aligned_allocator.hpp"
-#include "io_util.h"
 #include "cao_util.h"
 #include "implicit_heap_search_c.h"
 

@@ -38,6 +38,10 @@ MPI_Datatype get_mpi_dt<unsigned long>(){
     return MPI_UNSIGNED_LONG;
 }
 
+//
+// A share queue using a lock
+//  - T should have constructor with empty arguments
+//  - swap(T&, T&) should be implemented to avoid unnecessary copying
 template <typename T>
 class SharedQueue{
 
@@ -107,6 +111,8 @@ enum WorkRequest{
     ASK_WORK_TAG = 0x1,
     SND_WORK_TAG = 0x2
 };
+
+// Dynamic work distribution
 //
 //
 // WorkItemType holds the information regarding work that needs to be
@@ -151,7 +157,7 @@ class WorkDistribution{
     // work distribution
     OffsetType totalWork;
     std::vector<PayLoadType>& payLoads;
-    unsigned numThreads;
+    unsigned numWorkers;
     OffsetType workChunk;
 
     // woker functions
@@ -166,26 +172,21 @@ class WorkDistribution{
     int mpiSize;
     int mpiRank;
 
+    int initFactor; // how much is initially allocated
+
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
     // It is assumed that the PayLoadType object is exclusive to this thread
-    static void worker_thread(int tid, int nthreads, int rank,
-                              OffsetType wChunk, PayLoadType& pload) {
-        BatchLoaderType load_work;
+    static void worker_thread(int tid, int rank,
+                              PayLoadType& pload) {
         BatchWorkerType batch_work;
-        WorkItemType work;
-        // my first chunk
-        //   (work_chunk) ((rank * (numThreads + 1)) + tid);
-        OffsetType threadOffset = rank * (nthreads + 1) * wChunk;
-        threadOffset += tid * wChunk;
-        load_work(pload, threadOffset, threadOffset + wChunk, work);
-        batch_work(work, pload, tid, rank);
 
         while(true) {
-            work.reset();
+            WorkItemType work;
             if(wrkQueue.pop(work)){
                 // do a batch of work
                 batch_work(work, pload, tid, rank);
+                work.reset();
             }
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
@@ -194,14 +195,24 @@ class WorkDistribution{
 
     // Launch a group of worker threads
     void startWorkers(std::vector<std::thread>& workers) {
-        for (unsigned i = 0; i < numThreads; ++i) {
-            workers.push_back(std::thread(worker_thread, i, numThreads,
-                                          mpiRank, workChunk,
-                                          std::ref(payLoads[i + 1])));
+        for (unsigned tid = 0; tid < numWorkers; ++tid) {
+            // initialize the first chunk
+            BatchLoaderType load_work;
+            WorkItemType work;
+            // My first work chunk
+            //   (work_chunk) ((rank * (numWorkers + 1)) + tid);
+            OffsetType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
+            threadOffset += tid * workChunk;
+            load_work(payLoads[tid + 1], threadOffset,
+                      threadOffset + workChunk, work);
+            wrkQueue.push(work);
+            // start thread
+            workers.push_back(std::thread(worker_thread, tid, mpiRank,
+                                          std::ref(payLoads[tid + 1])));
         }
     }
 
-    // Wait for worker threads to finish it up
+    // Wait for worker threads to finish
     void joinWorkers(std::vector<std::thread>& workers) {
         for(auto wit = workers.begin(); wit != workers.end(); wit++){
             wit->join();
@@ -244,18 +255,18 @@ class WorkDistribution{
     //     i.e. returns true when there is no 'zero work' assigned
     bool updateWorkQueue(std::vector<OffsetType>& wrkOffsets){
         auto last = std::find(wrkOffsets.begin(), wrkOffsets.end(), 0);
-        //auto nwrk = std::distance(wrkOffsets.begin(), last);
-        //for(int i = 0; i < nwrk; i++){
+
         for(auto ait = wrkOffsets.begin(); ait != last; ait++){
             WorkItemType tmp;
             load_work(payLoads[0], *ait, (*ait) + workChunk, tmp);
             wrkQueue.push(tmp);
         }
+        //std::cout << wrkOffsets.back();
 
-        //return (nwrk == (long)wrkOffsets.size());
         return (wrkOffsets.back() != 0);
     }
 
+    // Check if any one is asking for work assignment
     int probeQuery(MPI_Status& status){
         int flag;
         MPI_Iprobe(MPI_ANY_SOURCE, ASK_WORK_TAG, MPI_COMM_WORLD, &flag, &status);
@@ -265,39 +276,45 @@ class WorkDistribution{
     // Assigns work to remote processes, if they are asking for it
     //  - returns true when the whole of threadWork is actual work!
     //    or when nothing is assigned
-    bool assignWorkRemote(OffsetType& wrkAssigned){
-        int count, recvMsg;
+    bool assignWorkRemote(OffsetType& wrkAssigned, int& nwrkZero){
+        int count, recvMsg, nSent = 0;
         MPI_Status status;
         MPI_Request request;
-        std::vector<OffsetType> threadWork(numThreads);
+        std::vector<OffsetType> threadWork(numWorkers);
+        bool fullAssigned = true;
         // if anybody asking work,
-        //   either assign work to them or tell them there is no more work to do
-        if(!probeQuery(status)){
-            return true;
+        //   Either assign work to them or tell them there is no more work to do
+        while(probeQuery(status)){
+            // who is asking for work ?
+            MPI_Get_count(&status, MPI_INT, &count);
+            assert(count == 1);
+            MPI_Recv(&recvMsg, 1, MPI_INT, status.MPI_SOURCE,
+                     ASK_WORK_TAG, MPI_COMM_WORLD, &status);
+            // always assign work of size 'numWorkers'
+            assignWork(threadWork, wrkAssigned);
+            // send the allocated work
+            MPI_Isend(&(threadWork[0]), numWorkers, get_mpi_dt<OffsetType>(),
+                      status.MPI_SOURCE, SND_WORK_TAG, MPI_COMM_WORLD, &request);
+            MPI_Wait(&request, &status); // should I need to wait ?
+            nSent += 1;
+            if(threadWork.back() == 0){
+                fullAssigned = false;
+                nwrkZero += 1;
+            }
         }
-        // who is asking for work ?
-        MPI_Get_count(&status, MPI_INT, &count);
-        assert(count == 1);
-        MPI_Recv(&recvMsg, 1, MPI_INT, status.MPI_SOURCE,
-                 ASK_WORK_TAG, MPI_COMM_WORLD, &status);
-        // assign work proptional to numThreads
-        assignWork(threadWork, wrkAssigned);
-        // send the allocated
-        MPI_Isend(&(threadWork[0]), numThreads, get_mpi_dt<OffsetType>(),
-                  status.MPI_SOURCE, SND_WORK_TAG, MPI_COMM_WORLD, &request);
-        MPI_Wait(&request, &status); // should I need to wait ?
 
-        return (threadWork.back() != 0);
+        return fullAssigned;
     }
 
     // Ask and recieve work from the master co-ord process
     void recvWorkRemote(std::vector<OffsetType>& recvMessage){
         MPI_Status status;
         MPI_Request request;
-        int sendMsg = (int) numThreads;
+        int sendMsg = (int) numWorkers;
+        recvMessage.resize(numWorkers);
         MPI_Isend(&sendMsg, 1, MPI_INT, 0, ASK_WORK_TAG, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, &status);
-        MPI_Recv(&(recvMessage[0]), numThreads, get_mpi_dt<OffsetType>(), 0,
+        MPI_Recv(&(recvMessage[0]), numWorkers, get_mpi_dt<OffsetType>(), 0,
                  SND_WORK_TAG, MPI_COMM_WORLD, &status);
     }
 
@@ -306,31 +323,31 @@ class WorkDistribution{
     //  - This function is not thread safe, only one thread in a process
     //     is allowed to run this function.
     void masterCoord(){
-        int nwrkZero = 1;
-        OffsetType wrkAssigned = mpiSize * (numThreads + 1) * workChunk;
-        WDState coordState = ASSIGN_WORK;
+        static int nwrkZero = 1;
+        static OffsetType wrkAssigned = initFactor * mpiSize *
+            (numWorkers + 1) * workChunk;
+        static WDState coordState = ASSIGN_WORK;
 
         switch(coordState){
         case ASSIGN_WORK:
             // Assign to work local threads, if they don't have enough
-            if(wrkQueue.size() < 2 * numThreads){
-                std::vector<OffsetType> threadWork(numThreads);
+            if(wrkQueue.size() < 2 * numWorkers){
+                std::vector<OffsetType> threadWork(numWorkers);
                 assignWork(threadWork, wrkAssigned);
                 if(!updateWorkQueue(threadWork)) // if assigned 'zero work'
                     coordState = PENDING_WORK; // update state
             }
             // Assign work to remote processes, if they are asking for it
-            if(!assignWorkRemote(wrkAssigned)){
+            if(!assignWorkRemote(wrkAssigned, nwrkZero)){
                 // Update state, if I have assigned 'zero work'
                 coordState = PENDING_WORK;
-                nwrkZero += 1;
             }
             break;
         case PENDING_WORK:
             // I, root, haven't recieved message from every one:
             //   Assign 'zero work', to any remote process asking for work
-            if(nwrkZero < mpiSize && !assignWorkRemote(wrkAssigned)) {
-                nwrkZero += 1;
+            if(nwrkZero < mpiSize){
+                assignWorkRemote(wrkAssigned, nwrkZero);
             }
             // I, root, have assigned 'zero work' to every process;
             //   Also, my queue is empty. I can finish work now.
@@ -356,8 +373,8 @@ class WorkDistribution{
         switch(coordState){
         case ASSIGN_WORK:
             // If my local threads don't have enough work, ask from the root
-            if(wrkQueue.size() < 2 * numThreads){
-                std::vector<OffsetType> recvMessage(numThreads);
+            if(wrkQueue.size() < 2 * numWorkers){
+                std::vector<OffsetType> recvMessage(numWorkers);
                 recvWorkRemote(recvMessage);
                 // If I have been assigned 'zero work', update state to pending
                 if(!updateWorkQueue(recvMessage))
@@ -382,9 +399,24 @@ class WorkDistribution{
 
     // Load a batch as the work item for coord thread
     void loadWork(){
-        OffsetType startOffset = mpiRank * (numThreads + 1) * workChunk;
+        OffsetType startOffset = mpiRank * (numWorkers + 1) * workChunk;
         load_work(payLoads[0], startOffset,
                   startOffset + workChunk, crdWork);
+    }
+
+    void initQueue(){
+        std::vector<OffsetType> iOffsets(numWorkers);
+        OffsetType oCurrOffset;
+        for(int j = 1; j <= 2; j++){
+            oCurrOffset = j * mpiSize * (numWorkers + 1) * workChunk;
+            oCurrOffset += mpiRank * (numWorkers + 1) * workChunk;
+            for(int i = 0; i < numWorkers; i++){
+                iOffsets[i] = oCurrOffset;
+                oCurrOffset += workChunk;
+            }
+            updateWorkQueue(iOffsets);
+        }
+        initFactor += 2;
     }
 
 public:
@@ -434,20 +466,21 @@ public:
     }
 
     WorkDistribution(OffsetType tWork, std::vector<PayLoadType>& refPayload,
-                     unsigned nThreads = 2, OffsetType wChunk = 0):
+                     unsigned nWorkers = 2, OffsetType wChunk = 0):
         totalWork(tWork), payLoads(refPayload),
-        numThreads(nThreads), workChunk(wChunk)
+        numWorkers(nWorkers), workChunk(wChunk)
     {
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 
         if(!(wChunk > 0)) {
-            workChunk = totalWork/(mpiSize * numThreads);
+            workChunk = totalWork/(mpiSize * numWorkers);
         }
         workProgress = 0;
-        assert(numThreads > 0);
+        initFactor = 1;
+        assert(numWorkers > 0);
         assert(workChunk > 0);
-        assert(payLoads.size() == numThreads + 1);
+        assert(payLoads.size() == numWorkers + 1);
     }
 };
 

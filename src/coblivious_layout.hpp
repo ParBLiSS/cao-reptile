@@ -10,7 +10,6 @@
 #include "build_hp_tree.hpp"
 #include "hp_precomputed_table.h"
 #include "implicit_hp_search_pure_c.hpp"
-#include "io_util.h"
 #include "log2.h"
 #include "cao_util.h"
 
