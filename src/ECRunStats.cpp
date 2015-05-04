@@ -149,13 +149,13 @@ void ECRunStats::updateSpectrumTime(ECData& ecdata, std::ostream& ofs){
     std::stringstream oss, oss2;
     oss << "kmer count\t" << ecdata.getKmerCount() << std::endl;
     oss << "tile count\t" << ecdata.getTileCount() << std::endl;
+    oss << "absent kmer\t" << ecdata.getParams().absentKmers << std::endl;
     std::cout << oss.str();
     std::cout.flush();
 
     kmer_sync_start = tstart;
     kmer_sync_stop = tstop;
-    oss2 << "K-SPECTRUM CONSTRUCTION TIME " << tstop-tstart
-        << " (secs)" << std::endl;
+    oss2 << "spectrum construction\t" << tstop-tstart << std::endl;
     ofs << oss2.str();
     ofs.flush();
 }
@@ -164,10 +164,8 @@ void ECRunStats::updateECTime(std::ostream& ofs){
     std::stringstream oss;
     ec_sync_start = tstart;
     ec_sync_stop = tstop;
-    oss << "ERR CORRECTION TIME " << tstop-tstart
-        << " (secs)" << std::endl;
-    oss << "TOTAL TIME " << tstop-tstartInit
-        << " (secs)" << std::endl;
+    oss << "error correction\t" << tstop-tstart << std::endl;
+    oss << "total\t" << tstop-tstartInit << std::endl;
     ofs << oss.str();
     ofs.flush();
 }

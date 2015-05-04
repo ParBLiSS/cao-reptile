@@ -205,6 +205,9 @@ class ECData {
     void writeQueryStats(const std::string& filename) const;
     void writeSpectrum() const;
 
+    void loadSpectrum();
+    void writeDistSpectrum() const;
+
     ECData(Para& p);
     virtual ~ECData();
 };

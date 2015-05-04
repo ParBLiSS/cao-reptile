@@ -90,6 +90,11 @@ public:
     int workFactor;
     std::string kmerSpectrumOutFile;
     std::string tileSpectrumOutFile;
+    std::string kmerSpectrumInFile;
+    std::string tileSpectrumInFile;
+    bool kinAbsent;
+
+    int runType;
 
     // size and rank of the MPI world
     int m_size;
@@ -104,10 +109,9 @@ public:
     bool validate();
 
  private:
-
+    bool validateSpectrumOutput();
     void setPara(const char *configFile);
     void load_parallel_params();
-
     void compute_offsets();
 };
 

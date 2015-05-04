@@ -34,6 +34,36 @@
 #include "sort_kmers.hpp"
 #include "ECRunStats.hpp"
 
+void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+
+    // counts the k-mers and loads them in the ECData object
+    count_kmers(ecdata);
+    // sort kmers and tiles
+    sort_kmers(ecdata);
+
+    ecstx.tstop_kmer_p = clock();
+    MPI_Barrier(MPI_COMM_WORLD);
+    ecstx.tstop = MPI_Wtime();
+    if (ecdata.getParams().m_rank == 0) {
+        ecstx.updateSpectrumTime(ecdata, ofs);
+    }
+
+}
+
+void load_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+
+    ecdata.loadSpectrum();
+
+    ecstx.tstop_kmer_p = clock();
+    MPI_Barrier(MPI_COMM_WORLD);
+    ecstx.tstop = MPI_Wtime();
+    if (ecdata.getParams().m_rank == 0) {
+        ecstx.updateSpectrumTime(ecdata, ofs);
+    }
+}
+
 void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ecstx.tstart_read_p = clock();
     // If we have to store the reads, we read and store the reads
@@ -86,16 +116,42 @@ void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     }
 }
 
-int parallelEC( char *inputFile){
-    Para params(inputFile);
-
+void dist_spectrum(Para& params){
     std::ostream& ofs = std::cout;
-    // Validations on the parameters given in config file
-    if(params.validate() == false) {
-        if(params.m_rank == 0)
-            std::cout << "Validation Failed" << std::endl;
-        MPI::COMM_WORLD.Abort(1);
-    }
+    ECData ecdata(params);
+    ECRunStats ecstx;
+
+    load_reads(ecdata, ecstx, ofs);
+
+    construct_dist_spectrum(ecdata, ecstx, ofs);
+
+    ecdata.writeDistSpectrum();
+
+    ecstx.reportTimings(params, ofs);
+}
+
+void run_ec_only(Para& params){
+    std::ostream& ofs = std::cout;
+    ECData ecdata(params);
+    ECRunStats ecstx;
+
+    load_reads(ecdata, ecstx, ofs);
+
+    load_spectrum(ecdata, ecstx, ofs);
+
+    run_reptile(ecdata, ecstx, ofs);
+
+    ecstx.reportTimings(params, ofs);
+
+#ifdef QUERY_COUNTS
+    ecstx.reportQueryCounts(ecdata, ofs);
+#endif
+
+    ecdata.writeSpectrum();
+}
+
+int parallelEC(Para& params){
+    std::ostream& ofs = std::cout;
 
     ECData ecdata(params);
     ECRunStats ecstx;
@@ -143,8 +199,20 @@ int main(int argc,char *argv[]){
         MPI::COMM_WORLD.Abort(1);
     }
     input.close();
+    Para params(argv[1]);
+    // Validations on the parameters given in config file
+    if(params.validate() == false) {
+        if(params.m_rank == 0)
+            std::cout << "Validation Failed" << std::endl;
+        MPI::COMM_WORLD.Abort(1);
+    }
 
-    parallelEC(argv[1]);
+    if(params.runType == 0)
+        parallelEC(params);
+    else if(params.runType == 1)
+        dist_spectrum(params);
+    else if(params.runType == 2)
+        run_ec_only(params);
 
     MPI::Finalize();
     return 0;

@@ -363,7 +363,54 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
     m_tilesize = newTileSize;
 }
 
+void ECData::writeDistSpectrum() const{
+    if(m_kcount == 0 || m_tilecount == 0)
+        return;
+    std::ofstream kFile (m_params.kmerSpectrumOutFile.c_str(),
+                         std::ofstream::binary);
+    std::ofstream tFile (m_params.tileSpectrumOutFile.c_str(),
+                         std::ofstream::binary);
+    kFile.write((char*)m_karray, sizeof(kmer_t)*m_kcount);
+    tFile.write((char*)m_tilearray, sizeof(tile_t)*m_tilecount);
+
+    kFile.close();
+    tFile.close();
+}
+
+void ECData::loadSpectrum(){
+    std::ifstream kFile(m_params.kmerSpectrumInFile.c_str(),
+                        std::ifstream::binary);
+    std::ifstream tileFile(m_params.tileSpectrumInFile.c_str(),
+                           std::ifstream::binary);
+    if(kFile){
+        kFile.seekg(0, kFile.end);
+        unsigned fLength = kFile.tellg();
+        kFile.seekg(0, kFile.beg);
+        if(m_kcount > 0)
+            free(m_karray);
+
+        m_kcount = fLength / sizeof(kmer_t);
+        m_karray = (kmer_t*) malloc(sizeof(kmer_t) * m_kcount);
+        kFile.read((char*) m_karray,  sizeof(kmer_t) * m_kcount);
+        m_ksize = m_kcount;
+    }
+    if(tileFile){
+        tileFile.seekg(0, tileFile.end);
+        unsigned fLength = tileFile.tellg();
+        tileFile.seekg(0, tileFile.beg);
+        if(m_tilecount > 0)
+            free(m_tilearray);
+        m_tilecount = fLength / sizeof(tile_t);
+        m_tilearray = (tile_t*) malloc(sizeof(tile_t) * m_tilecount);
+        tileFile.read((char*) m_tilearray,  sizeof(tile_t) * m_tilecount);
+        m_tilesize = m_tilecount;
+    }
+}
+
 void ECData::writeSpectrum() const{
+    if(m_params.runType != 0){ // don't write when run type is otherwise
+        return;
+    }
     if(m_params.writeSpectrum > 0 && (m_params.m_rank == 0)){
         assert(m_params.kmerSpectrumOutFile.length() > 0);
         assert(m_params.tileSpectrumOutFile.length() > 0);

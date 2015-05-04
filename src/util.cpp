@@ -23,8 +23,10 @@ void Para::setPara(const char *configFile) {
     writeSpectrum = -1;
     numThreads = 1;
     dynamicWorkDist = 0;
+    runType = 0;
     workFactor = 40;
     QFlag = true;
+    kinAbsent = false;
     while(getline(input, line)){
         buf.clear();
         buf.str(line);
@@ -78,6 +80,14 @@ void Para::setPara(const char *configFile) {
                 buf >> numThreads;
             else if (s1 == "WorkDistribution")
                 buf >> dynamicWorkDist;
+            else if (s1 == "KmerSpectrumInFile")
+                buf >> kmerSpectrumInFile;
+            else if (s1 == "TileSpectrumInFile")
+                buf >> tileSpectrumInFile;
+            else if (s1 == "RunType")
+                buf >> runType;
+            else if (s1 == "KmerSpectrumInAbsent")
+                buf >> kinAbsent;
         }
     }
 }
@@ -93,14 +103,15 @@ bool Para::validate() {
             std::cout << "Err: Output file is not specified!\n";
         return false;
     }
-    if(writeOutput != 0){
+    if(writeOutput != 0 && (runType == 0 || runType == 2)){
         //  each process validates its ouput path
         std::stringstream outs;
         outs << oErrName << "-" << m_rank ;
         outputFilename = outs.str();
         std::ofstream oHandle(outputFilename.c_str());
         if (!oHandle.good()) {
-            std::cout << "open " << outputFilename << " failed, correct path?\n";
+            std::cout << "err output : open " << outputFilename
+                      << " failed, correct path?\n";
             return false;
         }
         oHandle.close();
@@ -117,28 +128,71 @@ bool Para::validate() {
         std::cout << "open " << iFaName << "failed :|\n";
         return false;
     }
+    if(runType == 0){
+        if(writeSpectrum != 0 && m_rank == 0)  // validate spectrum output file
+            if(!validateSpectrumOutput())
+                return false;
+    }
+    if(runType == 1){ // validate spectrum output file
+        if(!validateSpectrumOutput())
+            return false;
+    }
+    if(runType == 2){
+        if(kmerSpectrumInFile.length() == 0 || tileSpectrumInFile.length() == 0){
+            std::cout << "kmer sectrum input or tile spectrum input is "
+                      << "mandatory for EC only option" << std::endl;
+            return false;
+        }
+        std::ifstream kFile(kmerSpectrumInFile.c_str(),
+                            std::ifstream::binary);
+        if(!kFile.good()){
+            std::cout << "kmer sectrum input : open " << kmerSpectrumInFile
+                      << " failed, correct path?\n" << std::endl;
+            return false;
+        }
+        kFile.close();
+        std::ifstream tileFile(tileSpectrumInFile.c_str(),
+                               std::ifstream::binary);
+        if(!tileFile.good()){
+            std::cout << "tile sectrum input : open " << kmerSpectrumInFile
+                      << " failed, correct path?\n" << std::endl;
+            return false;
+        }
+        tileFile.close();
+        absentKmers = kinAbsent;
+    }
     if(m_rank == 0) {
         std::stringstream oss;
         oss << "--" << std::endl
             << "parameter" << "\t" << "value" << std::endl;
         oss << "short reads file\t" << iFaName << "\n";
         oss << "O/ErrFile\t" << oErrName << "\n";
-        oss << "(K, step, tile)\t" << "(" << K << "," << step << ","
-                  << K + step << ")\n"
-                  << "BatchSize\t" << batchSize << "\n"
-                  << "Max Hamming Dist\t" << hdMax << "\n"
-                  << "ExpectSearch\t" << eSearch << "\n"
-                  << "T_ratio\t" << tRatio << "\n"
-                  << "QThreshold\t" << qualThreshold << "\n"
-                  << "MaxBadQPerKmer\t" << maxBadQPerKmer << "\n"
-                  << "Qlb\t" << Qlb << "\n"
-                  << "T_expGoodCnt\t" << tGoodTile << "\n"
-                  << "T_card\t" << tCard << "\n"
-                  << "StoreReads\t" << storeReads << "\n"
-                  << "CacheOptimizedSearch\t" << cacheOptimizedSearch << "\n"
-                  << "Kmer Cache\t" << kmerCacheSize << "\n"
-                  << "Tile Cache\t" << tileCacheSize << "\n"
-                  << "--\n";
+        oss << "(K, step, tile)\t"
+            << "(" << K << "," << step << "," << K + step << ")\n"
+            << "BatchSize\t" << batchSize << "\n"
+            << "Max Hamming Dist\t" << hdMax << "\n"
+            << "ExpectSearch\t" << eSearch << "\n"
+            << "T_ratio\t" << tRatio << "\n"
+            << "QThreshold\t" << qualThreshold << "\n"
+            << "MaxBadQPerKmer\t" << maxBadQPerKmer << "\n"
+            << "Qlb\t" << Qlb << "\n"
+            << "T_expGoodCnt\t" << tGoodTile << "\n"
+            << "T_card\t" << tCard << "\n"
+            << "StoreReads\t" << storeReads << "\n"
+            << "CacheOptimizedSearch\t" << cacheOptimizedSearch << "\n"
+            << "Kmer Cache\t" << kmerCacheSize << "\n"
+            << "Tile Cache\t" << tileCacheSize << "\n"
+            << "Threads \t" << numThreads << "\n"
+            << "Dynamic Distribution \t" << dynamicWorkDist << "\n"
+            << "Work Factor \t" << workFactor << "\n"
+            << "Write Output \t" << writeOutput << "\n"
+            << "Write Spectrum \t" << writeSpectrum << "\n"
+            << "Kmer Spectrum Output \t" << kmerSpectrumOutFile << "\n"
+            << "Tile Spectrum Output \t" << tileSpectrumOutFile << "\n"
+            << "Kmer Spectrum Input \t" << kmerSpectrumInFile << "\n"
+            << "Tile Spectrum Input \t" << tileSpectrumInFile << "\n"
+            << "Kmer Input Absent ? \t" << kinAbsent << "\n"
+            << "--\n";
         std::cout << oss.str();
         std::cout.flush();
     }
@@ -158,6 +212,34 @@ void Para::compute_offsets(){
     fileSize = fin.tellg();
     offsetStart = (fileSize/m_size) * m_rank;
     offsetEnd = (fileSize/m_size) * (m_rank + 1);
+}
+
+bool Para::validateSpectrumOutput(){
+    if(kmerSpectrumOutFile.length() == 0)
+        kmerSpectrumOutFile = "kmer-spectrum";
+    if(tileSpectrumOutFile.length() == 0)
+        tileSpectrumOutFile = "tile-spectrum";
+    //  each process validates its ouput path
+    std::stringstream outs, outs2;
+    outs << kmerSpectrumOutFile << "-" << m_rank << ".bin" ;
+    kmerSpectrumOutFile = outs.str();
+    outs2 << tileSpectrumOutFile << "-" << m_rank << ".bin" ;
+    tileSpectrumOutFile = outs2.str();
+    std::ofstream oHandle(kmerSpectrumOutFile.c_str());
+    if (!oHandle.good()) {
+        std::cout << "kmer spectrum input : open " << kmerSpectrumOutFile
+                  << " failed, correct path?\n";
+        return false;
+    }
+    oHandle.close();
+    std::ofstream oHandle2(tileSpectrumOutFile.c_str());
+    if (!oHandle2.good()) {
+        std::cout << "tile spectrum input : open " << tileSpectrumOutFile
+                  << " failed, correct path?\n";
+        return false;
+    }
+    oHandle2.close();
+    return true;
 }
 
 std::string toString(kmer_id_t ID, int len){
