@@ -50,7 +50,7 @@ void ECDriver::ecDynamic(){
 
 void ECDriver::ecStatic() {
     if(inPara_.writeOutput != 0)
-        oHandle_.open(outFname_.c_str());
+        oHandle_.open(inPara_.outputFilename.c_str());
 
     if(inPara_.storeReads) {
         // reads are already obtained from input file and stored in ECData

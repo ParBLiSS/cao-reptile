@@ -37,15 +37,15 @@
 
 class ECDriver {
 public:
-    ECDriver(ECData& p, std::string& fn, Para& mpara):
-         ecdata_(p),inPara_(mpara),outFname_(fn),readID_(0){};
+    ECDriver(ECData& p, Para& mpara):
+        ecdata_(p),inPara_(mpara),readID_(0){};
     virtual ~ECDriver(){};
 
     void ec();
 private:
     ECData& ecdata_;
     Para& inPara_;
-    std::string outFname_;
+
     int readID_;
     std::ofstream oHandle_;
 

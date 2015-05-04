@@ -103,21 +103,35 @@ KmerCacheSize      4
 TileCacheSize      4
 #
 # Should i write out the spectrum
-WriteSpectrum      1
+WriteSpectrum      0
 #
 # RunType 0 : construct spectrum and run error correction
 # RunType 1 : run only distributed spectrum construction
 # RunType 2 : run only error correction
 RunType            0
 #
-#
+# Kmer spectrum input file (when RunType is 2)
 #
 KmerSpectrumInFile    kmer-spectrum-test.bin
 #
-#
+# Tile spectrum input file (when RunType is 2)
 #
 TileSpectrumInFile    tile-spectrum-test.bin
 #
-#
+# When RunType == 2, specify whether the kmer spectrum input is absent kmers
 #
 KmerSpectrumInAbsent   1
+# Number of worker threads
+#   - In case of static work distribution
+#
+Threads                2
+#
+# Work distribution - Whether it should be static (0) or dynamic (1)
+#
+WorkDistribution       1
+#
+# In case of dynamic distribution, how many partitions should the error
+# correction work be paritioned. It is computed as below
+#     (fileSize)/(nproc * (num_threads + 1) * workfactor)
+#
+WorkFactor             2

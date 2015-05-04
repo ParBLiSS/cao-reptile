@@ -8,7 +8,7 @@ struct WInt{
     WInt(){
         value = 9;
         sz = 50;
-        // std::cout << "C";
+        //std::cout << "C";
     }
     size_t size(){
         return sz;
@@ -42,7 +42,7 @@ struct BatchIntWork{
         x = 1;
         // sleep for quite a while
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        //std::cout << rank ;
+        std::cout << rank ;
     }
 };
 
@@ -52,7 +52,7 @@ struct UnitIntWork{
         x = x + 12;
         // sleep for a long while
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        //std::cout << "+" ;
+        std::cout << "+" ;
     }
 };
 
@@ -86,11 +86,7 @@ int main(int argc, char *argv[]){
 
     WorkDistribution<WInt, int, int, WIntLoader, BatchIntWork,
                      UnitIntWork> wds(tWork, pload, nthreads, 100);
-    if(rank == 0) {
-        wds.masterMain();
-    } else {
-        wds.slaveMain();
-    }
+    wds.main();
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0)
         std::cout << std::endl;

@@ -104,8 +104,7 @@ void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ecdata.buildCacheOptimizedLayout();
 
     // Run reptile
-    ECDriver ecdr(ecdata, ecdata.getParams().outputFilename,
-                  ecdata.getParams());
+    ECDriver ecdr(ecdata, ecdata.getParams());
     ecdr.ec();
 
     ecstx.tstop_ec_p = clock();

@@ -122,6 +122,10 @@ struct ReadStore {
     ivec_t qualsOffset;
     int readId;
 
+    ReadStore(){
+        // std::cout << "C" ;
+    }
+
     void reset(){
         readsString.resize(0);
         readsOffset.resize(0);

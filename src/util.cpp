@@ -24,7 +24,7 @@ void Para::setPara(const char *configFile) {
     numThreads = 1;
     dynamicWorkDist = 0;
     runType = 0;
-    workFactor = 40;
+    workFactor = 2;
     QFlag = true;
     kinAbsent = false;
     while(getline(input, line)){
@@ -78,6 +78,8 @@ void Para::setPara(const char *configFile) {
                 buf >> tileSpectrumOutFile;
             else if (s1 == "Threads")
                 buf >> numThreads;
+            else if (s1 == "WorkFactor")
+                buf >> workFactor;
             else if (s1 == "WorkDistribution")
                 buf >> dynamicWorkDist;
             else if (s1 == "KmerSpectrumInFile")

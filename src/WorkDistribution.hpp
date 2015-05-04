@@ -168,8 +168,8 @@ template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
           typename UnitWorkerType>
 class WorkDistribution{
-    static SharedQueue<WorkItemType> wrkQueue;
-    static std::atomic_bool wrkFinished;
+    SharedQueue<WorkItemType> wrkQueue;
+    std::atomic_bool wrkFinished;
 
     // work distribution
     SizeType totalWork;
@@ -189,23 +189,28 @@ class WorkDistribution{
     int mpiSize;
     int mpiRank;
 
-    int initFactor; // how much is initially allocated
+    // co-ordination variables
+    int numWorkZero; // master co-ord for counting no. 'zero work'
+    SizeType workAssigned; // master co-ord tracks how much work is assinged
+    WDState coordState; // current state
+    int initFactor; // scale of how much work is initially allocated
 
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
     // It is assumed that the PayLoadType object is exclusive to this thread
-    static void worker_thread(int tid, int rank,
-                              PayLoadType& pload) {
+    static void worker_thread(int tid, int rank, PayLoadType& pload,
+                              SharedQueue<WorkItemType>& wrkQueueRef,
+                              std::atomic_bool& wrkFinishedRef) {
         BatchWorkerType batch_work;
         WorkItemType work;
 
         while(true) {
-            if(wrkQueue.pop(work)){
+            if(wrkQueueRef.pop(work)){
                 // do a batch of work
                 batch_work(work, pload, tid, rank);
                 work.reset();
             }
-            if(wrkFinished.load(std::memory_order_relaxed))
+            if(wrkFinishedRef.load(std::memory_order_relaxed))
                 break;
         }
     }
@@ -219,13 +224,16 @@ class WorkDistribution{
             // My first work chunk
             //   (work_chunk) ((rank * (numWorkers + 1)) + tid);
             SizeType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
-            threadOffset += tid * workChunk;
+            threadOffset += (tid + 1) * workChunk;
+
             load_work(payLoads[tid + 1], threadOffset,
                       threadOffset + workChunk, work);
             wrkQueue.push(work);
             // start thread
             workers.push_back(std::thread(worker_thread, tid, mpiRank,
-                                          std::ref(payLoads[tid + 1])));
+                                          std::ref(payLoads[tid + 1]),
+                                          std::ref(wrkQueue),
+                                          std::ref(wrkFinished)));
         }
     }
 
@@ -245,9 +253,10 @@ class WorkDistribution{
             return false;
         }
         // TODO: do work of some predefined granularity
-        unit_work(crdWork, payLoads[0], workProgress);
-        workProgress += 1;
-        if(workProgress >= crdWork.size()){
+        if(workProgress < crdWork.size()){
+            unit_work(crdWork, payLoads[0], workProgress);
+            workProgress += 1;
+        } else {
             workProgress = 0;
             crdWork.reset();
         }
@@ -255,8 +264,7 @@ class WorkDistribution{
     }
 
     // Compute the work to be assigned as vector of offets
-    void assignWork(std::vector<SizeType>& wrkOffsets,
-                     SizeType& workAssigned){
+    void assignWork(std::vector<SizeType>& wrkOffsets){
         for(auto sit = wrkOffsets.begin(); sit != wrkOffsets.end(); sit++){
             if(workAssigned < totalWork){
                 *sit = workAssigned;
@@ -293,7 +301,7 @@ class WorkDistribution{
     // Assigns work to remote processes, if they are asking for it
     //  - returns true when the whole of threadWork is actual work!
     //    or when nothing is assigned
-    bool assignWorkRemote(SizeType& wrkAssigned, int& nwrkZero){
+    bool assignWorkRemote(){
         int count, recvMsg, nSent = 0;
         MPI_Status status;
         MPI_Request request;
@@ -308,7 +316,7 @@ class WorkDistribution{
             MPI_Recv(&recvMsg, 1, MPI_INT, status.MPI_SOURCE,
                      ASK_WORK_TAG, MPI_COMM_WORLD, &status);
             // always assign work of size 'numWorkers'
-            assignWork(threadWork, wrkAssigned);
+            assignWork(threadWork);
             // send the allocated work
             MPI_Isend(&(threadWork[0]), numWorkers, get_mpi_dt<SizeType>(),
                       status.MPI_SOURCE, SND_WORK_TAG, MPI_COMM_WORLD, &request);
@@ -316,7 +324,7 @@ class WorkDistribution{
             nSent += 1;
             if(threadWork.back() == 0){
                 fullAssigned = false;
-                nwrkZero += 1;
+                numWorkZero += 1;
             }
         }
 
@@ -340,22 +348,18 @@ class WorkDistribution{
     //  - This function is not thread safe, only one thread in a process
     //     is allowed to run this function.
     void masterCoord(){
-        static int nwrkZero = 1;
-        static SizeType wrkAssigned = initFactor * mpiSize *
-            (numWorkers + 1) * workChunk;
-        static WDState coordState = ASSIGN_WORK;
 
         switch(coordState){
         case ASSIGN_WORK:
             // Assign to work local threads, if they don't have enough
             if(wrkQueue.size() < 2 * numWorkers){
                 std::vector<SizeType> threadWork(numWorkers);
-                assignWork(threadWork, wrkAssigned);
+                assignWork(threadWork);
                 if(!updateWorkQueue(threadWork)) // if assigned 'zero work'
                     coordState = PENDING_WORK; // update state
             }
             // Assign work to remote processes, if they are asking for it
-            if(!assignWorkRemote(wrkAssigned, nwrkZero)){
+            if(!assignWorkRemote()){
                 // Update state, if I have assigned 'zero work'
                 coordState = PENDING_WORK;
             }
@@ -363,12 +367,12 @@ class WorkDistribution{
         case PENDING_WORK:
             // I, root, haven't recieved message from every one:
             //   Assign 'zero work', to any remote process asking for work
-            if(nwrkZero < mpiSize){
-                assignWorkRemote(wrkAssigned, nwrkZero);
+            if(numWorkZero < mpiSize){
+                assignWorkRemote();
             }
             // I, root, have assigned 'zero work' to every process;
             //   Also, my queue is empty. I can finish work now.
-            if(nwrkZero == mpiSize && wrkQueue.empty()){
+            if(numWorkZero == mpiSize && wrkQueue.empty()){
                 coordState = FINISHED_WORK;
             }
             break;
@@ -386,7 +390,7 @@ class WorkDistribution{
     //  - This function is not thread safe, only one thread in a process
     //     is allowed to run this function.
     int slaveCoord(){
-        static WDState coordState = ASSIGN_WORK;
+
         switch(coordState){
         case ASSIGN_WORK:
             // If my local threads don't have enough work, ask from the root
@@ -417,6 +421,7 @@ class WorkDistribution{
     // Load a batch as the work item for coord thread
     void loadWork(){
         SizeType startOffset = mpiRank * (numWorkers + 1) * workChunk;
+        // std::cout << mpiRank << " " << startOffset << std::endl;
         load_work(payLoads[0], startOffset,
                   startOffset + workChunk, crdWork);
     }
@@ -438,42 +443,27 @@ class WorkDistribution{
     }
 
 public:
-    // Main loop of master co-ordination thread
-    //  - This function is not thread safe, only one thread should be
-    //    allowed to run this function.
-    void masterMain(){
+
+    // Main loop of the co-rodnation thread
+    //  - assumes the root process
+    //  - this function is not thread safe, only the main thread should be
+    //     allowed to run this function.
+    void main(int root = 0){
         wrkFinished.store(false, std::memory_order_relaxed);
         std::vector<std::thread> workers;
         startWorkers(workers); // start workers
 
         loadWork(); // Load the local work first
 
+        workAssigned = initFactor * mpiSize * (numWorkers + 1) * workChunk;
+        // std::cout << mpiRank << " " << workAssigned << std::endl;
         // Start co-ordination loop
         do {
             doWork();
-            masterCoord();
-            if(wrkFinished.load(std::memory_order_relaxed))
-                break;
-        } while(true);
-
-        while(doWork());  // finish if any local work left to do
-
-        joinWorkers(workers);
-    }
-
-    // Main loop of master co-rodnation thread
-    //  - this function is not thread safe, only one thread should be
-    //     allowed to run this function.
-    void slaveMain(){
-        wrkFinished.store(false, std::memory_order_relaxed);
-        std::vector<std::thread> workers;
-        startWorkers(workers); // start workers
-
-        loadWork(); // Load the local work first
-
-        do {
-            doWork();
-            slaveCoord();
+            if(mpiRank == root)
+                masterCoord();
+            else
+                slaveCoord();
             if(wrkFinished.load(std::memory_order_relaxed))
                 break;
         } while(true);
@@ -496,25 +486,12 @@ public:
         }
         workProgress = 0;
         initFactor = 1;
+        numWorkZero = 1;
+        coordState = ASSIGN_WORK;
         assert(numWorkers > 0);
         assert(workChunk > 0);
         assert(payLoads.size() == numWorkers + 1);
     }
 };
-
-template <typename WorkItemType, typename SizeType, typename PayLoadType,
-          typename BatchLoaderType, typename BatchWorkerType,
-          typename UnitWorkerType>
-SharedQueue<WorkItemType> WorkDistribution<WorkItemType, SizeType, PayLoadType,
-                                           BatchLoaderType, BatchWorkerType,
-                                           UnitWorkerType>::wrkQueue;
-
-template <typename WorkItemType, typename SizeType, typename PayLoadType,
-          typename BatchLoaderType, typename BatchWorkerType,
-          typename UnitWorkerType>
-std::atomic_bool WorkDistribution<WorkItemType, SizeType, PayLoadType,
-                                           BatchLoaderType, BatchWorkerType,
-                                           UnitWorkerType>::wrkFinished;
-
 
 #endif // WORKDISTRIBUTION_H

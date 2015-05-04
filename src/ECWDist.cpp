@@ -30,7 +30,7 @@ struct BatchEC{
 // Error correction for a single read within the batch
 struct UnitEC{
     void operator()(const ReadStore& rbatch, ECImpl& ecr, unsigned ipos) {
-        if(ipos > rbatch.size())
+        if(ipos >= rbatch.size())
             return;
         int position = rbatch.readsOffset[ipos];
         int qposition = rbatch.qualsOffset[ipos];
@@ -45,6 +45,7 @@ struct UnitEC{
 struct ReadBatchLoader{
     void operator()(const ECImpl& ecr, unsigned long woffStart,
                      unsigned long woffEnd, ReadStore& tmp){
+        // std::cout << "C" ;
         std::ifstream fin(ecr.getPara().iFaName);
         fin.seekg(woffStart);
         readBatch(&fin, UINT_MAX, woffEnd, tmp);
@@ -63,15 +64,22 @@ void ec_wdist(ECData& ecdata){
     std::vector<ECImpl> threadEC(nThreads + 1,
                                  ECImpl(ecdata, params));
     unsigned tWork = getTotalWork(params.iFaName);
-    unsigned nWorkers = params.m_size * params.numThreads;
+    unsigned nWorkers = params.m_size * (params.numThreads + 1);
     unsigned tChunk = tWork / (nWorkers * params.workFactor);
+
+    if(params.m_rank == 0)
+        std::cout << "chunk\t" << tChunk << std::endl;
+
     WorkDistribution<ReadStore, unsigned long, ECImpl,
                      ReadBatchLoader, BatchEC, UnitEC> wdist(tWork, threadEC,
                                                              params.numThreads,
                                                              tChunk);
-    if(params.m_rank == 0){
-        wdist.masterMain();
-    } else{
-        wdist.slaveMain();
+    wdist.main();
+    if(ecdata.getParams().writeOutput != 0){
+        std::ofstream ofs(ecdata.getParams().outputFilename.c_str());
+        if(ofs.good()){
+            for(auto eit = threadEC.begin(); eit != threadEC.end(); eit++)
+                eit->writeErrors(ofs);
+        }
     }
 }
