@@ -112,8 +112,25 @@ enum WorkRequest{
     SND_WORK_TAG = 0x2
 };
 
-// Dynamic work distribution
+// WorkDistribution
 //
+// - Distributes a given quantity of work into workchunks across the
+//   all distributed processes and their shared memory threads.
+// - Architected as a single master procecss and a bunch of slave
+//   processes
+// - Each process has a co-ordination thread and  'numThreads' no. of
+///  worker threads.
+// - Initial work chunk is assigned without explicit allocation by the
+//   master process.
+// - Co-ordination threads in slave processes have the responsibility
+//   to allocate work for worker threads by asking work from the
+//   master process.
+// - Co-ordination threads in master process have the responsibility
+//   to allocate work for its worker threads and also allocate work for
+//   all slave processes.
+// - Co-ordination threads in all the processes also load the work item
+//   (incase it needs to be loaded from a file or network) and do some
+//   part of the work in between other responsibilites.
 //
 // WorkItemType holds the information regarding work that needs to be
 // done and is expected to have the following interface
@@ -123,7 +140,7 @@ enum WorkRequest{
 //   3. implement a swap function to avoid copying in the queue
 // size() should correspond to the number of units of work.
 //
-// OffsetType is used to measure the quantity of work, size of the work
+// SizeType is used to measure the quantity of work, size of the work
 // chunk, and offsets work. This type is expected to an integral type.
 //
 // A reference to PayLoadType object passsed to the worker
@@ -138,7 +155,7 @@ enum WorkRequest{
 // BatchLoaderType loads a WorkItemType object from starting and ending
 // offset. It also takes the payload object as an argument to retrieve
 // the meta data necessary. The arguments are const PayLoadType& pl,
-// OffsetType startOffset, OffsetType endOffset, WorkItemType& item
+// SizeType startOffset, SizeType endOffset, WorkItemType& item
 //
 // BatchWokerType does the work corresponding to a given batch. Its
 // arguments are WorkItemType& item, PayLoadType& pl, int threadid, int rank
@@ -147,7 +164,7 @@ enum WorkRequest{
 // batch. Its arguments are WorkItemType& item, PayLoadType& pl,
 // unsigned unit_id
 //
-template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
           typename UnitWorkerType>
 class WorkDistribution{
@@ -155,10 +172,10 @@ class WorkDistribution{
     static std::atomic_bool wrkFinished;
 
     // work distribution
-    OffsetType totalWork;
+    SizeType totalWork;
     std::vector<PayLoadType>& payLoads;
     unsigned numWorkers;
-    OffsetType workChunk;
+    SizeType workChunk;
 
     // woker functions
     BatchLoaderType load_work;
@@ -180,9 +197,9 @@ class WorkDistribution{
     static void worker_thread(int tid, int rank,
                               PayLoadType& pload) {
         BatchWorkerType batch_work;
+        WorkItemType work;
 
         while(true) {
-            WorkItemType work;
             if(wrkQueue.pop(work)){
                 // do a batch of work
                 batch_work(work, pload, tid, rank);
@@ -201,7 +218,7 @@ class WorkDistribution{
             WorkItemType work;
             // My first work chunk
             //   (work_chunk) ((rank * (numWorkers + 1)) + tid);
-            OffsetType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
+            SizeType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
             threadOffset += tid * workChunk;
             load_work(payLoads[tid + 1], threadOffset,
                       threadOffset + workChunk, work);
@@ -238,8 +255,8 @@ class WorkDistribution{
     }
 
     // Compute the work to be assigned as vector of offets
-    void assignWork(std::vector<OffsetType>& wrkOffsets,
-                     OffsetType& workAssigned){
+    void assignWork(std::vector<SizeType>& wrkOffsets,
+                     SizeType& workAssigned){
         for(auto sit = wrkOffsets.begin(); sit != wrkOffsets.end(); sit++){
             if(workAssigned < totalWork){
                 *sit = workAssigned;
@@ -253,7 +270,7 @@ class WorkDistribution{
     // Update work queue with new set of items
     //   - returns true when the whole of wrkOffsets is actual work!
     //     i.e. returns true when there is no 'zero work' assigned
-    bool updateWorkQueue(std::vector<OffsetType>& wrkOffsets){
+    bool updateWorkQueue(std::vector<SizeType>& wrkOffsets){
         auto last = std::find(wrkOffsets.begin(), wrkOffsets.end(), 0);
 
         for(auto ait = wrkOffsets.begin(); ait != last; ait++){
@@ -276,11 +293,11 @@ class WorkDistribution{
     // Assigns work to remote processes, if they are asking for it
     //  - returns true when the whole of threadWork is actual work!
     //    or when nothing is assigned
-    bool assignWorkRemote(OffsetType& wrkAssigned, int& nwrkZero){
+    bool assignWorkRemote(SizeType& wrkAssigned, int& nwrkZero){
         int count, recvMsg, nSent = 0;
         MPI_Status status;
         MPI_Request request;
-        std::vector<OffsetType> threadWork(numWorkers);
+        std::vector<SizeType> threadWork(numWorkers);
         bool fullAssigned = true;
         // if anybody asking work,
         //   Either assign work to them or tell them there is no more work to do
@@ -293,7 +310,7 @@ class WorkDistribution{
             // always assign work of size 'numWorkers'
             assignWork(threadWork, wrkAssigned);
             // send the allocated work
-            MPI_Isend(&(threadWork[0]), numWorkers, get_mpi_dt<OffsetType>(),
+            MPI_Isend(&(threadWork[0]), numWorkers, get_mpi_dt<SizeType>(),
                       status.MPI_SOURCE, SND_WORK_TAG, MPI_COMM_WORLD, &request);
             MPI_Wait(&request, &status); // should I need to wait ?
             nSent += 1;
@@ -307,14 +324,14 @@ class WorkDistribution{
     }
 
     // Ask and recieve work from the master co-ord process
-    void recvWorkRemote(std::vector<OffsetType>& recvMessage){
+    void recvWorkRemote(std::vector<SizeType>& recvMessage){
         MPI_Status status;
         MPI_Request request;
         int sendMsg = (int) numWorkers;
         recvMessage.resize(numWorkers);
         MPI_Isend(&sendMsg, 1, MPI_INT, 0, ASK_WORK_TAG, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, &status);
-        MPI_Recv(&(recvMessage[0]), numWorkers, get_mpi_dt<OffsetType>(), 0,
+        MPI_Recv(&(recvMessage[0]), numWorkers, get_mpi_dt<SizeType>(), 0,
                  SND_WORK_TAG, MPI_COMM_WORLD, &status);
     }
 
@@ -324,7 +341,7 @@ class WorkDistribution{
     //     is allowed to run this function.
     void masterCoord(){
         static int nwrkZero = 1;
-        static OffsetType wrkAssigned = initFactor * mpiSize *
+        static SizeType wrkAssigned = initFactor * mpiSize *
             (numWorkers + 1) * workChunk;
         static WDState coordState = ASSIGN_WORK;
 
@@ -332,7 +349,7 @@ class WorkDistribution{
         case ASSIGN_WORK:
             // Assign to work local threads, if they don't have enough
             if(wrkQueue.size() < 2 * numWorkers){
-                std::vector<OffsetType> threadWork(numWorkers);
+                std::vector<SizeType> threadWork(numWorkers);
                 assignWork(threadWork, wrkAssigned);
                 if(!updateWorkQueue(threadWork)) // if assigned 'zero work'
                     coordState = PENDING_WORK; // update state
@@ -374,7 +391,7 @@ class WorkDistribution{
         case ASSIGN_WORK:
             // If my local threads don't have enough work, ask from the root
             if(wrkQueue.size() < 2 * numWorkers){
-                std::vector<OffsetType> recvMessage(numWorkers);
+                std::vector<SizeType> recvMessage(numWorkers);
                 recvWorkRemote(recvMessage);
                 // If I have been assigned 'zero work', update state to pending
                 if(!updateWorkQueue(recvMessage))
@@ -399,14 +416,15 @@ class WorkDistribution{
 
     // Load a batch as the work item for coord thread
     void loadWork(){
-        OffsetType startOffset = mpiRank * (numWorkers + 1) * workChunk;
+        SizeType startOffset = mpiRank * (numWorkers + 1) * workChunk;
         load_work(payLoads[0], startOffset,
                   startOffset + workChunk, crdWork);
     }
 
+    // Inital work allocation
     void initQueue(){
-        std::vector<OffsetType> iOffsets(numWorkers);
-        OffsetType oCurrOffset;
+        std::vector<SizeType> iOffsets(numWorkers);
+        SizeType oCurrOffset;
         for(int j = 1; j <= 2; j++){
             oCurrOffset = j * mpiSize * (numWorkers + 1) * workChunk;
             oCurrOffset += mpiRank * (numWorkers + 1) * workChunk;
@@ -420,7 +438,7 @@ class WorkDistribution{
     }
 
 public:
-    // Main loop of master co-rodnation thread
+    // Main loop of master co-ordination thread
     //  - This function is not thread safe, only one thread should be
     //    allowed to run this function.
     void masterMain(){
@@ -465,8 +483,8 @@ public:
         joinWorkers(workers);
     }
 
-    WorkDistribution(OffsetType tWork, std::vector<PayLoadType>& refPayload,
-                     unsigned nWorkers = 2, OffsetType wChunk = 0):
+    WorkDistribution(SizeType tWork, std::vector<PayLoadType>& refPayload,
+                     unsigned nWorkers = 2, SizeType wChunk = 0):
         totalWork(tWork), payLoads(refPayload),
         numWorkers(nWorkers), workChunk(wChunk)
     {
@@ -484,17 +502,17 @@ public:
     }
 };
 
-template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
           typename UnitWorkerType>
-SharedQueue<WorkItemType> WorkDistribution<WorkItemType, OffsetType, PayLoadType,
+SharedQueue<WorkItemType> WorkDistribution<WorkItemType, SizeType, PayLoadType,
                                            BatchLoaderType, BatchWorkerType,
                                            UnitWorkerType>::wrkQueue;
 
-template <typename WorkItemType, typename OffsetType, typename PayLoadType,
+template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
           typename UnitWorkerType>
-std::atomic_bool WorkDistribution<WorkItemType, OffsetType, PayLoadType,
+std::atomic_bool WorkDistribution<WorkItemType, SizeType, PayLoadType,
                                            BatchLoaderType, BatchWorkerType,
                                            UnitWorkerType>::wrkFinished;
 

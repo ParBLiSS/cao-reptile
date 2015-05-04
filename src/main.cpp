@@ -56,6 +56,8 @@ void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     count_kmers(ecdata);
     // sort kmers and tiles
     sort_kmers(ecdata);
+    // gather kemers and tiles
+    gather_spectrum(ecdata);
 
     ecstx.tstop_kmer_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);

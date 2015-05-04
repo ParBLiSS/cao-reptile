@@ -149,6 +149,7 @@ class ECData {
   public:
     friend void sort_kmers(ECData& ecdata);
     friend void count_kmers(ECData& ecdata);
+    friend void gather_spectrum(ECData& ecdata);
 
     Para& getParams(){return m_params;}
 

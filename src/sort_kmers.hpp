@@ -37,7 +37,6 @@
 #include <fstream>
 #include <climits>
 
-#include "ECData.hpp"
 #include "util.h"
 #include "load_balance.hpp"
 
@@ -86,14 +85,15 @@ template <typename StructDataType, typename KeyDataType,
 void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
                 MPI_Datatype mpi_struct_type,MPI_Datatype mpi_key_type,
                 StructCompare structComparator,KeyCompare keyComparator,
-                bool eliminateDupes,int threshold,Para& params){
+                bool absentKmers, Para& params){
 
     int i = 0, j = 0;
-    StructDataType *AllData;
     int NoofElements;
     int kvalue = params.K;
     int size = MPI::COMM_WORLD.Get_size(),
         rank = MPI::COMM_WORLD.Get_rank();
+    bool eliminateDupes = true;
+    int threshold = params.tCard;
     // sorting of the local k-mers
     //std::sort(karray, karray + kcount, structComparator);
 #ifdef DEBUG
@@ -199,14 +199,15 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     for(i=0;i<size;i++)
         NewlocalCount += recvcts[i];
 
-    StructDataType *Newlocal = new StructDataType[NewlocalCount];
-    // (StructDataType*) malloc (NewlocalCount * sizeof(StructDataType));
+    StructDataType *Newlocal = // new StructDataType[NewlocalCount];
+        (StructDataType*) malloc (NewlocalCount * sizeof(StructDataType));
     MPI_Alltoallv(karray,sendcts,senddisp,mpi_struct_type,
                   Newlocal,recvcts,recvdisp,mpi_struct_type,MPI_COMM_WORLD);
     std::sort(Newlocal,Newlocal+NewlocalCount,structComparator);
 
     // Get rid of the memory
     free(karray); kcount = ksize = 0;
+    ksize = NewlocalCount;
 
     // if not using map-reduce, eliminate dupes and update count
     if(eliminateDupes) {
@@ -228,7 +229,6 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     eliminate_threshold(Newlocal,NewlocalCount,threshold);
 
     NoofElements = 0;
-    AllData = 0;
     //for(i=0;i<size;i++)
     //  sendcts[i] = NewlocalCount;
     // Print for debugging
@@ -246,13 +246,14 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     }
 #endif
     StructDataType *AbsentIDs = 0;
-    if( sizeof(StructDataType) == sizeof(kmer_t) &&
+    if( absentKmers &&
         NoofElements > (1 << (2*kvalue-1))) {
         KeyDataType si = (rank == 0) ? 0 : GlobalSplitter[rank-1]; j = 0;
         KeyDataType end = (rank == size-1) ? (1 << 2*kvalue) : GlobalSplitter[rank];
         KeyDataType absent_size = end - si - NewlocalCount;
         if(absent_size > 0) {
-            AbsentIDs = new StructDataType[absent_size];
+            AbsentIDs = //new StructDataType[absent_size];
+                (StructDataType*) malloc (absent_size * sizeof(StructDataType));
             int k = 0;
             for(;si < end;si++){
                 if(j < NewlocalCount && Newlocal[j].ID == si) {
@@ -262,20 +263,48 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
                 AbsentIDs[k].ID = si; AbsentIDs[k].count = 0;
                 k++;
             }
-            delete[] Newlocal;
+            free(Newlocal);
             Newlocal = AbsentIDs; NewlocalCount = k;
+            ksize = absent_size;
         } else {
-            delete[] Newlocal; Newlocal = 0;
+            free(Newlocal); Newlocal = 0;
             NewlocalCount = 0;
         }
         params.absentKmers = true;
     }
+    karray = Newlocal;
+    kcount = NewlocalCount;
+    //
+    // DONOT free Newlocal : Newlocal is the output!
+    delete[] recvcts;
+    delete[] sendcts;
+    delete[] recvdisp;
+    delete[] senddisp;
+    delete[] AllSplitter;
+    delete[] GlobalSplitter;
+    delete[] Splitter;
+}
+
+template <typename StructDataType, typename KeyDataType>
+void gather_spectrum(StructDataType *&karray, int &kcount, int &ksize,
+                     MPI_Datatype mpi_struct_type)
+{
+    StructDataType *AllData = 0;
+    int NoofElements = 0;
+    StructDataType *Newlocal = karray;
+    int NewlocalCount = kcount;
+    int size = MPI::COMM_WORLD.Get_size(),
+        rank = MPI::COMM_WORLD.Get_rank();
+    int *recvcts =  new int[size]();
+    int *sendcts = new int[size]();
+    int *recvdisp = new int[size]();
+    int *senddisp = new int[size]();
 
     MPI_Allgather (&NewlocalCount, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
     recvdisp[0] = 0;
     NoofElements = recvcts[0];
     int max  = 0 ;
-    for(i=1;i<size;i++){
+    for(int i=1;i<size;i++){
         recvdisp[i]=recvdisp[i-1]+recvcts[i-1];
         NoofElements += recvcts[i];
         if(max < recvcts[i]) max =  recvcts[i];
@@ -315,13 +344,13 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
 #endif
 
     if(size > 1) {
-        for(i = 0; i <iterations;i++) {
+        for(int i = 0; i <iterations;i++) {
             if(i*fixednumber < NewlocalCount)
                 displacement = i*fixednumber;
             else
                 displacement = 0;
 
-            for(j = 0 ; j< size; j++){
+            for(int j = 0 ; j< size; j++){
                 recvcurrentcts[j] = recvcts[j] - i*fixednumber > fixednumber ?
                      fixednumber : (recvcts[j] - i*fixednumber > 0 ?
                                         recvcts[j] - i*fixednumber: 0) ;
@@ -338,6 +367,7 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     }
 
     // load the sorted list back onto input list
+    free(karray); kcount = ksize = 0; Newlocal = 0;
     karray = AllData;
     ksize = kcount = NoofElements;
 
@@ -356,18 +386,15 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     //        NoofElements << std::endl;
 
     // DONOT free AllData : AllData is the output!
-    delete[] Newlocal;
     delete[] recvcts;
     delete[] sendcts;
     delete[] recvdisp;
     delete[] senddisp;
-    delete[] AllSplitter;
-    delete[] GlobalSplitter;
-    delete[] Splitter;
     delete[] recvcurrentdisp;
     delete[] recvcurrentcts;
 }
 
+class ECData;
 void sort_kmers(ECData& ecdata);
 
 #endif

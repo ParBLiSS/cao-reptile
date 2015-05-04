@@ -6,7 +6,9 @@ struct WInt{
     int value;
     int sz;
     WInt(){
+        value = 9;
         sz = 50;
+        // std::cout << "C";
     }
     size_t size(){
         return sz;
@@ -15,7 +17,18 @@ struct WInt{
         value = 0;
         sz = 0;
     }
+
+    WInt(const WInt& other){
+        //std::cout << other.value;
+        value  = other.value;
+        sz = other.sz;
+    }
 };
+
+void swap(WInt& x, WInt& y){
+    std::swap(x.value, y.value);
+    std::swap(x.sz, y.sz);
+}
 
 struct WIntLoader{
     void operator()(const int& , int woffStart, int, WInt& tmp){
@@ -29,7 +42,7 @@ struct BatchIntWork{
         x = 1;
         // sleep for quite a while
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << rank ;
+        //std::cout << rank ;
     }
 };
 
@@ -39,7 +52,7 @@ struct UnitIntWork{
         x = x + 12;
         // sleep for a long while
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "+" ;
+        //std::cout << "+" ;
     }
 };
 
@@ -62,8 +75,7 @@ int main(int argc, char *argv[]){
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank == 0)
-        std::cout << provided << " " << MPI_THREAD_FUNNELED << std::endl;
-
+        std::cout << (provided == MPI_THREAD_FUNNELED) << std::endl;
 
     //check_file(argv[1], rank);
     //auto tWork = getTotalWork(argv[1]);
