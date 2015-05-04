@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <sstream>
+#include <algorithm>
+#include <cstring>
 
 #include <sys/time.h>
 #include <mpi.h>

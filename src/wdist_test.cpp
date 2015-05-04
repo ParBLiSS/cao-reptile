@@ -39,7 +39,7 @@ struct WIntLoader{
 struct BatchIntWork{
     void operator()(const WInt& rbatch, int& ecr, int tid, int rank){
         int x = tid + rank * rbatch.value + ecr;
-        x = 1;
+        x = x + 1;
         // sleep for quite a while
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::cout << rank ;

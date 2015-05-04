@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <mpi.h>
+#include <limits>
 
 // Make ReadStore swappable
 static void swap(ReadStore& left, ReadStore& right){
@@ -48,7 +49,7 @@ struct ReadBatchLoader{
         // std::cout << "C" ;
         std::ifstream fin(ecr.getPara().iFaName);
         fin.seekg(woffStart);
-        readBatch(&fin, UINT_MAX, woffEnd, tmp);
+        readBatch(&fin, std::numeric_limits<int>::max(), woffEnd, tmp);
     }
 };
 

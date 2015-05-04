@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <cstdint>
+#include <algorithm>
 #include <mpi.h>
 
 typedef std::vector<int> ivec_t;

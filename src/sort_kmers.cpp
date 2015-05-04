@@ -22,6 +22,7 @@
  *
  */
 
+#include <cstring>
 #include "sort_kmers.hpp"
 #include "ECData.hpp"
 #include "util.h"
