@@ -33,6 +33,7 @@ void swap(WInt& x, WInt& y){
 struct WIntLoader{
     void operator()(const int& , int woffStart, int, WInt& tmp){
         tmp.value = woffStart;
+        //std::cout << "L" ;
     }
 };
 
@@ -42,7 +43,7 @@ struct BatchIntWork{
         x = x + 1;
         // sleep for quite a while
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << rank ;
+        std::cout << rank;
     }
 };
 
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]){
     //check_file(argv[1], rank);
     //auto tWork = getTotalWork(argv[1]);
     int nthreads = 2;
-    int tWork = 5000;
+    int tWork = 6000;
     std::vector<int> pload;
     pload.resize(nthreads + 1);
 

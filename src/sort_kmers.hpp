@@ -299,6 +299,8 @@ void gather_spectrum(StructDataType *&karray, int &kcount, int &ksize,
     int *sendcts = new int[size]();
     int *recvdisp = new int[size]();
     int *senddisp = new int[size]();
+    int *recvcurrentcts =  new int[size]();
+    int *recvcurrentdisp = new int[size]();
 
     MPI_Allgather (&NewlocalCount, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
     recvdisp[0] = 0;
@@ -326,8 +328,6 @@ void gather_spectrum(StructDataType *&karray, int &kcount, int &ksize,
     // Change all gather to gather
 
     // lets find the maximum
-    int *recvcurrentcts =  new int[size]();
-    int *recvcurrentdisp = new int[size]();
     int fixednumber = 16000000/size;
     int iterations  =  (max%fixednumber == 0 ?
             max/fixednumber : max/fixednumber +1);

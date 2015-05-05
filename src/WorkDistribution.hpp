@@ -118,7 +118,7 @@ enum WorkRequest{
 //   all distributed processes and their shared memory threads.
 // - Architected as a single master procecss and a bunch of slave
 //   processes
-// - Each process has a co-ordination thread and  'numThreads' no. of
+// - Each process has a co-ordination thread and  'numWorkers' no. of
 ///  worker threads.
 // - Initial work chunk is assigned without explicit allocation by the
 //   master process.
@@ -246,7 +246,6 @@ class WorkDistribution{
 
     // Work done by coord thread
     bool doWork(){
-        // TODO: think about loading from work available
         // get the next work item from queue
         if(workProgress == 0 &&
            crdWork.size() == 0 && !wrkQueue.pop(crdWork)){
@@ -376,8 +375,7 @@ class WorkDistribution{
                 coordState = FINISHED_WORK;
             }
             break;
-        case FINISHED_WORK:
-            // TODO: do compare and exchange
+        case FINISHED_WORK: // nothing to done, signal workers
             if(!wrkFinished.load(std::memory_order_relaxed)){
                 wrkFinished.store(true, std::memory_order_relaxed);
             }
@@ -419,7 +417,7 @@ class WorkDistribution{
     }
 
     // Load a batch as the work item for coord thread
-    void loadWork(){
+    void loadCoordWork(){
         SizeType startOffset = mpiRank * (numWorkers + 1) * workChunk;
         // std::cout << mpiRank << " " << startOffset << std::endl;
         load_work(payLoads[0], startOffset,
@@ -428,14 +426,15 @@ class WorkDistribution{
 
     // Inital work allocation
     void initQueue(){
-        std::vector<SizeType> iOffsets(numWorkers);
-        SizeType oCurrOffset;
+        std::vector<SizeType> iOffsets(numWorkers + 1);
+        SizeType currOffset;
         for(int j = 1; j <= 2; j++){
-            oCurrOffset = j * mpiSize * (numWorkers + 1) * workChunk;
-            oCurrOffset += mpiRank * (numWorkers + 1) * workChunk;
-            for(int i = 0; i < numWorkers; i++){
-                iOffsets[i] = oCurrOffset;
-                oCurrOffset += workChunk;
+            currOffset = mpiRank + (j * mpiSize);
+            currOffset *= (numWorkers + 1) * workChunk;
+            for(auto oit = iOffsets.begin(); oit != iOffsets.end(); ++oit){
+                *oit = currOffset;
+                currOffset += workChunk;
+                // std::cout << mpiRank << " " << currOffset << std::endl;
             }
             updateWorkQueue(iOffsets);
         }
@@ -453,7 +452,8 @@ public:
         std::vector<std::thread> workers;
         startWorkers(workers); // start workers
 
-        loadWork(); // Load the local work first
+        loadCoordWork(); // Load the local work first
+        initQueue(); // Initializes the queue with 2 * numWorkers
 
         workAssigned = initFactor * mpiSize * (numWorkers + 1) * workChunk;
         // std::cout << mpiRank << " " << workAssigned << std::endl;
