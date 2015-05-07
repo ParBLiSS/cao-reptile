@@ -45,9 +45,8 @@ void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& of
     ecstx.tstop_kmer_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
-    if (ecdata.getParams().m_rank == 0) {
-        ecstx.updateSpectrumTime(ecdata, ofs);
-    }
+
+    ecstx.updateDistSpectrumTime(ecdata, ofs);
 
 }
 

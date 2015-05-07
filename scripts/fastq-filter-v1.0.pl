@@ -136,8 +136,8 @@ foreach $file (@files) {
 				}
 			}
 
-			print OFa ">$readRank"."\n".$read."\n";
-			print OFa "+$readRank"."\n@".$qual;
+			print OFa "@"."$readRank"."\n".$read."\n";
+			print OFa "+$readRank"."\n".$qual;
 
 			$readRank ++;
 		}

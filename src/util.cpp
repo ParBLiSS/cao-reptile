@@ -22,7 +22,7 @@ void Para::setPara(const char *configFile) {
     storeReads = 0;
     kmerCacheSize = tileCacheSize = 4;
     writeOutput = 1;
-    writeSpectrum = -1;
+    writeSpectrum = 0;
     numThreads = 1;
     dynamicWorkDist = 0;
     runType = 0;
@@ -273,60 +273,66 @@ std::string toString(kmer_id_t ID, int len){
 bool readFastqRecord(std::ifstream* fqfs,
                      std::string fRecord[4])
 {
+  for(int i = 0; i < 4; i++) {
+    fRecord[i] = "";
+  }
+  for(int i = 0; i < 4; i++) {
     if(!fqfs->good())
-        return false;
+      return false;
+    std::getline(*fqfs, fRecord[i]);
+    fRecord[i] = trim(fRecord[i]);
+    if(fRecord[i].length() == 0)
+      return false;
+  }
 
-    for(int i = 0; i < 4; i++) {
-        fRecord[i] = "";
-        if(fqfs->good())
-            std::getline(*fqfs, fRecord[i]);
-        if(fRecord[i].length() == 0)
-            return false;
-    }
-
-    return true;
- }
+  return true;
+}
 
 bool readFirstFastqRecord(std::ifstream* fqfs,
                           std::string fRecord[4])
 {
-    // read strings
-    for(int i = 0; i < 4; i++)
-        fRecord[i] = "";
+  // read strings
+  for(int i = 0; i < 4; i++)
+    fRecord[i] = "";
 
-    for(int i = 0; i < 4; i++) {
-        if(fqfs->good())
-            std::getline(*fqfs, fRecord[i]);
-        if(fRecord[i].length() == 0)
-            return false;
-    }
+  for(int i = 0; i < 4; i++) {
+    if(!fqfs->good())
+      return false;
+    std::getline(*fqfs, fRecord[i]);
+    fRecord[i] = trim(fRecord[i]);
+  }
+  for(int i = 1; i < 4; i++)
+    if(fRecord[i].length() == 0)
+      return false;
 
-    int sdelta = 4, sread = 4;
-    // unless, the record is good, we can't turst the first line's first char
-    if(fRecord[2][0] == '+' && fRecord[0][0] == '@'){
-        return true; // record is good!
-    } else if(fRecord[1][0] == '@' && fRecord[3][0] == '+'){
-        sdelta = 1; sread = 3; // have three lines of a 'good' record
-    } else if(fRecord[2][0] == '@') {
-        sdelta = 2; sread = 2; // have two lines of a 'good' record
-    } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
-        sdelta = 3; sread = 1; // have only one line of a 'good' record
-    } else {
-        return false; // bad record!
-    }
-    // bubble up by swapping
-    assert(sdelta >= 0);
-    for(int i = 0;(i + sdelta) < 4; i++)
-        std::swap(fRecord[i], fRecord[i + sdelta]);
-    // read extra lines to fill up the record
-    for(int i = sread; i < 4; i++) {
-        fRecord[i] = "";
-        if(fqfs->good())
-            std::getline(*fqfs, fRecord[i]);
-        if(fRecord[i].length() == 0)
-            return false;
-    }
-    return true;
+  int sdelta = 4, sread = 4;
+  // unless, the record is good, we can't turst the first line's first char
+  if(fRecord[2][0] == '+' && fRecord[0][0] == '@'){
+    return true; // record is good!
+  } else if(fRecord[1][0] == '@' && fRecord[3][0] == '+'){
+    sdelta = 1; sread = 3; // have three lines of a 'good' record
+  } else if(fRecord[2][0] == '@') {
+    sdelta = 2; sread = 2; // have two lines of a 'good' record
+  } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
+    sdelta = 3; sread = 1; // have only one line of a 'good' record
+  } else {
+    return false; // bad record!
+  }
+  // bubble up by swapping
+  assert(sdelta >= 0);
+  for(int i = 0;(i + sdelta) < 4; i++)
+    std::swap(fRecord[i], fRecord[i + sdelta]);
+  // read extra lines to fill up the record
+  for(int i = sread; i < 4; i++) {
+    fRecord[i] = "";
+    if(!fqfs->good())
+      return false;
+    std::getline(*fqfs, fRecord[i]);
+    fRecord[i] = trim(fRecord[i]);
+    if(fRecord[i].length() == 0)
+      return false;
+  }
+  return true;
 }
 
 void updateStrStore(const std::string& in_str,

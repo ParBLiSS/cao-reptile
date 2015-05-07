@@ -95,6 +95,12 @@ bool ECData::getReadsFromFile(){
 
     bool lastRead = readBatch(&read_stream, m_params.batchSize,
                               m_params.offsetEnd, m_reads);
+    unsigned nsize = m_reads.size();
+    unsigned tmp = nsize;
+    MPI_Reduce( &tmp, &nsize, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+    if(m_params.m_rank == 0){
+      std::cout << "nreads\t" << nsize << std::endl;
+    }
     return lastRead;
 }
 

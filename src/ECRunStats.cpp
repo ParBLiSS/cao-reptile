@@ -145,6 +145,32 @@ void ECRunStats::updateFileReadTime(std::ostream&){
     read_sync_stop = tstop;
 }
 
+void ECRunStats::updateDistSpectrumTime(ECData& ecdata, std::ostream& ofs){
+    unsigned kcount = ecdata.getKmerCount();
+    unsigned tilecount = ecdata.getTileCount();
+    unsigned tmp = kcount;
+    MPI_Reduce( &tmp, &kcount, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+    tmp = tilecount;
+    MPI_Reduce( &tmp, &tilecount, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+
+    if(ecdata.getParams().m_rank != 0)
+      return;
+
+    std::stringstream oss, oss2;
+    oss << "kmer count\t" << kcount << std::endl;
+    oss << "tile count\t" << tilecount << std::endl;
+    oss << "absent kmer\t" << ecdata.getParams().absentKmers << std::endl;
+    std::cout << oss.str();
+    std::cout.flush();
+
+    kmer_sync_start = tstart;
+    kmer_sync_stop = tstop;
+    oss2 << "spectrum construction\t" << tstop-tstart << std::endl;
+    ofs << oss2.str();
+    ofs.flush();
+}
+
+
 void ECRunStats::updateSpectrumTime(ECData& ecdata, std::ostream& ofs){
     std::stringstream oss, oss2;
     oss << "kmer count\t" << ecdata.getKmerCount() << std::endl;
