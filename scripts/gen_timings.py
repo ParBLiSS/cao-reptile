@@ -7,6 +7,8 @@ tot_bstr = "TOTAL TIME"
 
 def timings(fname):
     felts = fname.split("_")
+    if(len(felts) <= 3):
+      print fname
     assert(len(felts) > 3)
     rtyp = felts[1]
     rcfg = felts[2].replace("reptile", "")
