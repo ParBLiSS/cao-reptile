@@ -28,24 +28,14 @@
 #ifndef _UTIL_H
 #define	_UTIL_H
 
-#include <MPI_env.hpp>
 #include <iostream>
 #include <fstream>
-#include <map>
 #include <vector>
-#include <set>
-#include <complex> //pow
-#include <ctype.h>
-#include <cmath>
-#include <string.h>
-#include <stdlib.h>
+#include <string>
+#include <utility>
+#include <cstdint>
 #include <algorithm>
-#include <iomanip>
-#include <stdint.h>
-
-#include <sys/time.h>
-#include <cassert>
-#include "fasta_file.hpp"
+#include <mpi.h>
 
 typedef std::vector<int> ivec_t;
 typedef std::vector<ivec_t> iivec_t;
@@ -54,24 +44,31 @@ typedef std::vector<uvec_t> uuvec_t;
 typedef std::vector<char> cvec_t;
 typedef std::vector<bool> bvec_t;
 typedef std::vector<std::string> strvec_t;
-typedef std::map<int, int> imap_t;
-typedef std::set<int> iset_t;
+
 typedef std::pair<int, int> ipair_t;
 typedef std::pair<uint32_t, uint32_t> upair_t;
 typedef uint32_t kmer_id_t;
 typedef uint64_t tile_id_t;
-//typedef MPI_UNSIGNED_LONG_LONG mpi_kmer_id_t;
+
 #define mpi_kmer_id_t MPI_UNSIGNED // MPI_UNSIGNED_LONG_LONG
 #define mpi_tile_id_t MPI_UNSIGNED_LONG_LONG // MPI_UNSIGNED_LONG_LONG
+/// macros for block decomposition
+#define BLOCK_LOW(i,p,n) ( (i*n) / p)
+#define BLOCK_HIGH(i,p,n) ( (((i+1)*n)/p) - 1)
+#define BLOCK_SIZE(i,p,n) (BLOCK_LOW((i+1),p,n) - BLOCK_LOW(i,p,n))
+#define BLOCK_OWNER(j,p,n) (((p) * ((j)+1)-1)/(n))
+
 
 class Para {
 public:
     std::string iFaName;
-    int QFlag;
-    std::string iQName;
+    std::string oErrName;
+    std::string outputFilename;
+    double tRatio;
+    bool QFlag;
+    bool absentKmers;
     int batchSize;  //specify number of reads to be loaded
     int K;
-    std::string oErrName;
     int step;
     int qualThreshold;
     int Qlb;
@@ -79,64 +76,76 @@ public:
     int eSearch;
     int tGoodTile;
     int tCard;
-    //int tConst;
     int hdMax;
-    double tRatio;
     int storeReads;
-    bool absentKmers;
-    // cache additions
+
+    // cache optimizations
     int kmerCacheSize;
     int tileCacheSize;
     int cacheOptimizedSearch;
     int writeOutput;
 
     int writeSpectrum;
+    int numThreads;
+    int dynamicWorkDist;
+    int workFactor;
     std::string kmerSpectrumOutFile;
     std::string tileSpectrumOutFile;
+    std::string kmerSpectrumInFile;
+    std::string tileSpectrumInFile;
+    bool kinAbsent;
 
-    Para(const char *configFile) {
-        setPara(configFile);
-        load_parallel_params();
-    };
+    int runType;
 
-    virtual ~Para(){
-        delete mpi_env;
-    };
+    // size and rank of the MPI world
+    int m_size;
+    int m_rank;
 
-private:
-
-    void setPara(const char *configFile);
-
-  public:
-    empi::MPI_env *mpi_env;
-    long readsPerProcessor;
-    unsigned long startFromLineNo;
-    unsigned long endTillLineNo;
+    // input file offsets
     unsigned long offsetStart;
-    unsigned long qOffsetStart;
-    long inLastBatch;
+    unsigned long offsetEnd;
+    unsigned long fileSize;
 
-    unsigned long long offsetEnd;
-    unsigned long long qOffsetEnd;
-    unsigned long long fileSize;
-
-    void load_parallel_params() {
-        mpi_env = new empi::MPI_env();
-        compute_parallelio_params();
-    };
-
+    Para(const char *configFile);
     bool validate();
-    //void compute_readcount();
-    //void compute_parallelio_params(int fileRecordLength,
-    //     long& perprocessor,long& startfrom,long &offset,
-    //     long& inLastBatch);
-    void compute_parallelio_params(){
-        compute_offsets();
-    }
 
-   void compute_offsets();
+ private:
+    bool validateSpectrumOutput();
+    void setPara(const char *configFile);
+    void load_parallel_params();
+    void compute_offsets();
 };
 
+struct ReadStore {
+    cvec_t readsString;
+    ivec_t readsOffset;
+    cvec_t qualsString;
+    ivec_t qualsOffset;
+    int readId;
+
+    ReadStore(){
+        // std::cout << "C" ;
+    }
+
+    void reset(){
+        readsString.resize(0);
+        readsOffset.resize(0);
+        qualsString.resize(0);
+        qualsOffset.resize(0);
+    }
+
+    void swap(ReadStore& other){
+        std::swap(readsString, other.readsString);
+        std::swap(qualsString, other.qualsString);
+        std::swap(readsOffset, other.readsOffset);
+        std::swap(qualsOffset, other.qualsOffset);
+        std::swap(readId, other.readId);
+    }
+
+    size_t size() const{
+        return readsOffset.size();
+    }
+};
 
 inline int char_to_bits(char c) {
     static bool flag = false;
@@ -245,105 +254,34 @@ inline bool toID(T& ID, int &failidx, char* addr, int len) {
     return true;
 }
 
-
-inline std::string toString(kmer_id_t ID, int len){
-
-    std::string kmer = "";
-    for (int i = 0; i < len; ++ i){
-        int last = (ID & 0x3);
-        char c;
-        switch (last){
-            case 0: c = 'a';
-            break;
-            case 1: c = 'c';
-            break;
-            case 2: c = 'g';
-            break;
-            case 3: c = 't';
-            break;
-        }
-        kmer += c;
-        ID = ID >> 2;
-    }
-    std::reverse(kmer.begin(), kmer.end());
-
-    return kmer;
+// UTILITY FUNCTIONS -------------------------------------------------
+// trim taken from stack overflow
+// http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+static inline std::string &ltrim(std::string &s) {
+    s.erase(s.begin(),
+            std::find_if(s.begin(), s.end(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
 }
 
-inline double get_time() {
-      timeval t;
-      gettimeofday(&t, 0);
-      return t.tv_sec + (0.000001 * t.tv_usec);
-} // get_time
-
-inline void print_time (const std::string& msg, double& timing){
-    double cur_time = get_time();
-    std::cout << msg << "(" << cur_time - timing << " secs)\n\n";
-    timing = cur_time;
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+            s.end());
+    return s;
 }
 
-inline bool readBatch(bIO::FASTA_input& fasta,bIO::FASTA_input& qual,
-                      cvec_t &ReadsString,ivec_t &ReadsOffset,
-                      cvec_t &QualsString,ivec_t &QualsOffset,const Para &myPara)
-{
-    unsigned long position = 0;
-    typedef bIO::FASTA_input::value_type value_type;
-
-
-    bool lastRead = false;
-    unsigned long curLine = 0;
-    for(long j=0; j < myPara.batchSize ; j++){
-
-        const value_type& v = *fasta;
-
-        std::string posstr = v.first;
-        std::string read_str = v.second;
-        curLine = strtoul(v.first.c_str(),NULL,0);
-
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)  {
-            lastRead = true;
-            break;
-        }
-        int read_length = read_str.length();
-
-        ReadsString.resize(ReadsString.size() + read_length + 1);
-        memcpy(&ReadsString[position], read_str.c_str(), read_length + 1);
-        ReadsOffset.push_back(position);
-
-        position += read_length + 1;
-        if(++fasta == false){
-            lastRead = true;
-            break;
-        }
-    }
-#ifdef DEBUG
-    std::stringstream out;
-    out << "READ PROC : " << myPara.mpi_env->rank() << " " << curLine << std::endl;
-    std::cout << out.str();
-#endif
-    position = 0;
-    for(long j = 0; j < myPara.batchSize; j++){
-        const value_type& v = *qual;
-
-        std::string posstr = v.first;
-        std::string quals_str = v.second;
-        quals_str.erase(0,1);
-        int read_length = quals_str.length();
-
-        unsigned long curLine = strtoul(v.first.c_str(),NULL,0);
-        if( myPara.mpi_env->rank() < myPara.mpi_env->size() - 1 &&
-            curLine > myPara.endTillLineNo)
-            break;
-
-        QualsString.resize(QualsString.size() + read_length + 1);
-        memcpy(&QualsString[position], quals_str.c_str(), read_length + 1);
-        QualsOffset.push_back(position);
-
-        position += read_length + 1;
-        if(++qual == false) break;
-    }
-    return lastRead;
+// trim from both ends
+static inline std::string &trim(std::string &s) {
+    return ltrim(rtrim(s));
 }
 
+std::string toString(kmer_id_t ID, int len);
+double get_time();
+void print_time (const std::string& msg, double& timing);
+bool readBatch(std::ifstream* fqfs, const long& batchSize,
+               const unsigned long& offsetEnd,
+               ReadStore& rbatch);
+bool goodQuals(const char* qAddr, int len, int threshold);
 #endif	/* _UTIL_H */

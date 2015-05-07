@@ -6,11 +6,10 @@
 #include <iterator>
 #include <cassert>
 #include <algorithm>
-#include <stdint.h>
+#include <cstdint>
 #include "build_hp_tree.hpp"
 #include "hp_precomputed_table.h"
 #include "implicit_hp_search_pure_c.hpp"
-#include "io_util.h"
 #include "log2.h"
 #include "cao_util.h"
 
@@ -89,7 +88,9 @@ class ECDataCOLayout{
 public:
 
     typedef typename std::vector<IdType>::iterator id_iterator;
+    typedef typename std::vector<IdType>::const_iterator id_const_iterator;
     typedef typename std::vector<CountType>::iterator count_iterator;
+    typedef typename std::vector<CountType>::const_iterator count_const_iterator;
     typedef size_type_vector::iterator sizet_iterator;
     std::vector< precomputed_table<IdType> > pctSteps;
     std::vector<IdType> treeSteps;
@@ -119,9 +120,9 @@ public:
         init(inItrBegin, nTotal, limit);
     }
 
-    id_iterator getPosition(const IdType& val){
-        id_iterator idtr = std::upper_bound(stepIds.begin(),
-                                            stepIds.end(), val);
+    id_const_iterator getPosition(const IdType& val) const{
+        id_const_iterator idtr = std::upper_bound(stepIds.begin(),
+                                                  stepIds.end(), val);
         if(idtr == stepIds.end()){
             //std::cout << "END" << std::endl;
             // may do linear search, because it is very small
@@ -136,7 +137,7 @@ public:
             }
             idtr = pure_c::implicit_hp_search(mIds.begin() + bdist,
                                               mIds.begin() + edist,
-                                              pctSteps[dist].Pos.begin(),
+                                              //pctSteps[dist].Pos.begin(),
                                               pctSteps[dist].T.begin(),
                                               pctSteps[dist].B.begin(),
                                               pctSteps[dist].D.begin(), val);
@@ -147,8 +148,8 @@ public:
             return mIds.end();
     }
 
-    int getCount(const IdType& val, CountType& count){
-        id_iterator idtr = getPosition(val);
+    int getCount(const IdType& val, CountType& count) const{
+        id_const_iterator idtr = getPosition(val);
         if(idtr != mIds.end()){
             int dist = idtr - mIds.begin();
             count = mCounts[dist];
@@ -160,11 +161,11 @@ public:
         }
     }
 
-    bool find(const IdType& val){
+    bool find(const IdType& val) const{
         return (getPosition(val) != mIds.end());
     }
 
-    void serialize(std::ofstream& ofs){
+    void serialize(std::ofstream& ofs) const{
         ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
         ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }

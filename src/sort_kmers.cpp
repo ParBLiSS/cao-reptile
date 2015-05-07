@@ -22,32 +22,44 @@
  *
  */
 
+#include <cstring>
 #include "sort_kmers.hpp"
 #include "ECData.hpp"
 #include "util.h"
 
 
-void kmer_sort(ECData *ecdata) {
+void sort_kmers(ECData& ecdata) {
 
-    Para *params = ecdata->m_params;
     // kmer_t *allKmers;
     // int allKmerCount;
     // sort the k-mer pairs
     sort_kmers<kmer_t,kmer_id_t,KmerComp,KmerIDComp>(
-        ecdata->m_karray,ecdata->m_kcount,ecdata->m_ksize,
-        ecdata->m_mpi_kmer_t,mpi_kmer_id_t,
+        ecdata.m_karray,ecdata.m_kcount,ecdata.m_ksize,
+        ecdata.m_mpi_kmer_t,mpi_kmer_id_t,
         KmerComp(),KmerIDComp(),
-        true, params->tCard,
-        ecdata->m_params);
+        true,
+        ecdata.m_params);
 
     // tile_t *allTiles;
     // int allTileCount;
     // sort the tiles
     sort_kmers< tile_t,tile_id_t, TileComp, TileIDComp >(
-        ecdata->m_tilearray,ecdata->m_tilecount, ecdata->m_tilesize,
-        ecdata->m_mpi_tile_t,mpi_tile_id_t,
+        ecdata.m_tilearray,ecdata.m_tilecount, ecdata.m_tilesize,
+        ecdata.m_mpi_tile_t,mpi_tile_id_t,
         TileComp(),TileIDComp(),
-        true,params->tCard,
-        ecdata->m_params);
+        false,
+        ecdata.m_params);
 
+}
+
+void gather_spectrum(ECData& ecdata) {
+    // gather kmer spectrum
+    gather_spectrum<kmer_t, kmer_id_t>(
+        ecdata.m_karray,ecdata.m_kcount,ecdata.m_ksize,
+        ecdata.m_mpi_kmer_t);
+
+    // gather tile spectrum
+    gather_spectrum<tile_t, tile_id_t>(
+        ecdata.m_tilearray,ecdata.m_tilecount, ecdata.m_tilesize,
+        ecdata.m_mpi_tile_t);
 }

@@ -1,0 +1,32 @@
+PROG=cao-test
+MPICXX=mpicxx
+
+CFLAGS=-g -c -I$(MPIEXT) -Wall -Wextra -O3 -ffast-math -funroll-loops
+CFLAGS= -c  -Wall -Wextra -O3 -ffast-math -funroll-loops -std=c++11
+LDFLAGS=
+SRCS=test_main.cpp  caware_layout.cpp  coblivious_layout.cpp util.cpp 
+OBJS=$(SRCS:.cpp=.o)
+
+ifeq ($(MAKECMDGOALS),debug)
+CFLAGS += -g -DDEBUG
+endif
+
+ifeq ($(MAKECMDGOALS),counts)
+CFLAGS += -g -DQUERY_COUNTS
+endif
+
+all:$(SRCS) $(PROG)
+
+$(PROG): $(OBJS)
+	$(MPICXX) -o $@ $(OBJS) $(LDFLAGS)
+
+$(OBJS): %.o : %.cpp
+	$(MPICXX) $(CFLAGS) $<
+
+
+clean:
+	rm -rf $(PROG) $(OBJS)
+
+debug: all
+
+counts: all

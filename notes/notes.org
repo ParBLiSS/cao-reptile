@@ -382,3 +382,67 @@ cache aware layout and cache oblivious layout.
 |   512 |          32.67 |          2184.29 |        2224.49 |
 |  1024 |          56.61 |          1313.32 |        1373.40 |
 |-------+----------------+------------------+----------------|
+
+* Work Distribution Notes
+
+We will use a master-slave pattern to dynamically distribute
+work. Suppose, we use p processes for the error correction, and each
+process uses k + 1 shared memory threads.  In each process, we allocate
+one thread completely dedicated to handle all the inter-process
+communincations and work assignment. I call this thread 'the
+co-ordination thread'. This thread doesn't do any error correction (EC)
+work. The rest of the k worker threads will only do the EC work. In our
+implementation, we will use the the root process for the master process.
+
+In the mater process, the following are the reponsibilities of a
+co-ordination thread:
+1. Assign work to k local worker threads.
+2. Poll for any work request from slave process. If any slave process
+   asks for work, assign work for them.
+3. When there is no more work to assign, notify every one.
+
+In the slave process, a co-ordination thread's responsibilities are as
+follows:
+1. If we are running low on work assignment, ask work from master
+   process.
+2. Recieve work from master process and distribute it to the local
+   worker threads.
+
+An EC work-item is represented by an offset in the input file. This is
+position starting from which a worker thread starts reading and
+continues to do error correction for a predifined chunk. Communication
+between the co-ordination thread and the worker threads with in a
+process is accomplished via a shared queue. The co-ordination thread
+loads the work-item to queue, from which the worker threads pops the
+item and proceeds to do the error correction. When the queue size is
+below a given threshold, the co-ordination threads pre-emptively
+requests work from the master process. The master process always sends k
+work-items. Right now the threshold is kept as 2k, and hence the work
+queue size is always bounded by 3k work items.
+
+Worker thread is dumb in the sense that it goes on an infinite loop : it
+does error correction, looks at the work queue for the next chunk and so
+on. Worker processes break out of the loop, when a shared boolean
+variable is set to true.
+
+The state transitions of the co-ordination thread is as follows:
+Initially, the co-ordination thread is at "ASSIGN_WORK" state. In this
+state this thread in a slave process monitors the work queue, and if its
+size falls below 2k, it requests work-items from the master
+process. After receiving the work items, it pushes them into the work
+queue. In the master process, this thread fulfills the slaves' requests,
+and performs work-item assignment for local worker threads. When there
+is no more work available for assignment, we move to the next state :
+"PENDING_WORK". This state represents the situation that there is no
+more work to assign, but the work-queue is not empty i.e., there are
+still work-items left to be claimed by the dumb workers. In this state,
+the co-ord thread in a slave process will just monitor the work queue
+and wait for it to become empty. In the master process, the co-ord
+thread at this state will poll for any slave requests, while monitoring
+the work queue. This thread also sends the "No more work is available to
+assign" signal by sending assigning 'zero work'. This thread can move to
+next state only if it has sent 'zero work' signal to all the slave
+processes. The next state is 'FINISHED_WORK'. At this state, there is
+nothing more to do for the co-ord threads. It sets the shared boolean
+variable to true and waits for the worker threads to finish the last
+error correction work items.

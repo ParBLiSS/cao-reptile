@@ -43,7 +43,7 @@ int count_bytes(T val){
     return n;
 }
 
-ECData::ECData(Para *p) : m_karray(0),m_ksize(0),m_kcount(0),
+ECData::ECData(Para& p) : m_karray(0),m_ksize(0),m_kcount(0),
         m_tilearray(0),m_tilesize(0),m_tilecount(0),m_params(p){
     m_kmerQueries = 0;
     m_kmerQueryFails = 0;
@@ -82,7 +82,24 @@ void ECData::registerKmerTypes(){
 
 }
 
-bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
+// Get the reads corresponding to this processor and
+// store it in ECData object
+bool ECData::getReadsFromFile(){
+    std::ifstream read_stream(m_params.iFaName.c_str());
+    if(!read_stream.good()) {
+        std::cout << "open " << m_params.iFaName << "failed :|\n";
+        exit(1);
+    }
+    read_stream.seekg(m_params.offsetStart, std::ios::beg);
+    m_params.batchSize = INT_MAX; // Get all reads of this processor
+
+    bool lastRead = readBatch(&read_stream, m_params.batchSize,
+                              m_params.offsetEnd, m_reads);
+    return lastRead;
+}
+
+
+bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
   if(m_karray == 0){
     return false;
   }
@@ -113,7 +130,7 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
 
 #ifdef QUERY_COUNTS
   if(final){
-      assert(nlevels < MAX_LEVELS);
+      assert(nlevels < (int)MAX_LEVELS);
       m_kmerLevels[nlevels] += 1;
   }
   m_kmerQueries += 1;
@@ -122,53 +139,53 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) {
 #endif
 
 
-  if(m_params->absentKmers == true)
+  if(m_params.absentKmers == true)
     final = !final;
 
   // std::cout << "Find " << kmerID << " : "
-  //           << (m_params->absentKmers) << " : "
+  //           << (m_params.absentKmers) << " : "
   //           << final << std::endl;
 
   return final;
 }
 
-bool ECData::findKmerFlat(const kmer_id_t &kmerID) {
+bool ECData::findKmerFlat(const kmer_id_t &kmerID) const {
    bool final = m_kmerFlatLayout.find(kmerID);
-   if(m_params->absentKmers == true)
+   if(m_params.absentKmers == true)
        final = !final;
    // std::cout << "Find " << kmerID << " : "
-   //           << (m_params->absentKmers) << " : "
+   //           << (m_params.absentKmers) << " : "
    //           << final << std::endl;
 
    return final;
 }
 
-bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) {
+bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) const{
 
     bool final = m_kmerCALayout.find(kmerID);
 
-   if(m_params->absentKmers == true)
+   if(m_params.absentKmers == true)
        final = !final;
 
     // std::cout << "Find " << kmerID << " : "
-    //            << (m_params->absentKmers) << " : "
+    //            << (m_params.absentKmers) << " : "
     //            << final << std::endl;
     return final;
 }
 
-bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) {
+bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) const{
     bool final = m_kmerCOLayout.find(kmerID);
-   if(m_params->absentKmers == true)
+   if(m_params.absentKmers == true)
        final = !final;
 
     // std::cout << "Find " << kmerID << " : "
-    //            << (m_params->absentKmers) << " : "
+    //            << (m_params.absentKmers) << " : "
     //            << final << std::endl;
     return final;
 }
 
-bool ECData::findKmer(const kmer_id_t &kmerID) {
-    switch(m_params->cacheOptimizedSearch){
+bool ECData::findKmer(const kmer_id_t &kmerID) const{
+    switch(m_params.cacheOptimizedSearch){
         case 1:
             return findKmerCacheAware(kmerID);
         case 2:
@@ -180,7 +197,7 @@ bool ECData::findKmer(const kmer_id_t &kmerID) {
     }
 }
 
-int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
+int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
   int lb = 0, ub = m_tilecount - 1, mid;
   int final = -1;
 #ifdef QUERY_COUNTS
@@ -205,7 +222,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
   }
 #ifdef QUERY_COUNTS
   if(final){
-      assert(nlevels < MAX_LEVELS);
+      assert(nlevels < (int)MAX_LEVELS);
       m_tileLevels[nlevels] += 1;
   }
   m_tileQueries += 1;
@@ -218,7 +235,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) {
 }
 
 
-int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) {
+int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileFlatLayout.getCount(tileID, count);
     if( final != -1 ) {
@@ -229,7 +246,7 @@ int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) {
     return final;
 }
 
-int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
+int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileCALayout.getCount(tileID, count);
 
@@ -242,7 +259,7 @@ int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output){
     return final;
 }
 
-int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
+int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileCOLayout.getCount(tileID, count);
     if( final != -1 ) {
@@ -254,8 +271,8 @@ int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output){
     return final;
 }
 
-int ECData::findTile(const tile_id_t &tileID,kc_t& output){
-   switch(m_params->cacheOptimizedSearch){
+int ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
+   switch(m_params.cacheOptimizedSearch){
         case 1:
             return findTileCacheAware(tileID, output);
         case 2:
@@ -319,16 +336,16 @@ bool ECData::addToArray(tile_id_t &ID,int count){
     return true;
 }
 
-void ECData::printKArray(){
+void ECData::printKArray() const{
 
     std::cout << "Karray " <<
-        m_params->mpi_env->rank() << m_kcount << std::endl;
+        m_params.m_rank << m_kcount << std::endl;
 
     for(int i = 0; i < m_kcount;i++){
         // just to print
         std::stringstream out;
 
-        out << m_params->mpi_env->rank() << " " << m_karray[i].count << " "
+        out << m_params.m_rank << " " << m_karray[i].count << " "
             << m_karray[i].ID << std::endl;
         std::cout << out.str();
     }
@@ -346,15 +363,62 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
     m_tilesize = newTileSize;
 }
 
-void ECData::writeSpectrum(){
-    if(m_params->writeSpectrum > 0 && (m_params->mpi_env->rank() == 0)){
-        assert(m_params->kmerSpectrumOutFile.length() > 0);
-        assert(m_params->tileSpectrumOutFile.length() > 0);
+void ECData::writeDistSpectrum() const{
+    if(m_kcount == 0 || m_tilecount == 0)
+        return;
+    std::ofstream kFile (m_params.kmerSpectrumOutFile.c_str(),
+                         std::ofstream::binary);
+    std::ofstream tFile (m_params.tileSpectrumOutFile.c_str(),
+                         std::ofstream::binary);
+    kFile.write((char*)m_karray, sizeof(kmer_t)*m_kcount);
+    tFile.write((char*)m_tilearray, sizeof(tile_t)*m_tilecount);
 
-        std::ofstream kFile (m_params->kmerSpectrumOutFile.c_str(),
+    kFile.close();
+    tFile.close();
+}
+
+void ECData::loadSpectrum(){
+    std::ifstream kFile(m_params.kmerSpectrumInFile.c_str(),
+                        std::ifstream::binary);
+    std::ifstream tileFile(m_params.tileSpectrumInFile.c_str(),
+                           std::ifstream::binary);
+    if(kFile){
+        kFile.seekg(0, kFile.end);
+        unsigned fLength = kFile.tellg();
+        kFile.seekg(0, kFile.beg);
+        if(m_kcount > 0)
+            free(m_karray);
+
+        m_kcount = fLength / sizeof(kmer_t);
+        m_karray = (kmer_t*) malloc(sizeof(kmer_t) * m_kcount);
+        kFile.read((char*) m_karray,  sizeof(kmer_t) * m_kcount);
+        m_ksize = m_kcount;
+    }
+    if(tileFile){
+        tileFile.seekg(0, tileFile.end);
+        unsigned fLength = tileFile.tellg();
+        tileFile.seekg(0, tileFile.beg);
+        if(m_tilecount > 0)
+            free(m_tilearray);
+        m_tilecount = fLength / sizeof(tile_t);
+        m_tilearray = (tile_t*) malloc(sizeof(tile_t) * m_tilecount);
+        tileFile.read((char*) m_tilearray,  sizeof(tile_t) * m_tilecount);
+        m_tilesize = m_tilecount;
+    }
+}
+
+void ECData::writeSpectrum() const{
+    if(m_params.runType != 0){ // don't write when run type is otherwise
+        return;
+    }
+    if(m_params.writeSpectrum > 0 && (m_params.m_rank == 0)){
+        assert(m_params.kmerSpectrumOutFile.length() > 0);
+        assert(m_params.tileSpectrumOutFile.length() > 0);
+
+        std::ofstream kFile (m_params.kmerSpectrumOutFile.c_str(),
                              std::ofstream::binary);
-        std::ofstream tFile (m_params->tileSpectrumOutFile.c_str(), std::ofstream::binary);
-        switch(m_params->cacheOptimizedSearch){
+        std::ofstream tFile (m_params.tileSpectrumOutFile.c_str(), std::ofstream::binary);
+        switch(m_params.cacheOptimizedSearch){
         case 1:
             m_kmerCALayout.serialize(kFile);
             m_tileCALayout.serialize(tFile);
@@ -437,7 +501,7 @@ void ECData::padKmerArray(unsigned kSize){
     unsigned rSize = (m_kcount % kSize);
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
-        if(m_params->mpi_env->rank() == 0) {
+        if(m_params.m_rank == 0) {
             std::stringstream out;
             out << "Padding kmer array : " << fillIn << std::endl;
             std::cout << out.str();
@@ -453,7 +517,7 @@ void ECData::padTileArray(unsigned kSize){
     unsigned rSize = (m_tilecount % kSize);
     unsigned fillIn = kSize - rSize;
     if(rSize > 0){
-        if(m_params->mpi_env->rank() == 0) {
+        if(m_params.m_rank == 0) {
             std::stringstream out;
             out << "Padding tile array : " << fillIn << std::endl;
             std::cout << out.str();
@@ -467,7 +531,7 @@ void ECData::padTileArray(unsigned kSize){
 
 void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
-    int rank = m_params->mpi_env->rank();
+    int rank = m_params.m_rank;
     if(rank == 0) {
        std::stringstream out;
        out << "Build Kmer Cache Aware Layout : " << m_kcount
@@ -494,7 +558,7 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
 }
 
 void ECData::buildCacheObliviousLayout(){
-    int rank = m_params->mpi_env->rank();
+    int rank = m_params.m_rank;
 
     padKmerArray(1024);
     if(rank == 0){
@@ -516,7 +580,7 @@ void ECData::buildCacheObliviousLayout(){
 }
 
 void ECData::buildFlatLayout(){
-    int rank = m_params->mpi_env->rank();
+    int rank = m_params.m_rank;
     if(rank == 0) {
        std::stringstream out;
        out << "Build Kmer Flat Layout : "
@@ -541,10 +605,10 @@ void ECData::buildFlatLayout(){
 
 void ECData::buildCacheOptimizedLayout(){
 
-   switch(m_params->cacheOptimizedSearch){
+   switch(m_params.cacheOptimizedSearch){
        case 1:
-           buildCacheAwareLayout(m_params->kmerCacheSize,
-                                 m_params->tileCacheSize);
+           buildCacheAwareLayout(m_params.kmerCacheSize,
+                                 m_params.tileCacheSize);
            break;
        case 2:
            buildCacheObliviousLayout();
@@ -557,7 +621,7 @@ void ECData::buildCacheOptimizedLayout(){
    }
 }
 
-void ECData::output(const std::string& filename){
+void ECData::writeQueryStats(const std::string& filename) const{
     std::ofstream oHandle(filename.c_str(), ios::out | ios::app );
     if (!oHandle.good()) {
         std::cout << "open " << filename << " failed, correct path?\n";
@@ -578,7 +642,7 @@ void ECData::estimateKmerByteCounters(){
 
     for(int i = 1; i < m_kcount;i++){
         std::stringstream out;
-        out << i << " " << m_karray[i].ID << " "; 
+        out << i << " " << m_karray[i].ID << " ";
         for(int j = 0; j < 3; j++){
             kmer_id_t& last_ref = m_byte_kref[j].back();
             int n = count_bytes<kmer_id_t>(m_karray[i].ID - last_ref);
@@ -587,8 +651,8 @@ void ECData::estimateKmerByteCounters(){
             } else {
                 m_byte_kcount[j] += 1;
             }
-            out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref) 
-                << " " << n << " "; 
+            out << j + 1 << " " << last_ref << " " << (m_karray[i].ID - last_ref)
+                << " " << n << " ";
         }
 
         out << std::endl;
@@ -616,13 +680,13 @@ void ECData::estimateTileByteCounters(){
 }
 
 void ECData::estimateByteCounters(){
-   if(m_params->cacheOptimizedSearch != 0)
+   if(m_params.cacheOptimizedSearch != 0)
        return;
     estimateKmerByteCounters();
 }
 
-void ECData::printByteCounters(std::ostream& ots){
-   if(m_params->cacheOptimizedSearch != 0)
+void ECData::printByteCounters(std::ostream& ots) const{
+   if(m_params.cacheOptimizedSearch != 0)
        return;
 
     std::stringstream oss;
@@ -634,7 +698,7 @@ void ECData::printByteCounters(std::ostream& ots){
     for(int j = 0; j < 3; j++){
         std::stringstream oss2;
         oss2 << "kmer" << "\t" << (j+1) << "\t"
-             << m_byte_kref[j].size() << "\t" 
+             << m_byte_kref[j].size() << "\t"
              << m_byte_kcount[j] << std::endl;
         ots << oss2.str();
         ots.flush();
@@ -643,7 +707,7 @@ void ECData::printByteCounters(std::ostream& ots){
     for(int j = 0; j < 7; j++){
         std::stringstream oss2;
         oss2 << "tile" << "\t" << (j+1) << "\t"
-              << m_byte_tref[j].size() << "\t" 
+              << m_byte_tref[j].size() << "\t"
              << m_byte_tcount[j] << std::endl;
         ots << oss2.str();
         ots.flush();
@@ -651,7 +715,7 @@ void ECData::printByteCounters(std::ostream& ots){
 }
 
 void ECData::runCAStats(std::ostream& ots){
-   if(m_params->cacheOptimizedSearch != 1)
+   if(m_params.cacheOptimizedSearch != 1)
        return;
 
     double kavg, kmax, kmin;

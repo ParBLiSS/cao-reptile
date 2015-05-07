@@ -4,11 +4,10 @@
 #include <iostream>
 #include <iterator>
 #include <cassert>
-#include <stdint.h>
+#include <cstdint>
 #include <fstream>
 
 #include "aligned_allocator.hpp"
-#include "io_util.h"
 #include "cao_util.h"
 #include "implicit_heap_search_c.h"
 
@@ -199,6 +198,7 @@ class ECDataCALayout{
 
 public:
     typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
+        typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::const_iterator id_const_iterator;
     std::vector< IdType, aligned_allocator<IdType, 64> > mIds;
     std::vector<CountType, aligned_allocator<CountType, 64> > mCounts;
     int mDegree;
@@ -220,7 +220,7 @@ public:
         init_layout(intr, nTotal, kSize);
     };
 
-    bool find(const IdType &rID) {
+    bool find(const IdType &rID) const{
         return (pure_c::implicit_heap_search(mIds.begin(),
                                              mIds.end(),
                                              mDegree,
@@ -228,11 +228,11 @@ public:
                 !=  mIds.end());
     };
 
-    int getCount(const IdType& rID, CountType& count){
-        id_iterator fpos = pure_c::implicit_heap_search(mIds.begin(),
-                                                        mIds.end(),
-                                                        mDegree,
-                                                        rID);
+    int getCount(const IdType& rID, CountType& count) const{
+        id_const_iterator fpos = pure_c::implicit_heap_search(mIds.begin(),
+                                                              mIds.end(),
+                                                              mDegree,
+                                                              rID);
         if(fpos != mIds.end()) {
             int dist = fpos - mIds.begin();
             count = mCounts[dist];
@@ -273,7 +273,7 @@ public:
         avg_bytes = (avg_bytes * m)/mIds.size();
     }
 
-    void serialize(std::ofstream& ofs){
+    void serialize(std::ofstream& ofs) const{
         ofs.write((char*)&mIds[0], sizeof(IdType)*mIds.size());
         ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }

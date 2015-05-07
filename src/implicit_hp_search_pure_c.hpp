@@ -13,10 +13,11 @@
 #include <vector>
 
 namespace pure_c {
+  const int max_depth = 40;
     template <typename RandomIterator, typename Tp>
  RandomIterator implicit_hp_search(RandomIterator begin,
 			 RandomIterator beyond,
-			 RandomIterator Pos,
+                                   //RandomIterator Pos,
 			 RandomIterator T,
 			 RandomIterator B,
 			 RandomIterator D,
@@ -25,6 +26,8 @@ namespace pure_c {
    //initialize:
    diff_type current_depth = 0, current_bfs_index = 1, size = beyond - begin;
    Tp x, y, z, w;
+   Tp PosArr[max_depth] = {0};
+   Tp* Pos = PosArr, *q;
    RandomIterator p;
    *Pos = 0;
 
@@ -36,8 +39,8 @@ namespace pure_c {
    if (current_bfs_index > size) goto return_false;
    p = D + current_depth;
    x = *p;
-   p = Pos + x;
-   x = *p;
+   q = Pos + x;
+   x = *q;
    p = T + current_depth;
    y = *p;
    z = current_bfs_index & y;
@@ -46,13 +49,13 @@ namespace pure_c {
    z = z * w;
    w = x + y;
    w = w + z;
-   p = Pos + current_depth;
-   *p = w;
+   q = Pos + current_depth;
+   *q = w;
   not_finished:
     if (current_bfs_index > size) goto return_false;
   //node_contains:
-   p = Pos+current_depth;
-   x = *p;
+   q = Pos+current_depth;
+   x = *q;
    p = begin+x;
    x = *p;
    if (x == value) goto return_true;
@@ -63,8 +66,8 @@ namespace pure_c {
    if (current_bfs_index > size) goto return_false;
    p = D + current_depth;
    x = *p;
-   p = Pos + x;
-   x = *p;
+   q = Pos + x;
+   x = *q;
    p = T + current_depth;
    y = *p;
    z = current_bfs_index & y;
@@ -73,8 +76,8 @@ namespace pure_c {
    z = z * w;
    w = x + y;
    w = w + z;
-   p = Pos + current_depth;
-   *p = w;
+   q = Pos + current_depth;
+   *q = w;
    goto not_finished;
 
   return_false:

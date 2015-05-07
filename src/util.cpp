@@ -1,5 +1,18 @@
 #include "util.h"
 
+#include <cassert>
+#include <sstream>
+#include <algorithm>
+#include <cstring>
+
+#include <sys/time.h>
+#include <mpi.h>
+
+Para::Para(const char *configFile){
+    setPara(configFile);
+    load_parallel_params();
+}
+
 void Para::setPara(const char *configFile) {
     cacheOptimizedSearch = 0;
     absentKmers = false;
@@ -10,6 +23,12 @@ void Para::setPara(const char *configFile) {
     kmerCacheSize = tileCacheSize = 4;
     writeOutput = 1;
     writeSpectrum = -1;
+    numThreads = 1;
+    dynamicWorkDist = 0;
+    runType = 0;
+    workFactor = 2;
+    QFlag = true;
+    kinAbsent = false;
     while(getline(input, line)){
         buf.clear();
         buf.str(line);
@@ -19,8 +38,6 @@ void Para::setPara(const char *configFile) {
                 buf >> iFaName;
             else if (s1 == "QFlag")
                 buf >> QFlag;
-            else if (s1 == "IQFile")
-                buf >> iQName;
             else if (s1 == "OErrFile")
                 buf >> oErrName;
             else if (s1 == "BatchSize")
@@ -61,23 +78,51 @@ void Para::setPara(const char *configFile) {
                 buf >> kmerSpectrumOutFile;
             else if (s1 == "TileSpectrumOutFile")
                 buf >> tileSpectrumOutFile;
+            else if (s1 == "Threads")
+                buf >> numThreads;
+            else if (s1 == "WorkFactor")
+                buf >> workFactor;
+            else if (s1 == "WorkDistribution")
+                buf >> dynamicWorkDist;
+            else if (s1 == "KmerSpectrumInFile")
+                buf >> kmerSpectrumInFile;
+            else if (s1 == "TileSpectrumInFile")
+                buf >> tileSpectrumInFile;
+            else if (s1 == "RunType")
+                buf >> runType;
+            else if (s1 == "KmerSpectrumInAbsent")
+                buf >> kinAbsent;
         }
     }
 }
 
 bool Para::validate() {
     if (iFaName.empty()) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout << "Err: InFaFile is not specified!\n";
         return false;
     }
     if (oErrName.empty()) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout << "Err: Output file is not specified!\n";
         return false;
     }
+    if(writeOutput != 0 && (runType == 0 || runType == 2)){
+        //  each process validates its ouput path
+        std::stringstream outs;
+        outs << oErrName << "-" << m_rank ;
+        outputFilename = outs.str();
+        std::ofstream oHandle(outputFilename.c_str());
+        if (!oHandle.good()) {
+            std::cout << "err output : open " << outputFilename
+                      << " failed, correct path?\n";
+            return false;
+        }
+        oHandle.close();
+    }
+
     if (K > 16 || (K + step) > 32) {
-        if(mpi_env->rank() == 0)
+        if(m_rank == 0)
             std::cout <<
                 "Set K in the range of (0, 16] and K+step in the range of (2, 32]\n";
         return false;
@@ -87,120 +132,261 @@ bool Para::validate() {
         std::cout << "open " << iFaName << "failed :|\n";
         return false;
     }
-    std::ifstream qual_stream(iQName.c_str());
-    if(!qual_stream.good()) {
-        std::cout << "open " << iQName << "failed :|\n";
-        return false;
+    if(runType == 0){
+        if(writeSpectrum != 0 && m_rank == 0)  // validate spectrum output file
+            if(!validateSpectrumOutput())
+                return false;
     }
-
-    if(mpi_env->rank() == 0) {
+    if(runType == 1){ // validate spectrum output file
+        if(!validateSpectrumOutput())
+            return false;
+    }
+    if(runType == 2){
+        if(kmerSpectrumInFile.length() == 0 || tileSpectrumInFile.length() == 0){
+            std::cout << "kmer sectrum input or tile spectrum input is "
+                      << "mandatory for EC only option" << std::endl;
+            return false;
+        }
+        std::ifstream kFile(kmerSpectrumInFile.c_str(),
+                            std::ifstream::binary);
+        if(!kFile.good()){
+            std::cout << "kmer sectrum input : open " << kmerSpectrumInFile
+                      << " failed, correct path?\n" << std::endl;
+            return false;
+        }
+        kFile.close();
+        std::ifstream tileFile(tileSpectrumInFile.c_str(),
+                               std::ifstream::binary);
+        if(!tileFile.good()){
+            std::cout << "tile sectrum input : open " << kmerSpectrumInFile
+                      << " failed, correct path?\n" << std::endl;
+            return false;
+        }
+        tileFile.close();
+        absentKmers = kinAbsent;
+    }
+    if(m_rank == 0) {
         std::stringstream oss;
         oss << "--" << std::endl
             << "parameter" << "\t" << "value" << std::endl;
         oss << "short reads file\t" << iFaName << "\n";
-        if (QFlag){
-            oss << "qual file\t" << iQName << "\n"
-                << "Qthreshold\t" << qualThreshold << "\n";
-        }
         oss << "O/ErrFile\t" << oErrName << "\n";
-        oss << "(K, step, tile)\t" << "(" << K << "," << step << ","
-                  << K + step << ")\n"
-                  << "BatchSize\t" << batchSize << "\n"
-                  << "Max Hamming Dist\t" << hdMax << "\n"
-                  << "ExpectSearch\t" << eSearch << "\n"
-                  << "T_ratio\t" << tRatio << "\n"
-                  << "QThreshold\t" << qualThreshold << "\n"
-                  << "MaxBadQPerKmer\t" << maxBadQPerKmer << "\n"
-                  << "Qlb\t" << Qlb << "\n"
-                  << "T_expGoodCnt\t" << tGoodTile << "\n"
-                  << "T_card\t" << tCard << "\n"
-                  << "StoreReads\t" << storeReads << "\n"
-                  << "CacheOptimizedSearch\t" << cacheOptimizedSearch << "\n"
-                  << "Kmer Cache\t" << kmerCacheSize << "\n"
-                  << "Tile Cache\t" << tileCacheSize << "\n"
-                  << "--\n";
+        oss << "(K, step, tile)\t"
+            << "(" << K << "," << step << "," << K + step << ")\n"
+            << "BatchSize\t" << batchSize << "\n"
+            << "Max Hamming Dist\t" << hdMax << "\n"
+            << "ExpectSearch\t" << eSearch << "\n"
+            << "T_ratio\t" << tRatio << "\n"
+            << "QThreshold\t" << qualThreshold << "\n"
+            << "MaxBadQPerKmer\t" << maxBadQPerKmer << "\n"
+            << "Qlb\t" << Qlb << "\n"
+            << "T_expGoodCnt\t" << tGoodTile << "\n"
+            << "T_card\t" << tCard << "\n"
+            << "StoreReads\t" << storeReads << "\n"
+            << "CacheOptimizedSearch\t" << cacheOptimizedSearch << "\n"
+            << "Kmer Cache\t" << kmerCacheSize << "\n"
+            << "Tile Cache\t" << tileCacheSize << "\n"
+            << "Threads \t" << numThreads << "\n"
+            << "Dynamic Distribution \t" << dynamicWorkDist << "\n"
+            << "Work Factor \t" << workFactor << "\n"
+            << "Write Output \t" << writeOutput << "\n"
+            << "Write Spectrum \t" << writeSpectrum << "\n"
+            << "Kmer Spectrum Output \t" << kmerSpectrumOutFile << "\n"
+            << "Tile Spectrum Output \t" << tileSpectrumOutFile << "\n"
+            << "Kmer Spectrum Input \t" << kmerSpectrumInFile << "\n"
+            << "Tile Spectrum Input \t" << tileSpectrumInFile << "\n"
+            << "Kmer Input Absent ? \t" << kinAbsent << "\n"
+            << "--\n";
         std::cout << oss.str();
         std::cout.flush();
     }
     return true;
 }
 
+void Para::load_parallel_params(){
+    m_size = MPI::COMM_WORLD.Get_size();
+    m_rank = MPI::COMM_WORLD.Get_rank();
+    compute_offsets();
+}
+
 void Para::compute_offsets(){
+    // offset computation for static work load
     std::ifstream fin(iFaName.c_str());
     fin.seekg(0,std::ios::end);
     fileSize = fin.tellg();
-    offsetStart = (fileSize/mpi_env->size()) * mpi_env->rank();
-    offsetEnd = (fileSize/mpi_env->size()) * (mpi_env->rank()+1);
-    fin.seekg(offsetStart, std::ios::beg);
+    offsetStart = (fileSize/m_size) * m_rank;
+    offsetEnd = (fileSize/m_size) * (m_rank + 1);
+}
 
+bool Para::validateSpectrumOutput(){
+    if(kmerSpectrumOutFile.length() == 0)
+        kmerSpectrumOutFile = "kmer-spectrum";
+    if(tileSpectrumOutFile.length() == 0)
+        tileSpectrumOutFile = "tile-spectrum";
+    //  each process validates its ouput path
+    std::stringstream outs, outs2;
+    outs << kmerSpectrumOutFile << "-" << m_rank << ".bin" ;
+    kmerSpectrumOutFile = outs.str();
+    outs2 << tileSpectrumOutFile << "-" << m_rank << ".bin" ;
+    tileSpectrumOutFile = outs2.str();
+    std::ofstream oHandle(kmerSpectrumOutFile.c_str());
+    if (!oHandle.good()) {
+        std::cout << "kmer spectrum input : open " << kmerSpectrumOutFile
+                  << " failed, correct path?\n";
+        return false;
+    }
+    oHandle.close();
+    std::ofstream oHandle2(tileSpectrumOutFile.c_str());
+    if (!oHandle2.good()) {
+        std::cout << "tile spectrum input : open " << tileSpectrumOutFile
+                  << " failed, correct path?\n";
+        return false;
+    }
+    oHandle2.close();
+    return true;
+}
 
-    bIO::FASTA_input fasta_sr(fin);
-    ++fasta_sr;
-    std::string lineNo = (*fasta_sr).first;
+std::string toString(kmer_id_t ID, int len){
 
-    fin.seekg(offsetEnd, std::ios::beg);
-    bIO::FASTA_input fastaend(fin);
-    ++fastaend;
-    std::string endLineNo = (*fastaend).first;
+    std::string kmer = "";
+    for (int i = 0; i < len; ++ i){
+        int last = (ID & 0x3);
+        char c;
+        switch (last){
+            case 0: c = 'a';
+            break;
+            case 1: c = 'c';
+            break;
+            case 2: c = 'g';
+            break;
+            case 3: c = 't';
+            break;
+        }
+        kmer += c;
+        ID = ID >> 2;
+    }
+    std::reverse(kmer.begin(), kmer.end());
 
-    startFromLineNo = strtoul (lineNo.c_str(),NULL,0);
-    endTillLineNo = strtoul (endLineNo.c_str(),NULL,0) - 1;
-    qOffsetStart = offsetStart + startFromLineNo ;
-    qOffsetEnd = offsetEnd + endTillLineNo ;
+    return kmer;
+}
 
-    // Print the qual size for debug purposes
-    std::ifstream qfin(iQName.c_str());
-    qfin.seekg(0,std::ios::end);
-#ifdef DEBUG
-    long long qfileSize = qfin.tellg();
-#endif
+bool readFastqRecord(std::ifstream* fqfs,
+                     std::string fRecord[4])
+{
+    if(!fqfs->good())
+        return false;
 
-    std::string curline,nextline;
-    qfin.seekg(qOffsetStart,std::ios::beg);
-    if(qfin.good()) {
-        std::getline(qfin,curline);
-        if(qfin.good()) {
-            std::getline(qfin,nextline);
-            if( curline[0] == '>' && nextline[0] == '>') {
-                qOffsetStart += curline.size();
-            }
+    for(int i = 0; i < 4; i++) {
+        fRecord[i] = "";
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
+
+    return true;
+ }
+
+bool readFirstFastqRecord(std::ifstream* fqfs,
+                          std::string fRecord[4])
+{
+    // read strings
+    for(int i = 0; i < 4; i++)
+        fRecord[i] = "";
+
+    for(int i = 0; i < 4; i++) {
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
+
+    int sdelta = 4, sread = 4;
+    // unless, the record is good, we can't turst the first line's first char
+    if(fRecord[2][0] == '+' && fRecord[0][0] == '@'){
+        return true; // record is good!
+    } else if(fRecord[1][0] == '@' && fRecord[3][0] == '+'){
+        sdelta = 1; sread = 3; // have three lines of a 'good' record
+    } else if(fRecord[2][0] == '@') {
+        sdelta = 2; sread = 2; // have two lines of a 'good' record
+    } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
+        sdelta = 3; sread = 1; // have only one line of a 'good' record
+    } else {
+        return false; // bad record!
+    }
+    // bubble up by swapping
+    assert(sdelta >= 0);
+    for(int i = 0;(i + sdelta) < 4; i++)
+        std::swap(fRecord[i], fRecord[i + sdelta]);
+    // read extra lines to fill up the record
+    for(int i = sread; i < 4; i++) {
+        fRecord[i] = "";
+        if(fqfs->good())
+            std::getline(*fqfs, fRecord[i]);
+        if(fRecord[i].length() == 0)
+            return false;
+    }
+    return true;
+}
+
+void updateStrStore(const std::string& in_str,
+                    cvec_t &StrStore,ivec_t &Offset,
+                    unsigned long& position){
+    StrStore.resize(StrStore.size() + in_str.length() + 1);
+    memcpy(&StrStore[position], in_str.c_str(), in_str.length() + 1);
+    Offset.push_back(position);
+    position += in_str.length() + 1;
+}
+
+bool readBatch(std::ifstream* fqfs, const long& batchSize,
+               const unsigned long& offsetEnd, ReadStore& rbatch)
+{
+    unsigned long rpos = 0, qpos = 0;
+    bool lastRead = false;
+    std::string fqRecord[4] = {std::string(""), std::string(""),
+                               std::string(""), std::string("")};
+    if(batchSize == 0)
+        return true;
+
+    // 1. read first record : for handling special case
+    if(!readFirstFastqRecord(fqfs, fqRecord))
+        return false;
+
+    updateStrStore(fqRecord[1], rbatch.readsString, rbatch.readsOffset, rpos);
+    updateStrStore(fqRecord[3], rbatch.qualsString, rbatch.qualsOffset, qpos);
+    rbatch.readId = std::stoi(fqRecord[0].substr(1).c_str());
+
+    // 2. read as much as batch size
+    for(long j=1; j < batchSize ; j++){
+        for(int i = 0; i < 4; i++)
+            fqRecord[i] = "";
+
+        if(!readFastqRecord(fqfs, fqRecord)){
+            lastRead = true;
+            break;
+        }
+
+        updateStrStore(fqRecord[1], rbatch.readsString, rbatch.readsOffset, rpos);
+        updateStrStore(fqRecord[3], rbatch.qualsString, rbatch.qualsOffset, qpos);
+
+        if(!fqfs->good() || fqfs->tellg() >= (std::streamoff) offsetEnd){
+            lastRead = true;
+            break;
         }
     }
 
-    qfin.seekg(qOffsetStart,std::ios::beg);
-    bIO::FASTA_input qfasta_sr(qfin);
-    ++qfasta_sr;
-    std::string qlineNo = (*qfasta_sr).first;
-
-
-    qfin.seekg(qOffsetEnd,std::ios::beg);
-    bIO::FASTA_input qfastaend(qfin);
-    ++qfastaend;
-    std::string qendLineNo = (*qfastaend).first;
-#ifdef DEBUG
-    long quendTillLineNo = strtoul (qendLineNo.c_str(),NULL,0) - 1;
-#endif
-
-    if(readsPerProcessor % batchSize == 0)
-        inLastBatch  = batchSize;
-    else
-        inLastBatch = readsPerProcessor % batchSize;
-#ifdef DEBUG
-    std::stringstream out;
-    std::string testStr;
-    unsigned long qualstartFromLineNo = strtoul (qlineNo.c_str(),NULL,0);
-
-    out << "PROC : " << mpi_env->rank() << " FILE SIZE : "
-        <<  fileSize <<   " START FROM : "
-        << startFromLineNo << " START OFFSET : " << offsetStart
-        << " UP TO : " << endTillLineNo << std::endl;
-    out << "PROC : " << mpi_env->rank() << " QUAL FILE SIZE : "
-        <<  qfileSize << " QUAL START FROM : "
-        << qlineNo  << " START OFFSET : " << qOffsetStart
-        << " UP TO : " << quendTillLineNo
-        << (( qualstartFromLineNo ==  startFromLineNo ) ? " TRUE" : " FALSE")
-        << std::endl;
-    std::cout << out.str();
-#endif
+    return lastRead;
 }
 
+
+void print_time (const std::string& msg, double& timing){
+    double cur_time = get_time();
+    std::cout << msg << "(" << cur_time - timing << " secs)\n\n";
+    timing = cur_time;
+}
+
+double get_time() {
+      timeval t;
+      gettimeofday(&t, 0);
+      return t.tv_sec + (0.000001 * t.tv_usec);
+} // get_time
