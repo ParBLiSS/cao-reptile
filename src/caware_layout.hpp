@@ -9,10 +9,8 @@
 
 #include "aligned_allocator.hpp"
 #include "cao_util.h"
+#include "log2.h"
 #include "implicit_heap_search_c.h"
-
-size_type int_log(const size_type& b, const size_type& x);
-int test_caware();
 
 class CacheAwareLayoutHelper{
    private:

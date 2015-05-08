@@ -170,6 +170,5 @@ public:
         ofs.write((char*)&mCounts[0], sizeof(CountType)*mCounts.size());
     }
 };
-int test_oblivious();
 
 #endif /* _COBLIVIOUS_LAYOUT_H_ */

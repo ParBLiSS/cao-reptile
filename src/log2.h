@@ -43,4 +43,16 @@ inline size_t hyperfloor(unsigned long n)
   return 1<<floor_log2(n);
 }
 
+template<typename SizeType>
+inline SizeType int_log(const SizeType& b,
+                        const SizeType& x){
+    double st = b;
+    SizeType vl = 1;
+    while(st < x){
+        st = st * b;
+        vl++;
+    }
+    return vl;
+}
+
 #endif  //__LOG2_H__

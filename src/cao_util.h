@@ -15,4 +15,5 @@ void write_stvector(std::vector<T> sts, std::ostream& os) {
     os << std::endl;
 }
 
+
 #endif /* _CAO_UTIL_H_ */

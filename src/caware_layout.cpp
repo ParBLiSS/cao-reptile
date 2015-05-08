@@ -7,17 +7,6 @@
 #include "caware_layout.hpp"
 
 
-size_type int_log(const size_type& b,
-                  const size_type& x){
-    double st = b;
-    size_type vl = 1;
-    while(st < x){
-        st = st * b;
-        vl++;
-    }
-    return vl;
-}
-
 
 typedef struct kd_s{
     int ID;
