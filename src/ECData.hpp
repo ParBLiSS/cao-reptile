@@ -108,10 +108,10 @@ class ECData {
 
     // I own karray, ksize and kcount. So, Please be nice to them!
     kmer_t *m_karray;
-    int m_ksize, m_kcount;
+    long m_ksize, m_kcount;
     // I own tilearray, tilesize and tilecount. So, Please be nice to them!
     tile_t *m_tilearray;
-    int m_tilesize, m_tilecount;
+    long m_tilesize, m_tilecount;
 
     // I am only pointing to this parameter object. I don't own it!
     Para& m_params;

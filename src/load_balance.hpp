@@ -271,8 +271,8 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
     delete[] pcount;
 }
 
-template <typename StructDataType>
-void load_balance2(StructDataType *&karray, int &kcount,int &ksize,
+template <typename StructDataType, typename SizeType>
+void load_balance2(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
                    MPI_Datatype mpi_struct_type,
                    int size,int rank){
     int i, j;

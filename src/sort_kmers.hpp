@@ -40,14 +40,15 @@
 #include "util.h"
 #include "load_balance.hpp"
 
-template <typename StructDataType>
-void eliminate_threshold(StructDataType *&array, int &count,
+template <typename StructDataType, typename SizeType>
+void eliminate_threshold(StructDataType *&array, SizeType &count,
                          int threshold){
-    static int i, j;
+    static SizeType i, j;
+    
     if(count ==0 || threshold == 0)
         return;
     for(j=0,i=0;i<count;i++){
-        if(array[i].count >= threshold) {
+        if((int)array[i].count >= threshold) {
             array[j].ID = array[i].ID;
             array[j].count = array[i].count;
             j++;
@@ -56,9 +57,9 @@ void eliminate_threshold(StructDataType *&array, int &count,
     count = j;
 }
 
-template <typename StructDataType>
-void eliminate_dupes(StructDataType *&array, int &count) {
-    static int i, j;
+template <typename StructDataType, typename SizeType>
+void eliminate_dupes(StructDataType *&array, SizeType &count) {
+    static SizeType i, j;
     if(count == 0)
         return;
     for(j = 0,i=1;i<count;i++){
@@ -81,14 +82,15 @@ void eliminate_dupes(StructDataType *&array, int &count) {
 }
 
 template <typename StructDataType, typename KeyDataType,
-          typename StructCompare, typename KeyCompare>
-void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
+          typename StructCompare, typename KeyCompare,
+          typename SizeType>
+void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
                 MPI_Datatype mpi_struct_type,MPI_Datatype mpi_key_type,
                 StructCompare structComparator,KeyCompare keyComparator,
                 bool absentKmers, Para& params){
 
     int i = 0, j = 0;
-    int NoofElements;
+    SizeType NoofElements;
     int kvalue = params.K;
     int size = MPI::COMM_WORLD.Get_size(),
         rank = MPI::COMM_WORLD.Get_rank();
@@ -285,12 +287,12 @@ void sort_kmers(StructDataType *&karray, int &kcount, int &ksize,
     delete[] Splitter;
 }
 
-template <typename StructDataType, typename KeyDataType>
-void gather_spectrum(StructDataType *&karray, int &kcount, int &ksize,
+template <typename StructDataType, typename KeyDataType, typename SizeType>
+void gather_spectrum(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
                      MPI_Datatype mpi_struct_type)
 {
     StructDataType *AllData = 0;
-    int NoofElements = 0;
+    SizeType NoofElements = 0;
     StructDataType *Newlocal = karray;
     int NewlocalCount = kcount;
     int size = MPI::COMM_WORLD.Get_size(),

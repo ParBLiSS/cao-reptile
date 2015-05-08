@@ -226,10 +226,10 @@ bool Para::validateSpectrumOutput(){
         tileSpectrumOutFile = "tile-spectrum";
     //  each process validates its ouput path
     std::stringstream outs, outs2;
-    outs << kmerSpectrumOutFile << "-" << std::setfill('0') 
+    outs << kmerSpectrumOutFile << "-" << std::setfill('0')
          << std::setw(5) << m_rank << ".bin" ;
     kmerSpectrumOutFile = outs.str();
-    outs2 << tileSpectrumOutFile << "-" << std::setfill('0') 
+    outs2 << tileSpectrumOutFile << "-" << std::setfill('0')
           << std::setw(5) << m_rank << ".bin" ;
     tileSpectrumOutFile = outs2.str();
     std::ofstream oHandle(kmerSpectrumOutFile.c_str());
