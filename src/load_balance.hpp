@@ -271,19 +271,21 @@ void load_balance(StructDataType *&karray, int &kcount,int &ksize,
     delete[] pcount;
 }
 
+#include "mpi_util.hpp"
+
 template <typename StructDataType, typename SizeType>
 void load_balance2(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
                    MPI_Datatype mpi_struct_type,
                    int size,int rank){
     int i, j;
-    unsigned totalelements = 0;
+    SizeType totalelements = 0;
     if(size == 1){
         return ;
     }
-    int *pcount = new int[size](); // how much each processor has
+    SizeType *pcount = new SizeType[size](); // how much each processor has
 
-    MPI_Allgather(&kcount, 1 , MPI_INT,
-                  pcount, 1 , MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(&kcount, 1 , get_mpi_dt<SizeType>(),
+                  pcount, 1 , get_mpi_dt<SizeType>(), MPI_COMM_WORLD);
 
     bool lBalanceReqd = false;
     for (i=0;i<size;i++) {
