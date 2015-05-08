@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <iomanip>
 
 #include <sys/time.h>
 #include <mpi.h>
@@ -110,7 +111,7 @@ bool Para::validate() {
     if(writeOutput != 0 && (runType == 0 || runType == 2)){
         //  each process validates its ouput path
         std::stringstream outs;
-        outs << oErrName << "-" << m_rank ;
+        outs << oErrName << "-" << std::setfill('0') << std::setw(5) << m_rank ;
         outputFilename = outs.str();
         std::ofstream oHandle(outputFilename.c_str());
         if (!oHandle.good()) {
@@ -225,9 +226,11 @@ bool Para::validateSpectrumOutput(){
         tileSpectrumOutFile = "tile-spectrum";
     //  each process validates its ouput path
     std::stringstream outs, outs2;
-    outs << kmerSpectrumOutFile << "-" << m_rank << ".bin" ;
+    outs << kmerSpectrumOutFile << "-" << std::setfill('0') 
+         << std::setw(5) << m_rank << ".bin" ;
     kmerSpectrumOutFile = outs.str();
-    outs2 << tileSpectrumOutFile << "-" << m_rank << ".bin" ;
+    outs2 << tileSpectrumOutFile << "-" << std::setfill('0') 
+          << std::setw(5) << m_rank << ".bin" ;
     tileSpectrumOutFile = outs2.str();
     std::ofstream oHandle(kmerSpectrumOutFile.c_str());
     if (!oHandle.good()) {
@@ -315,6 +318,8 @@ bool readFirstFastqRecord(std::ifstream* fqfs,
     sdelta = 2; sread = 2; // have two lines of a 'good' record
   } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
     sdelta = 3; sread = 1; // have only one line of a 'good' record
+  } else if(fRecord[2][0] == '+'){
+    sdelta = 4; sread = 0; // have zero lines of a 'good' record
   } else {
     return false; // bad record!
   }

@@ -80,6 +80,7 @@ void ECDriver::correctBatch(const ReadStore& rbatch) {
 }
 
 void ECDriver::correctBatchST(const ReadStore& rbatch) {
+    readID_ = rbatch.readId;
     ECImpl ecr(ecdata_, inPara_);
 #ifdef DEBUG
     std::stringstream out3 ;
