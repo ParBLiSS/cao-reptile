@@ -29,11 +29,11 @@ set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
 find_package(Threads REQUIRED)
 #
 # main executable
-add_executable (cao-reptile src/util.cpp src/mpi_util.cpp src/ECData.cpp src/ECDriver.cpp src/find_neighbors.cpp  src/count_kmers.cpp   src/sort_kmers.cpp src/caware_layout.cpp  src/coblivious_layout.cpp src/ECImpl.cpp src/ECWDist.cpp src/ECRunStats.cpp src/main.cpp)
+add_executable (cao-reptile src/util.cpp src/mpi_util.cpp src/ECData.cpp src/ECDriver.cpp src/find_neighbors.cpp  src/count_kmers.cpp src/sort_kmers.cpp src/ECImpl.cpp src/ECWDist.cpp src/ECRunStats.cpp src/main.cpp)
 target_link_libraries(cao-reptile "${MPI_LIBRARIES}" stdc++)
 #
 # test executable
-add_executable (cao-reptile-test src/util.cpp src/mpi_util.cpp src/ECData.cpp  src/ECDriver.cpp src/find_neighbors.cpp src/count_kmers.cpp src/sort_kmers.cpp src/caware_layout.cpp src/coblivious_layout.cpp src/ECImpl.cpp src/ECWDist.cpp src/ECRunStats.cpp src/test_main.cpp)
+add_executable (cao-reptile-test src/caware_layout.cpp src/coblivious_layout.cpp src/test_main.cpp)
 target_link_libraries(cao-reptile-test "${MPI_LIBRARIES}" stdc++)
 #
 #
