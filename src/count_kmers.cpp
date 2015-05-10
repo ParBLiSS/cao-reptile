@@ -182,8 +182,9 @@ void kmerSpectrumBatch(ReadStore& rbatch, ECData& ecdata,
     const Para& params = ecdata.getParams();
     double tBatchStart = MPI_Wtime();
 #endif
-    KmerType tmp;
+    KmerType tmp = 0;
     ecdata.setBatchStart(tmp);
+    assert(tmp == 1);
     //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
     //         << " LOADING  BATCH " << _batch << std::endl;
     for(unsigned long i = 0; i < rbatch.readsOffset.size();i++) {
@@ -194,7 +195,9 @@ void kmerSpectrumBatch(ReadStore& rbatch, ECData& ecdata,
         int read_length = strlen(addr);
         add_kmers<KmerType>(addr,qAddr,QFlag,read_length,kLength,ecdata);
     }
+    tmp = 0;
     ecdata.mergeBatch(tmp);
+    assert(tmp == 1);
 #ifdef DEBUG
 	std::stringstream out;
     	out << " PROCESS: " << ecdata.m_params.m_rank

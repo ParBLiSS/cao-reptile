@@ -310,7 +310,7 @@ bool ECData::addToArray(kmer_id_t &ID,int count){
     }
     if(m_karray == NULL){
       std::stringstream out1;
-      out1 << m_params.m_rank << " " 
+      out1 << m_params.m_rank << " "
            << m_ksize << " " << m_kcount << " "
            << m_tilesize << " " << m_tilecount << " " << std::endl;
       std::cout << out1.str();
@@ -335,7 +335,7 @@ bool ECData::addToArray(kmer_id_t &ID,unsigned char count){
     }
     if(m_karray == NULL){
       std::stringstream out1;
-      out1 << m_params.m_rank << " " 
+      out1 << m_params.m_rank << " "
            << m_ksize << " " << m_kcount << " "
            << m_tilesize << " " << m_tilecount << " " << std::endl;
       std::cout << out1.str();
@@ -360,7 +360,7 @@ bool ECData::addToArray(tile_id_t &ID,int count){
     }
     if(m_tilearray == NULL){
       std::stringstream out1;
-      out1 << m_params.m_rank << " " 
+      out1 << m_params.m_rank << " "
            << m_ksize << " " << m_kcount << " "
            << m_tilesize << " " << m_tilecount << " " << std::endl;
       std::cout << out1.str();
@@ -485,12 +485,12 @@ ECData::~ECData(){
 
 
 void ECData::setBatchStart(tile_id_t &tmp){
-    currentKmerBatchStart = m_kcount;
+    currentTileBatchStart = m_tilecount;
     tmp = 1;
 }
 
 void ECData::setBatchStart(kmer_id_t &tmp){
-    currentTileBatchStart = m_tilecount;
+    currentKmerBatchStart = m_kcount;
     tmp = 1;
 }
 
@@ -531,7 +531,6 @@ void ECData::mergeBatch(tile_id_t &tmp){
 }
 
 void ECData::mergeBatch(kmer_id_t &tmp){
-
     // Sort the new ones
     std::sort(m_karray + currentKmerBatchStart,
               m_karray + m_kcount, KmerComp());

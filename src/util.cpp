@@ -97,7 +97,7 @@ void Para::setPara(const char *configFile) {
         }
     }
 
-    tileLength = K + step - (K - step);
+    tileLength = K + step;
 }
 
 bool Para::validate() {
@@ -125,11 +125,11 @@ bool Para::validate() {
         oHandle.close();
     }
 
-    if ((K < 0) || (K > 16) || (K < step) ||
-        (tileLength < 0) || (tileLength > 32)) {
+    if ((K < 0) || (K > 16) || (step < 1) ||
+        (tileLength < K) || (tileLength > 32)) {
         if(m_rank == 0)
             std::cout <<
-                "Set K in the range of (0, 16] and K+step in the range of (16, 32]\n";
+                "Set K in the range of (0, 16] and K+step in the range of (K, 32]\n";
         return false;
     }
     std::ifstream read_stream(iFaName.c_str());

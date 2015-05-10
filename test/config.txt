@@ -108,7 +108,7 @@ WriteSpectrum      0
 # RunType 0 : construct spectrum and run error correction
 # RunType 1 : run only distributed spectrum construction
 # RunType 2 : run only error correction
-RunType            0
+RunType            1
 #
 # Kmer spectrum input file (when RunType is 2)
 #
