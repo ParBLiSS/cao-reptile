@@ -290,6 +290,13 @@ int ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
     }
 }
 
+static const long size_factor = 10;
+static const long size_threshold = 536870912;
+long get_size(const long& cursize){
+  if(cursize < size_threshold)
+    return 2 * cursize;
+  return (cursize) + (cursize / size_factor);
+}
 
 bool ECData::addToArray(kmer_id_t &ID,int count){
     if(m_karray == 0){
@@ -297,8 +304,16 @@ bool ECData::addToArray(kmer_id_t &ID,int count){
         m_ksize = 2;
     }
     else if(m_kcount+1 > m_ksize){
-        m_karray = (kmer_t*) realloc(m_karray, sizeof(kmer_t) * (2* m_ksize));
-        m_ksize *= 2;
+        long tl = get_size(m_ksize);
+        m_karray = (kmer_t*) realloc(m_karray, sizeof(kmer_t) * tl);
+        m_ksize = tl;
+    }
+    if(m_karray == NULL){
+      std::stringstream out1;
+      out1 << m_params.m_rank << " " 
+           << m_ksize << " " << m_kcount << " "
+           << m_tilesize << " " << m_tilecount << " " << std::endl;
+      std::cout << out1.str();
     }
     assert(m_karray != NULL);
 
@@ -314,8 +329,16 @@ bool ECData::addToArray(kmer_id_t &ID,unsigned char count){
         m_ksize = 2;
     }
     else if(m_kcount+1 > m_ksize){
-        m_karray = (kmer_t*) realloc(m_karray, sizeof(kmer_t) * (2* m_ksize));
-        m_ksize *= 2;
+        long tl = get_size(m_ksize);
+        m_karray = (kmer_t*) realloc(m_karray, sizeof(kmer_t) * tl);
+        m_ksize = tl;
+    }
+    if(m_karray == NULL){
+      std::stringstream out1;
+      out1 << m_params.m_rank << " " 
+           << m_ksize << " " << m_kcount << " "
+           << m_tilesize << " " << m_tilecount << " " << std::endl;
+      std::cout << out1.str();
     }
     assert(m_karray != NULL);
 
@@ -331,8 +354,16 @@ bool ECData::addToArray(tile_id_t &ID,int count){
         m_tilesize = 2;
     }
     else if(m_tilecount+1 > m_tilesize){
-        m_tilearray = (tile_t*) realloc(m_tilearray, sizeof(tile_t) * (2* m_tilesize));
-        m_tilesize *= 2;
+        long tl = get_size(m_ksize);
+        m_tilearray = (tile_t*) realloc(m_tilearray, sizeof(tile_t) * tl);
+        m_tilesize = tl;
+    }
+    if(m_tilearray == NULL){
+      std::stringstream out1;
+      out1 << m_params.m_rank << " " 
+           << m_ksize << " " << m_kcount << " "
+           << m_tilesize << " " << m_tilecount << " " << std::endl;
+      std::cout << out1.str();
     }
     assert(m_tilearray != NULL);
 
