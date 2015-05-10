@@ -78,6 +78,7 @@ public:
     int tCard;
     int hdMax;
     int storeReads;
+    int tileLength;
 
     // cache optimizations
     int kmerCacheSize;

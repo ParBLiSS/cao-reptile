@@ -30,6 +30,7 @@ void Para::setPara(const char *configFile) {
     workFactor = 2;
     QFlag = true;
     kinAbsent = false;
+    tileLength = 0;
     while(getline(input, line)){
         buf.clear();
         buf.str(line);
@@ -95,6 +96,8 @@ void Para::setPara(const char *configFile) {
                 buf >> kinAbsent;
         }
     }
+
+    tileLength = K + step - (K - step);
 }
 
 bool Para::validate() {
@@ -122,10 +125,11 @@ bool Para::validate() {
         oHandle.close();
     }
 
-    if (K > 16 || (K + step) > 32) {
+    if ((K < 0) || (K > 16) || (K < step) ||
+        (tileLength < 0) || (tileLength > 32)) {
         if(m_rank == 0)
             std::cout <<
-                "Set K in the range of (0, 16] and K+step in the range of (2, 32]\n";
+                "Set K in the range of (0, 16] and K+step in the range of (16, 32]\n";
         return false;
     }
     std::ifstream read_stream(iFaName.c_str());
@@ -173,7 +177,7 @@ bool Para::validate() {
         oss << "short reads file\t" << iFaName << "\n";
         oss << "O/ErrFile\t" << oErrName << "\n";
         oss << "(K, step, tile)\t"
-            << "(" << K << "," << step << "," << K + step << ")\n"
+            << "(" << K << "," << step << "," << tileLength << ")\n"
             << "BatchSize\t" << batchSize << "\n"
             << "Max Hamming Dist\t" << hdMax << "\n"
             << "ExpectSearch\t" << eSearch << "\n"

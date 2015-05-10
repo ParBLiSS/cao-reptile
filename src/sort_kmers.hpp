@@ -35,6 +35,7 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <climits>
 
 #include "util.h"
@@ -100,20 +101,18 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     //std::sort(karray, karray + kcount, structComparator);
 #ifdef DEBUG
     std::stringstream out1;
-    out1 << "KCOUNT BEFORE : " << kcount;
+    out1 << std::setw(5) << rank << " " 
+         << std::setw(15) << kcount << " " 
+         << std::setw(15) << ksize << std::endl;
+    //for(i=0;i<kcount; i++)
+    //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
+    std::cout << out1.str();
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    // Eliminate duplicate and update count
-    //if(eliminateDupes) {
-    //   eliminate_dupes(karray,kcount);
-     //}
-#ifdef DEBUG
-    out1 << " KCOUNT AFTER : " << kcount << std::endl;
-    std::cout << out1.str();
-#endif
     // load balancing code must appear here.
-    load_balance2(karray,kcount,ksize,mpi_struct_type,
-                  size,rank);
+    //load_balance2(karray,kcount,ksize,mpi_struct_type,
+    //              size,rank);
     // sorting of the local k-mers after load balnce
     std::sort(karray, karray + kcount, structComparator);
     if(eliminateDupes) {
@@ -124,13 +123,16 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     // Assuming this processor has atleast size - 1 elements
 #ifdef DEBUG
     std::stringstream out;
-    out << "I am processor : " << rank << ". I have " << kcount << " elements with me. \n My elements are as :\n";
-    for(i=0;i<kcount; i++)
-        out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
+    out << std::setw(5) << rank << " " 
+        << std::setw(15) << kcount << " " 
+        << std::setw(15) << ksize << std::endl;
+    //for(i=0;i<kcount; i++)
+    //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
     std::cout << out.str();
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    assert(kcount > size);
+    assert(kcount > (long)size);
     KeyDataType *Splitter = new KeyDataType[size-1];
     for (i=0; i < (size-1); i++){
         Splitter[i] = karray[(kcount/size) * (i+1)].ID;
@@ -160,6 +162,9 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
 
     // Calculate the number of elements that I, rank,
     // should send and recieve  from every one else
+    long *lsendcts = new long[size]();
+
+
     int *recvcts =  new int[size]();
     int *sendcts = new int[size]();
     int *recvdisp = new int[size]();
@@ -168,14 +173,30 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     for(i = 0; i < kcount;i++){
         if(j < (size-1)){
             if (karray[i].ID < GlobalSplitter[j])
-                sendcts[j]++;
+                lsendcts[j]++;
             else{
                 j++;
                 i--;
             }
         }
         else
-            sendcts[j]++;
+            lsendcts[j]++;
+    }
+#ifdef DEBUG
+    for(j = 0; j < size; j++){
+        std::stringstream out;
+        out << std::setw(5) << rank << " " 
+            << std::setw(5) << j << " " 
+            << std::setw(15) << lsendcts[j] << std::endl;
+        std::cout << out.str();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+    long snd_max = std::numeric_limits<int>::max();
+    for(j = 0;j < size; j++){
+        assert(lsendcts[j] < snd_max);
+        sendcts[j] = (int)lsendcts[j];
     }
     // Do an all-to-all to get how much I,rank, will recieve from every one
     MPI_Alltoall(sendcts, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
@@ -278,6 +299,7 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     kcount = NewlocalCount;
     //
     // DONOT free Newlocal : Newlocal is the output!
+    delete[] lsendcts;
     delete[] recvcts;
     delete[] sendcts;
     delete[] recvdisp;

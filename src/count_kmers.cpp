@@ -101,7 +101,7 @@ void processBatch(ReadStore& rbatch, ECData& ecdata)
     static int _batch = 0;
     const Para& params = ecdata.getParams();
     int kLength  = params.K,
-        tileLength = kLength + params.step;
+        tileLength = params.tileLength;
 
 #ifdef DEBUG
     double tBatchStart = MPI_Wtime();
