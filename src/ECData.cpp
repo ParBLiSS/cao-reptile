@@ -354,7 +354,7 @@ bool ECData::addToArray(tile_id_t &ID,int count){
         m_tilesize = 2;
     }
     else if(m_tilecount+1 > m_tilesize){
-        long tl = get_size(m_ksize);
+        long tl = get_size(m_tilesize);
         m_tilearray = (tile_t*) realloc(m_tilearray, sizeof(tile_t) * tl);
         m_tilesize = tl;
     }

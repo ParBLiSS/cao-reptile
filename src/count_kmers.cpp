@@ -185,6 +185,7 @@ void kmerSpectrumBatch(ReadStore& rbatch, ECData& ecdata,
     KmerType tmp = 0;
     ecdata.setBatchStart(tmp);
     assert(tmp == 1);
+    assert(rbatch.readsOffset.size() == rbatch.qualsOffset.size());
     //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
     //         << " LOADING  BATCH " << _batch << std::endl;
     for(unsigned long i = 0; i < rbatch.readsOffset.size();i++) {
@@ -258,7 +259,7 @@ void local_tile_spectrum(ECData& ecdata){
     if(params.storeReads) {
         // reads are already collected and stored
         kmerSpectrumBatch<tile_id_t>(ecdata.m_reads, ecdata,
-                                    params.tileLength, true);
+                                     params.tileLength, true);
     } else {
         // process reads from input file
         kmerSpectrumFile<tile_id_t>(ecdata, params.tileLength, true);
