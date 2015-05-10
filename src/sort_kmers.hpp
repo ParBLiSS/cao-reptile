@@ -45,7 +45,7 @@ template <typename StructDataType, typename SizeType>
 void eliminate_threshold(StructDataType *&array, SizeType &count,
                          int threshold){
     static SizeType i, j;
-    
+
     if(count ==0 || threshold == 0)
         return;
     for(j=0,i=0;i<count;i++){
@@ -95,14 +95,13 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     int kvalue = params.K;
     int size = MPI::COMM_WORLD.Get_size(),
         rank = MPI::COMM_WORLD.Get_rank();
-    bool eliminateDupes = true;
+
     int threshold = params.tCard;
-    // sorting of the local k-mers
-    //std::sort(karray, karray + kcount, structComparator);
+
 #ifdef DEBUG
     std::stringstream out1;
-    out1 << std::setw(5) << rank << " " 
-         << std::setw(15) << kcount << " " 
+    out1 << std::setw(5) << rank << " "
+         << std::setw(15) << kcount << " "
          << std::setw(15) << ksize << std::endl;
     //for(i=0;i<kcount; i++)
     //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
@@ -115,16 +114,15 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     //              size,rank);
     // sorting of the local k-mers after load balnce
     std::sort(karray, karray + kcount, structComparator);
-    if(eliminateDupes) {
-        eliminate_dupes(karray,kcount);
-    }
+
+    eliminate_dupes(karray,kcount);
 
     // Choosing size-1 splitters (size = no. of processors)
     // Assuming this processor has atleast size - 1 elements
 #ifdef DEBUG
     std::stringstream out;
-    out << std::setw(5) << rank << " " 
-        << std::setw(15) << kcount << " " 
+    out << std::setw(5) << rank << " "
+        << std::setw(15) << kcount << " "
         << std::setw(15) << ksize << std::endl;
     //for(i=0;i<kcount; i++)
     //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
@@ -185,8 +183,8 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
 #ifdef DEBUG
     for(j = 0; j < size; j++){
         std::stringstream out;
-        out << std::setw(5) << rank << " " 
-            << std::setw(5) << j << " " 
+        out << std::setw(5) << rank << " "
+            << std::setw(5) << j << " "
             << std::setw(15) << lsendcts[j] << std::endl;
         std::cout << out.str();
     }
@@ -233,9 +231,8 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     ksize = NewlocalCount;
 
     // if not using map-reduce, eliminate dupes and update count
-    if(eliminateDupes) {
-        eliminate_dupes(Newlocal,NewlocalCount);
-    }
+    eliminate_dupes(Newlocal,NewlocalCount);
+
 #ifdef DEBUG
     MPI_Allgather (&NewlocalCount, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
     NoofElements = recvcts[0];
@@ -420,5 +417,6 @@ void gather_spectrum(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
 
 class ECData;
 void sort_kmers(ECData& ecdata);
-
+void dist_kmer_spectrum(ECData& ecdata);
+void dist_tile_spectrum(ECData& ecdata);
 #endif

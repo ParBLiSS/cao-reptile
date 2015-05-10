@@ -452,12 +452,54 @@ ECData::~ECData(){
     free(m_tilearray);
 }
 
-void ECData::setBatchStart(){
+
+void ECData::setBatchStart(tile_id_t &tmp){
     currentKmerBatchStart = m_kcount;
-    currentTileBatchStart = m_tilecount;
+    tmp = 1;
 }
 
-void ECData::mergeBatchKmers(){
+void ECData::setBatchStart(kmer_id_t &tmp){
+    currentTileBatchStart = m_tilecount;
+    tmp = 1;
+}
+
+void ECData::setBatchStart(){
+    kmer_id_t tk;
+    tile_id_t tl;
+    setBatchStart(tk);
+    setBatchStart(tl);
+}
+
+void ECData::mergeBatch(){
+    kmer_id_t tk;
+    tile_id_t tl;
+    mergeBatch(tk);
+    mergeBatch(tl);
+}
+
+void ECData::mergeBatch(tile_id_t &tmp){
+    // Update tiles
+    std::sort(m_tilearray + currentTileBatchStart,
+              m_tilearray + m_tilecount, TileComp());
+
+    if(currentTileBatchStart > 0) {
+        tile_t *newarray = (tile_t*)malloc(sizeof(tile_t) * m_tilesize);
+        tile_t *merge_tile_lst = std::merge(m_tilearray, m_tilearray + currentTileBatchStart,
+                                            m_tilearray + currentTileBatchStart,
+                                            m_tilearray + m_tilecount,
+                                            newarray, TileComp());
+        int newtilecount = (merge_tile_lst - newarray);
+        free(m_tilearray);
+        m_tilecount = newtilecount;
+        m_tilearray = newarray;
+    }
+
+    eliminate_dupes(m_tilearray,m_tilecount);
+    currentTileBatchStart = 0;
+    tmp = 1;
+}
+
+void ECData::mergeBatch(kmer_id_t &tmp){
 
     // Sort the new ones
     std::sort(m_karray + currentKmerBatchStart,
@@ -481,26 +523,9 @@ void ECData::mergeBatchKmers(){
     // Eliminiate dupes.
     eliminate_dupes(m_karray,m_kcount);
 
-    // Update tiles
-    std::sort(m_tilearray + currentTileBatchStart,
-              m_tilearray + m_tilecount, TileComp());
-
-    if(currentTileBatchStart > 0) {
-        tile_t *newarray = (tile_t*)malloc(sizeof(tile_t) * m_tilesize);
-        tile_t *merge_tile_lst = std::merge(m_tilearray, m_tilearray + currentTileBatchStart,
-                                            m_tilearray + currentTileBatchStart,
-                                            m_tilearray + m_tilecount,
-                                            newarray, TileComp());
-        int newtilecount = (merge_tile_lst - newarray);
-        free(m_tilearray);
-        m_tilecount = newtilecount;
-        m_tilearray = newarray;
-    }
-
-
-    eliminate_dupes(m_tilearray,m_tilecount);
-    // reset this
-    currentKmerBatchStart = 0; currentTileBatchStart = 0;
+    // reset this batch
+    currentKmerBatchStart = 0;
+    tmp = 1;
 }
 
 void ECData::padKmerArray(unsigned kSize){

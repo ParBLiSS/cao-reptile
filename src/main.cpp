@@ -38,9 +38,12 @@ void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& of
     ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
 
     // counts the k-mers and loads them in the ECData object
-    count_kmers(ecdata);
-    // sort kmers and tiles
-    sort_kmers(ecdata);
+    local_kmer_spectrum(ecdata);
+    // sort kmers
+    dist_kmer_spectrum(ecdata);
+
+    local_tile_spectrum(ecdata);
+    dist_tile_spectrum(ecdata);
 
     ecstx.tstop_kmer_p = clock();
     MPI_Barrier(MPI_COMM_WORLD);

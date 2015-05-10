@@ -118,7 +118,7 @@ void processBatch(ReadStore& rbatch, ECData& ecdata)
         add_kmers<kmer_id_t>(addr,qAddr,false,read_length,kLength,ecdata);
         add_kmers<tile_id_t>(addr,qAddr,true,read_length,tileLength,ecdata);
     }
-    ecdata.mergeBatchKmers();
+    ecdata.mergeBatch();
 #ifdef DEBUG
 	std::stringstream out;
     	out << " PROCESS: " << ecdata.m_params.m_rank
@@ -168,5 +168,96 @@ void count_kmers(ECData& ecdata){
     } else {
         // process reads from input file
         processReadsFromFile(ecdata);
+    }
+}
+
+
+template <typename KmerType>
+void kmerSpectrumBatch(ReadStore& rbatch, ECData& ecdata,
+                      int kLength, bool QFlag)
+{
+    static int _batch = 0;
+
+#ifdef DEBUG
+    const Para& params = ecdata.getParams();
+    double tBatchStart = MPI_Wtime();
+#endif
+    KmerType tmp;
+    ecdata.setBatchStart(tmp);
+    //std::cout << " PROCESS: " << ecdata->m_params.mpi_env->rank()
+    //         << " LOADING  BATCH " << _batch << std::endl;
+    for(unsigned long i = 0; i < rbatch.readsOffset.size();i++) {
+        int position = rbatch.readsOffset[i];
+        int qposition = rbatch.qualsOffset[i];
+        char* addr = const_cast<char*> (&(rbatch.readsString[position]));
+        char* qAddr = const_cast<char*> (&(rbatch.qualsString[qposition]));
+        int read_length = strlen(addr);
+        add_kmers<KmerType>(addr,qAddr,QFlag,read_length,kLength,ecdata);
+    }
+    ecdata.mergeBatch(tmp);
+#ifdef DEBUG
+	std::stringstream out;
+    	out << " PROCESS: " << ecdata.m_params.m_rank
+        << " BATCH " << _batch
+        << " LOAD TIME " << MPI_Wtime()-tBatchStart << std::endl;
+        std::cout << out.str();
+#endif
+    _batch++;
+
+}
+
+template <typename KmerType>
+void kmerSpectrumFile(ECData& ecdata, int kLength, bool qFlag){
+    // get the parameters
+    const Para& params = ecdata.getParams();
+
+    std::ifstream read_stream(params.iFaName.c_str());
+    assert(read_stream.good() == true);
+
+    read_stream.seekg(params.offsetStart,std::ios::beg);
+
+    ReadStore rbatch;
+    while(1){
+        bool lastRead = readBatch(&read_stream, params.batchSize,
+                                  params.offsetEnd, rbatch);
+#ifdef DEBUG
+        std::stringstream out ;
+        out << "PROC : " << params.m_rank  << " "
+            << rbatch.readsOffset.size() << " " << lastRead << " QS: "
+            << rbatch.qualsOffset.size() << std::endl;
+        std::cout << out.str();
+#endif
+        assert(rbatch.readsOffset.size() == rbatch.qualsOffset.size());
+
+        kmerSpectrumBatch<KmerType>(rbatch, ecdata, kLength, qFlag);
+
+        rbatch.reset();
+        if(lastRead) break;
+    }
+}
+
+void local_kmer_spectrum(ECData& ecdata){
+    const Para& params = ecdata.getParams();
+
+    if(params.storeReads) {
+        // reads are already collected and stored
+        kmerSpectrumBatch<kmer_id_t>(ecdata.m_reads, ecdata,
+                                    params.K, false);
+    } else {
+        // process reads from input file
+        kmerSpectrumFile<kmer_id_t>(ecdata, params.K, false);
+    }
+}
+
+void local_tile_spectrum(ECData& ecdata){
+    const Para& params = ecdata.getParams();
+
+    if(params.storeReads) {
+        // reads are already collected and stored
+        kmerSpectrumBatch<tile_id_t>(ecdata.m_reads, ecdata,
+                                    params.tileLength, true);
+    } else {
+        // process reads from input file
+        kmerSpectrumFile<tile_id_t>(ecdata, params.tileLength, true);
     }
 }

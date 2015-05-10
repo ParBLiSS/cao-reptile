@@ -150,6 +150,10 @@ class ECData {
     friend void sort_kmers(ECData& ecdata);
     friend void count_kmers(ECData& ecdata);
     friend void gather_spectrum(ECData& ecdata);
+    friend void local_tile_spectrum(ECData& ecdata);
+    friend void local_kmer_spectrum(ECData& ecdata);
+    friend void dist_kmer_spectrum(ECData& ecdata);
+    friend void dist_tile_spectrum(ECData& ecdata);
 
     Para& getParams(){return m_params;}
 
@@ -182,8 +186,12 @@ class ECData {
     void replaceTileArray(tile_t *newTileArray,int newTileCount,
                           int newTileSize);
 
-    void mergeBatchKmers();
+    void mergeBatch();
+    void mergeBatch(kmer_id_t &tmp);
+    void mergeBatch(tile_id_t &tmp);
     void setBatchStart();
+    void setBatchStart(kmer_id_t &tmp);
+    void setBatchStart(tile_id_t &tmp);
     void buildCacheOptimizedLayout();
     void estimateByteCounters();
     void runCAStats(std::ostream& ots);
