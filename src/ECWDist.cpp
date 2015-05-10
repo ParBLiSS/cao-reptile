@@ -44,12 +44,12 @@ struct UnitEC{
 
 // Load a batch of reads starting from offset
 struct ReadBatchLoader{
-    void operator()(const ECImpl& ecr, unsigned long woffStart,
+    bool operator()(const ECImpl& ecr, unsigned long woffStart,
                      unsigned long woffEnd, ReadStore& tmp){
         // std::cout << "C" ;
         std::ifstream fin(ecr.getPara().iFaName);
         fin.seekg(woffStart);
-        readBatch(&fin, std::numeric_limits<int>::max(), woffEnd, tmp);
+        return readBatch(&fin, std::numeric_limits<int>::max(), woffEnd, tmp);
     }
 };
 

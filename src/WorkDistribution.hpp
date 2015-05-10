@@ -200,8 +200,9 @@ class WorkDistribution{
             SizeType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
             threadOffset += (tid + 1) * workChunk;
 
-            load_work(payLoads[tid + 1], threadOffset,
-                      threadOffset + workChunk, work);
+            bool initLoad = load_work(payLoads[tid + 1], threadOffset,
+                                      threadOffset + workChunk, work);
+            assert(initLoad == true);
             wrkQueue.push(work);
             // start thread
             workers.push_back(std::thread(worker_thread, tid, mpiRank,
@@ -256,8 +257,8 @@ class WorkDistribution{
 
         for(auto ait = wrkOffsets.begin(); ait != last; ait++){
             WorkItemType tmp;
-            load_work(payLoads[0], *ait, (*ait) + workChunk, tmp);
-            wrkQueue.push(tmp);
+            if(load_work(payLoads[0], *ait, (*ait) + workChunk, tmp))
+              wrkQueue.push(tmp);
         }
         //std::cout << wrkOffsets.back();
 
@@ -394,8 +395,9 @@ class WorkDistribution{
     void loadCoordWork(){
         SizeType startOffset = mpiRank * (numWorkers + 1) * workChunk;
         // std::cout << mpiRank << " " << startOffset << std::endl;
-        load_work(payLoads[0], startOffset,
-                  startOffset + workChunk, crdWork);
+        bool cwork = load_work(payLoads[0], startOffset,
+                               startOffset + workChunk, crdWork);
+        assert(cwork == true);
     }
 
     // Inital work allocation

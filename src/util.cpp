@@ -291,6 +291,14 @@ bool readFastqRecord(std::ifstream* fqfs,
   return true;
 }
 
+bool isAlphabet(const char& x){
+  return (x == 'A' || x == 'a' ||
+          x == 'G' || x == 'g' ||
+          x == 'C' || x == 'c' ||
+          x == 'T' || x == 't' ||
+          x == 'N' || x == 'n');
+}
+
 bool readFirstFastqRecord(std::ifstream* fqfs,
                           std::string fRecord[4])
 {
@@ -310,15 +318,15 @@ bool readFirstFastqRecord(std::ifstream* fqfs,
 
   int sdelta = 4, sread = 4;
   // unless, the record is good, we can't turst the first line's first char
-  if(fRecord[2][0] == '+' && fRecord[0][0] == '@'){
+  if(fRecord[2][0] == '+' && isAlphabet(fRecord[1][0]) && fRecord[0][0] == '@'){
     return true; // record is good!
-  } else if(fRecord[1][0] == '@' && fRecord[3][0] == '+'){
+  } else if(fRecord[1][0] == '@' && isAlphabet(fRecord[2][0]) && fRecord[3][0] == '+'){
     sdelta = 1; sread = 3; // have three lines of a 'good' record
-  } else if(fRecord[2][0] == '@') {
+  } else if(fRecord[2][0] == '@' && isAlphabet(fRecord[3][0])) {
     sdelta = 2; sread = 2; // have two lines of a 'good' record
   } else if (fRecord[1][0] == '+' && fRecord[3][0] == '@'){
     sdelta = 3; sread = 1; // have only one line of a 'good' record
-  } else if(fRecord[2][0] == '+'){
+  } else if(fRecord[2][0] == '+' && isAlphabet(fRecord[1][0])){
     sdelta = 4; sread = 0; // have zero lines of a 'good' record
   } else {
     return false; // bad record!

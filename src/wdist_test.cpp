@@ -31,9 +31,10 @@ void swap(WInt& x, WInt& y){
 }
 
 struct WIntLoader{
-    void operator()(const int& , int woffStart, int, WInt& tmp){
+    bool operator()(const int& , int woffStart, int, WInt& tmp){
         tmp.value = woffStart;
         //std::cout << "L" ;
+        return true;
     }
 };
 
