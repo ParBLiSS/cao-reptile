@@ -127,31 +127,83 @@ void ec_thread(int tid, int nthreads, const ReadStore& rbatch, ECImpl& ecr)
   }
 }
 
-void ECDriver::correctBatchMT(const ReadStore& rbatch) {
-    std::vector<std::thread> tvx(inPara_.numThreads);
-    std::vector<ECImpl> threadEC(inPara_.numThreads,
-                                 ECImpl(ecdata_, inPara_));
-
+void ECDriver::startThreads(std::vector<std::thread>& tvx,
+                            std::vector<ECImpl>& threadEC,
+                            const ReadStore& rbatch){
     //Launch a group of threads
     for (int i = 0; i < inPara_.numThreads; ++i) {
         tvx[i] = std::thread(ec_thread, i, inPara_.numThreads,
                              std::cref(rbatch),
                              std::ref(threadEC[i]));
     }
+}
 
-    //std::cout << "Launched from the main" << std::endl;
-
-    //Join the threads with the main thread
+void ECDriver::joinThreads(std::vector<std::thread>& tvx){
     for (int i = 0; i < inPara_.numThreads; ++i)
         tvx[i].join();
+}
 
-    // output is written serially
+void ECDriver::writeErrors(std::vector<ECImpl>& threadEC){
     for (int i = 0; i < inPara_.numThreads; ++i)
         if(oHandle_.good())
             threadEC[i].writeErrors(oHandle_);
 }
 
+void ECDriver::correctBatchMT(const ReadStore& rbatch) {
+    std::vector<std::thread> tvx(inPara_.numThreads);
+    std::vector<ECImpl> threadEC(inPara_.numThreads,
+                                 ECImpl(ecdata_, inPara_));
+
+    startThreads(tvx, threadEC, rbatch);
+    //std::cout << "Launched from the main" << std::endl;
+
+    //Join the threads with the main thread
+    joinThreads(tvx);
+    // output is written serially
+    writeErrors(threadEC);
+}
+
 void ECDriver::correctReadsFromFile() {
+  if(inPara_.numThreads > 1){
+      correctReadsFromFileMT();
+  } else {
+      correctReadsFromFileST();
+  }
+}
+
+void ECDriver::correctReadsFromFileMT(){
+    std::ifstream read_stream(inPara_.iFaName.c_str());
+    assert(read_stream.good() == true);
+
+    read_stream.seekg(inPara_.offsetStart, std::ios::beg);
+    std::vector<std::thread> tvx(inPara_.numThreads);
+    std::vector<ECImpl> threadEC(inPara_.numThreads,
+                                 ECImpl(ecdata_, inPara_));
+
+    ReadStore rbatch[2];
+    int cbatch = 0;
+    bool lastRead = false;
+    // load first batch
+    while(lastRead == false){
+        // start threads
+        startThreads(tvx, threadEC, rbatch[cbatch]);
+        // load the next set of reads ?
+        int nbatch = (cbatch + 1) % 2;
+        rbatch[nbatch].reset();
+        lastRead = readBatch(&read_stream, inPara_.batchSize,
+                             inPara_.offsetEnd, rbatch[nbatch]);
+        // join threads
+        joinThreads(tvx);
+        cbatch = nbatch;
+    }
+    // last batch
+    startThreads(tvx, threadEC, rbatch[cbatch]);
+    joinThreads(tvx);
+    // output is written serially
+    writeErrors(threadEC);
+}
+
+void ECDriver::correctReadsFromFileST() {
     std::ifstream read_stream(inPara_.iFaName.c_str());
     assert(read_stream.good() == true);
 

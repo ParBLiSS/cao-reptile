@@ -214,6 +214,8 @@ class ECData {
     void writeSpectrum() const;
 
     void loadSpectrum();
+    void writeKmerDistSpectrum() const;
+    void writeTileDistSpectrum() const;
     void writeDistSpectrum() const;
 
     ECData(Para& p);

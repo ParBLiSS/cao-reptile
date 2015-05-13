@@ -34,6 +34,10 @@
 
 #include <fstream>
 #include <string>
+#include <vector>
+#include <thread>
+
+class ECImpl;
 
 class ECDriver {
 public:
@@ -56,6 +60,18 @@ private:
     void correctBatchMT(const ReadStore& rbatch);
 
     void correctReadsFromFile();
+
+    void correctReadsFromFileMT();
+
+    void correctReadsFromFileST();
+
+    void joinThreads(std::vector<std::thread>& tvx);
+
+    void startThreads(std::vector<std::thread>& tvx,
+                      std::vector<ECImpl>& threadEC,
+                      const ReadStore& rbatch);
+
+    void writeErrors(std::vector<ECImpl>& threadEC);
 
     void ecStatic();
 

@@ -400,18 +400,30 @@ void ECData::replaceTileArray(tile_t *newTileArray,int newTileCount,
     m_tilesize = newTileSize;
 }
 
-void ECData::writeDistSpectrum() const{
-    if(m_kcount == 0 || m_tilecount == 0)
+void ECData::writeKmerDistSpectrum() const{
+    if(m_kcount == 0)
         return;
     std::ofstream kFile (m_params.kmerSpectrumOutFile.c_str(),
                          std::ofstream::binary);
+    kFile.write((char*)m_karray, sizeof(kmer_t)*m_kcount);
+    kFile.close();
+}
+
+void ECData::writeTileDistSpectrum() const{
+    if(m_tilecount == 0)
+        return;
     std::ofstream tFile (m_params.tileSpectrumOutFile.c_str(),
                          std::ofstream::binary);
-    kFile.write((char*)m_karray, sizeof(kmer_t)*m_kcount);
     tFile.write((char*)m_tilearray, sizeof(tile_t)*m_tilecount);
 
-    kFile.close();
     tFile.close();
+}
+
+void ECData::writeDistSpectrum() const{
+    if(m_kcount == 0 || m_tilecount == 0)
+        return;
+    writeKmerDistSpectrum();
+    writeTileDistSpectrum();
 }
 
 void ECData::loadSpectrum(){
