@@ -157,8 +157,8 @@ class ECData {
 
     Para& getParams(){return m_params;}
 
-    int getKmerCount() const{return m_kcount;}
-    int getTileCount() const{return m_tilecount;}
+    long getKmerCount() const{return m_kcount;}
+    long getTileCount() const{return m_tilecount;}
     const kmer_t& getKmerAt(int j) const{return m_karray[j];}
     const cvec_t& getReads() const{return m_reads.readsString;}
     const cvec_t& getQuals() const{return m_reads.qualsString;}
@@ -202,11 +202,11 @@ class ECData {
     bool findKmerCacheAware(const kmer_id_t &kmerID) const;
     bool findKmerCacheOblivious(const kmer_id_t &kmerID) const;
 
-    int findTile(const tile_id_t &tileID,kc_t& output) const;
-    int findTileFlat(const tile_id_t &tileID,kc_t& output) const;
-    int findTileDefault(const tile_id_t &tileID,kc_t& output) const;
-    int findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
-    int findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
+    long findTile(const tile_id_t &tileID,kc_t& output) const;
+    long findTileFlat(const tile_id_t &tileID,kc_t& output) const;
+    long findTileDefault(const tile_id_t &tileID,kc_t& output) const;
+    long findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
+    long findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
 
     void printByteCounters(std::ostream& ots) const;
     void printKArray() const;

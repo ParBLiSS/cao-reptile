@@ -109,11 +109,10 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
   if(m_karray == 0){
     return false;
   }
-  bool final = false;
-  int lb = 0, ub = m_kcount  - 1, mid;
 #ifdef QUERY_COUNTS
+  bool final = false;
+  long lb = 0, ub = m_kcount  - 1, mid;
   int nlevels = 0;
-#endif
 
   while (lb <= ub) {
       mid = (lb + ub) / 2;
@@ -125,14 +124,14 @@ bool ECData::findKmerDefault(const kmer_id_t &kmerID) const{
           lb = mid + 1;
       else if (m_karray[mid].ID > kmerID)
           ub = mid - 1;
-#ifdef QUERY_COUNTS
       nlevels += 1;
-#endif
   }
-  //kmer_t searchKmer;
-  //searchKmer.ID = kmerID;
-  //bool final = std::binary_search(m_karray,m_karray + m_kcount,
-  //                                searchKmer, KmerComp());
+#else
+  kmer_t searchKmer;
+  searchKmer.ID = kmerID;
+  bool final = std::binary_search(m_karray, m_karray + m_kcount,
+                                  searchKmer, KmerComp());
+#endif
 
 #ifdef QUERY_COUNTS
   if(final){
@@ -203,9 +202,9 @@ bool ECData::findKmer(const kmer_id_t &kmerID) const{
     }
 }
 
-int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
-  int lb = 0, ub = m_tilecount - 1, mid;
-  int final = -1;
+long ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
+  long final = -1;
+  long lb = 0, ub = m_tilecount - 1, mid;
 #ifdef QUERY_COUNTS
   int nlevels = 0;
 #endif
@@ -241,7 +240,7 @@ int ECData::findTileDefault(const tile_id_t &tileID,kc_t& output) const{
 }
 
 
-int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) const{
+long ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     int final = m_tileFlatLayout.getCount(tileID, count);
     if( final != -1 ) {
@@ -252,9 +251,9 @@ int ECData::findTileFlat(const tile_id_t &tileID,kc_t& output) const{
     return final;
 }
 
-int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
+long ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
-    int final = m_tileCALayout.getCount(tileID, count);
+    long final = m_tileCALayout.getCount(tileID, count);
 
     if( final != -1 ) {
         output.ID = tileID;
@@ -265,9 +264,9 @@ int ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
     return final;
 }
 
-int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
+long ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
-    int final = m_tileCOLayout.getCount(tileID, count);
+    long final = m_tileCOLayout.getCount(tileID, count);
     if( final != -1 ) {
         output.ID = tileID;
         output.goodCnt = output.cnt = count;
@@ -277,7 +276,7 @@ int ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
     return final;
 }
 
-int ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
+long ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
    switch(m_params.cacheOptimizedSearch){
         case 1:
             return findTileCacheAware(tileID, output);
@@ -433,7 +432,7 @@ void ECData::loadSpectrum(){
                            std::ifstream::binary);
     if(kFile){
         kFile.seekg(0, kFile.end);
-        unsigned fLength = kFile.tellg();
+        unsigned long fLength = kFile.tellg();
         kFile.seekg(0, kFile.beg);
         if(m_kcount > 0)
             free(m_karray);
@@ -445,10 +444,11 @@ void ECData::loadSpectrum(){
     }
     if(tileFile){
         tileFile.seekg(0, tileFile.end);
-        unsigned fLength = tileFile.tellg();
+        unsigned long fLength = tileFile.tellg();
         tileFile.seekg(0, tileFile.beg);
         if(m_tilecount > 0)
             free(m_tilearray);
+
         m_tilecount = fLength / sizeof(tile_t);
         m_tilearray = (tile_t*) malloc(sizeof(tile_t) * m_tilecount);
         tileFile.read((char*) m_tilearray,  sizeof(tile_t) * m_tilecount);

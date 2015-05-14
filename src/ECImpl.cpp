@@ -289,7 +289,7 @@ void ECImpl::tiling(kcvec_t& tiles, const uvec_t& N1,
         exit(1);
     }
     kc_t output;
-    int idx = ecdata_.findTile(reptile,output);
+    long idx = ecdata_.findTile(reptile,output);
     if (idx != -1) {
         tiles.push_back(output);
     }

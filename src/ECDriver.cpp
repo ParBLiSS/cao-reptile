@@ -173,9 +173,6 @@ void ECDriver::correctReadsFromFile() {
 
 void ECDriver::correctReadsFromFileMT(){
     std::ifstream read_stream(inPara_.iFaName.c_str());
-    assert(read_stream.good() == true);
-
-    read_stream.seekg(inPara_.offsetStart, std::ios::beg);
     std::vector<std::thread> tvx(inPara_.numThreads);
     std::vector<ECImpl> threadEC(inPara_.numThreads,
                                  ECImpl(ecdata_, inPara_));
@@ -183,12 +180,17 @@ void ECDriver::correctReadsFromFileMT(){
     ReadStore rbatch[2];
     int cbatch = 0;
     bool lastRead = false;
+    assert(read_stream.good() == true);
+    read_stream.seekg(inPara_.offsetStart, std::ios::beg);
     // load first batch
+    lastRead = readBatch(&read_stream, inPara_.batchSize,
+                         inPara_.offsetEnd, rbatch[0]);
     while(lastRead == false){
         // start threads
         startThreads(tvx, threadEC, rbatch[cbatch]);
         // load the next set of reads ?
         int nbatch = (cbatch + 1) % 2;
+
         rbatch[nbatch].reset();
         lastRead = readBatch(&read_stream, inPara_.batchSize,
                              inPara_.offsetEnd, rbatch[nbatch]);

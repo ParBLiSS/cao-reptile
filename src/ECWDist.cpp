@@ -53,7 +53,7 @@ struct ReadBatchLoader{
     }
 };
 
-int getTotalWork(const std::string& fileName){
+long getTotalWork(const std::string& fileName){
     std::ifstream fin(fileName.c_str());
     fin.seekg(0,std::ios::end);
     return fin.tellg();
@@ -61,12 +61,12 @@ int getTotalWork(const std::string& fileName){
 
 void ec_wdist(ECData& ecdata){
     Para& params = ecdata.getParams();
-    unsigned nThreads = (unsigned) params.numThreads;
+    long nThreads = (long) params.numThreads;
     std::vector<ECImpl> threadEC(nThreads + 1,
                                  ECImpl(ecdata, params));
-    unsigned tWork = getTotalWork(params.iFaName);
-    unsigned nWorkers = params.m_size * (params.numThreads + 1);
-    unsigned tChunk = tWork / (nWorkers * params.workFactor);
+    long tWork = getTotalWork(params.iFaName);
+    long nWorkers = params.m_size * (params.numThreads + 1);
+    long tChunk = tWork / (nWorkers * params.workFactor);
 
     if(params.m_rank == 0)
         std::cout << "chunk\t" << tChunk << std::endl;
