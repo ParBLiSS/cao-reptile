@@ -49,7 +49,8 @@ void eliminate_threshold(StructDataType *&array, SizeType &count,
     if(count ==0 || threshold == 0)
         return;
     for(j=0,i=0;i<count;i++){
-        if((int)array[i].count >= threshold) {
+        int cval = (int) (array[i].count);
+        if(cval >= threshold) {
             array[j].ID = array[i].ID;
             array[j].count = array[i].count;
             j++;
@@ -67,8 +68,9 @@ void eliminate_dupes(StructDataType *&array, SizeType &count) {
         if(array[i].ID == array[i-1].ID){
             // Add it to the previous ID. Limit count to UCHAR_MAX
             static int sum;
-            sum = (int) array[j].count + (int) array[i].count;
-            if(sum <= UCHAR_MAX)
+            sum = (int) (array[j].count); 
+            sum += (int) (array[i].count);
+            if(sum <= (int) UCHAR_MAX)
                 array[j].count += array[i].count;
             else
                 array[j].count = UCHAR_MAX;
@@ -102,7 +104,8 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     std::stringstream out1;
     out1 << std::setw(5) << rank << " "
          << std::setw(15) << kcount << " "
-         << std::setw(15) << ksize << std::endl;
+         << std::setw(15) << ksize << " "
+         << std::setw(5) << (kcount > (long)size) << std::endl;
     //for(i=0;i<kcount; i++)
     //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
     std::cout << out1.str();
@@ -110,8 +113,9 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
 #endif
 
     // load balancing code must appear here.
-    //load_balance2(karray,kcount,ksize,mpi_struct_type,
-    //              size,rank);
+    load_balance2<StructDataType, SizeType>(karray,kcount,ksize,
+                                            mpi_struct_type,
+                                            size,rank);
     // sorting of the local k-mers after load balnce
     std::sort(karray, karray + kcount, structComparator);
 
@@ -123,7 +127,8 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     std::stringstream out;
     out << std::setw(5) << rank << " "
         << std::setw(15) << kcount << " "
-        << std::setw(15) << ksize << std::endl;
+        << std::setw(15) << ksize << " " 
+        << std::setw(5) << (kcount > (long)size) << std::endl;
     //for(i=0;i<kcount; i++)
     //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
     std::cout << out.str();
@@ -191,9 +196,9 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-    long snd_max = std::numeric_limits<int>::max();
+    long int_max = std::numeric_limits<int>::max();
     for(j = 0;j < size; j++){
-        assert(lsendcts[j] < snd_max);
+        assert(lsendcts[j] < int_max);
         sendcts[j] = (int)lsendcts[j];
     }
     // Do an all-to-all to get how much I,rank, will recieve from every one
@@ -216,11 +221,23 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     }
 
     // a new local
-    int NewlocalCount = 0;
+    SizeType NewlocalCount = 0;
     for(i=0;i<size;i++)
         NewlocalCount += recvcts[i];
+    assert(NewlocalCount <= int_max);
 
-    StructDataType *Newlocal = // new StructDataType[NewlocalCount];
+#ifdef DEBUG
+    std::stringstream outx;
+    outx << std::setw(5) << rank << " "
+         << std::setw(15) << NewlocalCount << " "
+         << std::endl;
+    //for(i=0;i<kcount; i++)
+    //    out << karray[i].ID <<"\t"<< karray[i].count<<"\n";
+    std::cout << outx.str();
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+    StructDataType *Newlocal = 
         (StructDataType*) malloc (NewlocalCount * sizeof(StructDataType));
     MPI_Alltoallv(karray,sendcts,senddisp,mpi_struct_type,
                   Newlocal,recvcts,recvdisp,mpi_struct_type,MPI_COMM_WORLD);
@@ -230,7 +247,7 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     free(karray); kcount = ksize = 0;
     ksize = NewlocalCount;
 
-    // if not using map-reduce, eliminate dupes and update count
+    // eliminate dupes and update count
     eliminate_dupes(Newlocal,NewlocalCount);
 
 #ifdef DEBUG
@@ -249,32 +266,34 @@ void sort_kmers(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
     eliminate_threshold(Newlocal,NewlocalCount,threshold);
 
     NoofElements = 0;
-    //for(i=0;i<size;i++)
-    //  sendcts[i] = NewlocalCount;
-    // Print for debugging
-    MPI_Allgather (&NewlocalCount, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
+    int nlocal = NewlocalCount;
+    // Gather for absent kmers
+    MPI_Allgather (&nlocal, 1 , MPI_INT,recvcts, 1 , MPI_INT, MPI_COMM_WORLD);
     NoofElements = recvcts[0];
     for(i=1;i<size;i++){
         NoofElements += recvcts[i];
     }
-#ifdef DEBUG
+#ifndef DEBUG
     if (rank == 0) {
         std::stringstream out12;
-        out12 << "PROC : " << rank << " TOTAL BEFORE ABSENT IDS "
-              << NoofElements << std::endl;
+        out12 << "raw count\t" << NoofElements << std::endl;
         std::cout << out12.str();
     }
 #endif
     StructDataType *AbsentIDs = 0;
+    SizeType s_unit = 1;
     if( absentKmers &&
-        NoofElements > (1 << (2*kvalue-1))) {
+        NoofElements > (s_unit << (2 * kvalue - 1))) {
+        KeyDataType kmax = 1;
+        kmax = (sizeof(KeyDataType) * 8 == 2 * (unsigned) kvalue) ?
+           std::numeric_limits<KeyDataType>::max() : (kmax << (2 * kvalue));
         KeyDataType si = (rank == 0) ? 0 : GlobalSplitter[rank-1]; j = 0;
-        KeyDataType end = (rank == size-1) ? (1 << 2*kvalue) : GlobalSplitter[rank];
+        KeyDataType end = (rank == size-1) ? kmax : GlobalSplitter[rank];
         KeyDataType absent_size = end - si - NewlocalCount;
         if(absent_size > 0) {
-            AbsentIDs = //new StructDataType[absent_size];
+            AbsentIDs = 
                 (StructDataType*) malloc (absent_size * sizeof(StructDataType));
-            int k = 0;
+            SizeType k = 0;
             for(;si < end;si++){
                 if(j < NewlocalCount && Newlocal[j].ID == si) {
                     j++;

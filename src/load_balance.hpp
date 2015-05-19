@@ -288,19 +288,23 @@ void load_balance2(StructDataType *&karray, SizeType &kcount, SizeType &ksize,
                   pcount, 1 , get_mpi_dt<SizeType>(), MPI_COMM_WORLD);
 
     bool lBalanceReqd = false;
+    int ifail = -1;
     for (i=0;i<size;i++) {
-        if(pcount[i] < size) {
+       if(pcount[i] < (SizeType)size) {
             lBalanceReqd = true;
+            ifail = i;
             break;
         }
     }
+    if (rank == 0) {
+      if(!lBalanceReqd){
+        std::cout << "load balancing\tNo" << std::endl;
+      } else {
+        std::cout << "load balancing\tYes\t" << ifail << std::endl;
+      }
+      std::cout.flush();
+    }
     if(!lBalanceReqd) {
-        if (rank == 0) {
-            std::cout << "load balancing\tNo" << std::endl;
-        } else {
-            std::cout << "load balancing\tYes " << std::endl;
-        }
-        std::cout.flush();
         return;
     }
     // Count the total number of elements

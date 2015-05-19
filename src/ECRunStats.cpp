@@ -146,12 +146,12 @@ void ECRunStats::updateFileReadTime(std::ostream&){
 }
 
 void ECRunStats::updateDistSpectrumTime(ECData& ecdata, std::ostream& ofs){
-    unsigned kcount = ecdata.getKmerCount();
-    unsigned tilecount = ecdata.getTileCount();
-    unsigned tmp = kcount;
-    MPI_Reduce( &tmp, &kcount, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+    long kcount = ecdata.getKmerCount();
+    long tilecount = ecdata.getTileCount();
+    long tmp = kcount;
+    MPI_Reduce( &tmp, &kcount, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD );
     tmp = tilecount;
-    MPI_Reduce( &tmp, &tilecount, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce( &tmp, &tilecount, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD );
 
     if(ecdata.getParams().m_rank != 0)
       return;

@@ -419,8 +419,6 @@ void ECData::writeTileDistSpectrum() const{
 }
 
 void ECData::writeDistSpectrum() const{
-    if(m_kcount == 0 || m_tilecount == 0)
-        return;
     writeKmerDistSpectrum();
     writeTileDistSpectrum();
 }

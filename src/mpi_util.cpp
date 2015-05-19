@@ -26,7 +26,7 @@ MPI_Datatype get_mpi_dt<unsigned>(){
 
 template <>
 MPI_Datatype get_mpi_dt<long>(){
-    return MPI_UNSIGNED;
+    return MPI_LONG;
 }
 
 template <>
