@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstdint>
 #include <fstream>
+#include <thread>
 
 #include "aligned_allocator.hpp"
 #include "cao_util.h"
@@ -194,12 +195,12 @@ class ECDataCALayout{
         return n;
     }
 
-public:
-    typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
-        typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::const_iterator id_const_iterator;
     std::vector< IdType, aligned_allocator<IdType, 64> > mIds;
     std::vector<CountType, aligned_allocator<CountType, 64> > mCounts;
     int mDegree;
+public:
+    typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
+    typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::const_iterator id_const_iterator;
     ECDataCALayout(){};
     void init(RandomIterator intr,
               size_type nTotal, int kSize){
@@ -215,7 +216,7 @@ public:
     ECDataCALayout(RandomIterator intr,
                  size_type nTotal,
                  int kSize){
-        init_layout(intr, nTotal, kSize);
+        init(intr, nTotal, kSize);
     };
 
     bool find(const IdType &rID) const{
@@ -277,5 +278,72 @@ public:
     }
 };
 
+template <typename RandomIterator,
+          typename IdType,
+          typename CountType>
+void init_layout_thread(RandomIterator bitr, size_type nTotal, int kSize,
+                        ECDataCALayout<RandomIterator, IdType, CountType>& cLayout){
+    cLayout.init(bitr, nTotal, kSize);
+}
+
+template <typename RandomIterator,
+          typename IdType,
+          typename CountType>
+class ParECDataCALayout{
+    std::vector< ECDataCALayout<RandomIterator, IdType, CountType> > pLayouts;
+    std::vector<IdType> idBounds;
+
+    unsigned getBoundIdx(const IdType &rID) const{
+        unsigned i = 1;
+        for(;i < idBounds.size();i++)
+            if(rID < idBounds[i])
+                break;
+        return i - 1;
+    };
+
+public:
+    void init(RandomIterator intr, size_type nTotal, int kSize, int nThreads){
+        // construct nthreads
+        assert(nTotal > 0);
+        assert(nThreads > 0);
+        assert(nTotal % (kSize * nThreads) == 0);
+        std::vector<std::thread> initThreads;
+        size_type ntSize = nTotal / nThreads;
+        pLayouts.resize(nThreads);
+        idBounds.resize(nThreads);
+        initThreads.resize(nThreads);
+        for(int i = 0; i < nThreads; i++){
+            idBounds[i] = (intr + ntSize * i)->ID;
+            initThreads[i] =
+                std::thread(init_layout_thread<RandomIterator,
+                                               IdType, CountType>,
+                            intr + ntSize * i, ntSize, kSize,
+                            std::ref(pLayouts[i]));
+        }
+        for(int i = 0; i < nThreads;i++)
+            initThreads[i].join();
+    };
+
+    ParECDataCALayout(){};
+    ParECDataCALayout(RandomIterator intr,
+                      size_type nTotal, int kSize, int nThreads){
+        init(intr, nTotal, kSize, nThreads);
+    };
+
+    bool find(const IdType &rID) const{
+        // search with begin values
+        // pick the appropiate one
+        if(pLayouts.size() == 0)
+            return false;
+        return pLayouts[getBoundIdx(rID)].find(rID);
+    };
+
+    int getCount(const IdType& rID, CountType& count) const{
+        // search with the begin values
+        if(pLayouts.size() == 0)
+            return -1;
+        return pLayouts[getBoundIdx(rID)].getCount(rID, count);
+    };
+};
 
 #endif /* _CAWARE_LAYOUT_H_ */

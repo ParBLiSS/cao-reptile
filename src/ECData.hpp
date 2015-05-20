@@ -106,6 +106,11 @@ class ECData {
     ECDataFlatLayout<tile_t*, tile_id_t,
                      unsigned char> m_tileFlatLayout;
 
+    ParECDataCALayout<kmer_t*, kmer_id_t,
+                      unsigned char> m_kmerParCALayout;
+    ParECDataCALayout<tile_t*, tile_id_t,
+                      unsigned char> m_tileParCALayout;
+
     // I own karray, ksize and kcount. So, Please be nice to them!
     kmer_t *m_karray;
     long m_ksize, m_kcount;
@@ -143,7 +148,8 @@ class ECData {
 
     void buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                const unsigned& tileCacheSize);
-
+    void buildParCacheAwareLayout(const unsigned& kmerCacheSize,
+                                  const unsigned& tileCacheSize);
     void buildCacheObliviousLayout();
     void buildFlatLayout();
   public:
@@ -201,12 +207,14 @@ class ECData {
     bool findKmerFlat(const kmer_id_t &kmerID) const;
     bool findKmerCacheAware(const kmer_id_t &kmerID) const;
     bool findKmerCacheOblivious(const kmer_id_t &kmerID) const;
+    bool findKmerParCacheAware(const kmer_id_t &kmerID) const;
 
     long findTile(const tile_id_t &tileID,kc_t& output) const;
     long findTileFlat(const tile_id_t &tileID,kc_t& output) const;
     long findTileDefault(const tile_id_t &tileID,kc_t& output) const;
     long findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
     long findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
+    long findTileParCacheAware(const tile_id_t &tileID,kc_t& output) const;
 
     void printByteCounters(std::ostream& ots) const;
     void printKArray() const;

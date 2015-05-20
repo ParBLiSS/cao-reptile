@@ -178,6 +178,20 @@ bool ECData::findKmerCacheAware(const kmer_id_t &kmerID) const{
     return final;
 }
 
+bool ECData::findKmerParCacheAware(const kmer_id_t &kmerID) const{
+
+    bool final = m_kmerParCALayout.find(kmerID);
+
+   if(m_params.absentKmers == true)
+       final = !final;
+
+    // std::cout << "Find " << kmerID << " : "
+    //            << (m_params.absentKmers) << " : "
+    //            << final << std::endl;
+    return final;
+}
+
+
 bool ECData::findKmerCacheOblivious(const kmer_id_t &kmerID) const{
     bool final = m_kmerCOLayout.find(kmerID);
    if(m_params.absentKmers == true)
@@ -197,6 +211,8 @@ bool ECData::findKmer(const kmer_id_t &kmerID) const{
             return findKmerCacheOblivious(kmerID);
         case 3:
             return findKmerFlat(kmerID);
+        case 4:
+            return findKmerParCacheAware(kmerID);
         default:
             return findKmerDefault(kmerID);
     }
@@ -264,6 +280,20 @@ long ECData::findTileCacheAware(const tile_id_t &tileID,kc_t& output) const{
     return final;
 }
 
+long ECData::findTileParCacheAware(const tile_id_t &tileID,kc_t& output) const{
+    unsigned char count = 0;
+    long final = m_tileParCALayout.getCount(tileID, count);
+
+    if( final != -1 ) {
+        output.ID = tileID;
+        output.goodCnt = output.cnt = count;
+    }
+    // std::cout << "Find Tile " << tileID << " : "
+    //           << ((final >= 0) ? count : 0) <<  std::endl;
+    return final;
+}
+
+
 long ECData::findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const{
     unsigned char count = 0;
     long final = m_tileCOLayout.getCount(tileID, count);
@@ -284,6 +314,8 @@ long ECData::findTile(const tile_id_t &tileID,kc_t& output) const{
             return findTileCacheOblivious(tileID, output);
         case 3:
             return findTileFlat(tileID, output);
+        case 4:
+            return findTileParCacheAware(tileID, output);
         default:
             return findTileDefault(tileID, output);
     }
@@ -600,13 +632,43 @@ void ECData::padTileArray(unsigned kSize){
     }
 }
 
+void ECData::buildParCacheAwareLayout(const unsigned& kmerCacheSize,
+                                      const unsigned& tileCacheSize){
+    int rank = m_params.m_rank;
+    if(rank == 0) {
+       std::stringstream out;
+       out << "Build Parallel Kmer Cache Aware Layout : " << m_kcount
+           << " Kmer Cache : " << kmerCacheSize
+           << " Threads : " << m_params.numThreads << std::endl;
+       std::cout << out.str();
+    }
+    padKmerArray(kmerCacheSize * m_params.numThreads);
+    m_kmerParCALayout.init(m_karray, m_kcount, kmerCacheSize,
+                           m_params.numThreads);
+
+    free(m_karray); m_karray = 0; m_kcount = 0;
+
+    if(rank == 0){
+       std::stringstream out;
+       out << "Build Tile Cache Aware Layout : " << m_tilecount
+           << " Tile Cache : " << tileCacheSize
+           << " Threads : " << m_params.numThreads << std::endl;
+       std::cout << out.str();
+    }
+    padTileArray(tileCacheSize * m_params.numThreads);
+    m_tileParCALayout.init(m_tilearray, m_tilecount, tileCacheSize,
+                           m_params.numThreads);
+
+    free(m_tilearray); m_tilearray = 0; m_tilecount = 0;
+}
+
 void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
                                    const unsigned& tileCacheSize){
     int rank = m_params.m_rank;
     if(rank == 0) {
        std::stringstream out;
        out << "Build Kmer Cache Aware Layout : " << m_kcount
-                 << " Kmer Cache : " << kmerCacheSize << std::endl;
+           << " Kmer Cache : " << kmerCacheSize << std::endl;
        std::cout << out.str();
     }
 
@@ -618,7 +680,7 @@ void ECData::buildCacheAwareLayout(const unsigned& kmerCacheSize,
     if(rank == 0){
        std::stringstream out;
        out << "Build Tile Cache Aware Layout : " << m_tilecount
-                 << " Tile Cache : " << tileCacheSize << std::endl;
+           << " Tile Cache : " << tileCacheSize << std::endl;
        std::cout << out.str();
     }
 
@@ -687,6 +749,9 @@ void ECData::buildCacheOptimizedLayout(){
        case 3:
            buildFlatLayout();
            break;
+       case 4:
+           buildParCacheAwareLayout(m_params.kmerCacheSize,
+                                    m_params.tileCacheSize);
        default:
            break;
    }

@@ -96,7 +96,9 @@ WriteOutput     1
 #   cache oblivious layout "kmer" is used for k-spectrum search
 # If CacheOptimizedSearch == 3,
 #   sorted layout "kmer" list is used for k-spectrum search
-CacheOptimizedSearch      0
+# If CacheOptimizedSearch == 4,
+#   parallel cache aware layout list of "kmer" is used for k-spectrum search
+CacheOptimizedSearch      4
 # KmerCacheSize and TileCacheSize are paramters used for cache
 # aware layout
 KmerCacheSize      4
@@ -108,7 +110,7 @@ WriteSpectrum      0
 # RunType 0 : construct spectrum and run error correction
 # RunType 1 : run only distributed spectrum construction
 # RunType 2 : run only error correction
-RunType            1
+RunType            0
 #
 # Kmer spectrum input file (when RunType is 2)
 #
