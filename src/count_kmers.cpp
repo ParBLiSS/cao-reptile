@@ -240,28 +240,28 @@ void kmerSpectrumFile(ECData& ecdata, int kLength, bool qFlag){
     }
 }
 
-void local_kmer_spectrum(ECData& ecdata){
+void local_kmer_spectrum(ECData& ecdata, bool qFlag = false){
     const Para& params = ecdata.getParams();
 
     if(params.storeReads) {
         // reads are already collected and stored
         kmerSpectrumBatch<kmer_id_t>(ecdata.m_reads, ecdata,
-                                    params.K, false);
+                                     params.K, qFlag);
     } else {
         // process reads from input file
-        kmerSpectrumFile<kmer_id_t>(ecdata, params.K, false);
+        kmerSpectrumFile<kmer_id_t>(ecdata, params.K, qFlag);
     }
 }
 
-void local_tile_spectrum(ECData& ecdata){
+void local_tile_spectrum(ECData& ecdata, bool qFlag = true){
     const Para& params = ecdata.getParams();
 
     if(params.storeReads) {
         // reads are already collected and stored
         kmerSpectrumBatch<tile_id_t>(ecdata.m_reads, ecdata,
-                                     params.tileLength, true);
+                                     params.tileLength, qFlag);
     } else {
         // process reads from input file
-        kmerSpectrumFile<tile_id_t>(ecdata, params.tileLength, true);
+        kmerSpectrumFile<tile_id_t>(ecdata, params.tileLength, qFlag);
     }
 }

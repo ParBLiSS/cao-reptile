@@ -156,8 +156,8 @@ class ECData {
     friend void sort_kmers(ECData& ecdata);
     friend void count_kmers(ECData& ecdata);
     friend void gather_spectrum(ECData& ecdata);
-    friend void local_tile_spectrum(ECData& ecdata);
-    friend void local_kmer_spectrum(ECData& ecdata);
+    friend void local_tile_spectrum(ECData& ecdata, bool qFlag);
+    friend void local_kmer_spectrum(ECData& ecdata, bool qFlag);
     friend void dist_kmer_spectrum(ECData& ecdata);
     friend void dist_tile_spectrum(ECData& ecdata);
 
@@ -225,6 +225,8 @@ class ECData {
     void writeKmerDistSpectrum() const;
     void writeTileDistSpectrum() const;
     void writeDistSpectrum() const;
+
+    void makeTileHistogram(long tileHist[UCHAR_MAX + 1]);
 
     ECData(Para& p);
     virtual ~ECData();

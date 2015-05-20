@@ -109,6 +109,7 @@ public:
 
     Para(const char *configFile);
     bool validate();
+    void print();
 
  private:
     bool validateSpectrumOutput();

@@ -171,6 +171,13 @@ bool Para::validate() {
         absentKmers = kinAbsent;
     }
     if(m_rank == 0) {
+        print();
+    }
+
+    return true;
+}
+
+void Para::print(){
         std::stringstream oss;
         oss << "--" << std::endl
             << "parameter" << "\t" << "value" << std::endl;
@@ -204,8 +211,6 @@ bool Para::validate() {
             << "--\n";
         std::cout << oss.str();
         std::cout.flush();
-    }
-    return true;
 }
 
 void Para::load_parallel_params(){

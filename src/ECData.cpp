@@ -872,3 +872,13 @@ void ECData::runCAStats(std::ostream& ots){
     ots.flush();
 
 }
+
+void ECData::makeTileHistogram(long tileHist[UCHAR_MAX + 1]){
+    for(int i = 0; i < UCHAR_MAX + 1; i++){
+        tileHist[i] = 0;
+    }
+
+    for(long i = 0; i < m_tilecount; i++){
+        tileHist[m_tilearray[i].count] += 1;
+    }
+}
