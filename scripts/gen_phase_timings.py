@@ -1,12 +1,37 @@
 import sys
 
-
+def parse_cfg(rcfg):
+    elts = rcfg.split('h')
+    if(len(elts) != 2):
+        return "\t".join([rcfg, "", "", ""])
+    dset = elts[0].upper()
+    rcfg = elts[1]
+    elts = rcfg.split('r')
+    if(len(elts) != 2):
+        return "\t".join([rcfg, "", "", ""])
+    hdmx = elts[0] 
+    rcfg = elts[1]
+    elts = rcfg.split('w')
+    if(len(elts) != 2):
+        return "\t".join([rcfg, "", "", ""])
+    rtyp = elts[0] 
+    rcfg = elts[1]
+    elts = rcfg.split('t')
+    if(len(elts) != 2):
+        return "\t".join([rcfg, "", "", ""])
+    dist = elts[0] 
+    nthr = elts[1]
+    return "\t".join([dset, hdmx, dist, nthr])
+    
 def timings(fname):
-    felts = fname.split("_")
+    tfname = fname.replace("run_", "").replace("reptile", "").replace("p", "_")
+    felts = tfname.split("_")
+    if(len(felts) <= 3):
+      print fname
     assert(len(felts) > 3)
-    rtyp = felts[1]
-    rcfg = felts[2].replace("reptile", "")
-    rnpc = felts[3]
+    rtyp = felts[0]
+    rcfg = parse_cfg(felts[1])
+    rnpc = felts[2]
     with open(fname) as f:
         ncounter = 0
         tstate = 0
