@@ -437,7 +437,7 @@ void ECImpl::genericUnitNeighbor(uvec_t& myNB, int dPoint){
     std::cout << "OUTPUT : " ;
 #endif
     for (unsigned i = 0; i < nbIDs.size(); ++i) {
-        if ( nbIDs[i] != 0 && ecdata_.findKmerCacheAware(nbIDs[i])){
+        if ( nbIDs[i] != 0 && ecdata_.findKmer(nbIDs[i])){
 #ifdef DEBUG
             std::cout << nbIDs[i] << " " ;
 #endif

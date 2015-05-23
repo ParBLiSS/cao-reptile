@@ -153,6 +153,19 @@ class ECData {
                                   const unsigned& tileCacheSize);
     void buildCacheObliviousLayout();
     void buildFlatLayout();
+
+    bool findKmerDefault(const kmer_id_t &kmerID) const;
+    bool findKmerFlat(const kmer_id_t &kmerID) const;
+    bool findKmerCacheAware(const kmer_id_t &kmerID) const;
+    bool findKmerCacheOblivious(const kmer_id_t &kmerID) const;
+    bool findKmerParCacheAware(const kmer_id_t &kmerID) const;
+
+    long findTileFlat(const tile_id_t &tileID,kc_t& output) const;
+    long findTileDefault(const tile_id_t &tileID,kc_t& output) const;
+    long findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
+    long findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
+    long findTileParCacheAware(const tile_id_t &tileID,kc_t& output) const;
+
   public:
     friend void sort_kmers(ECData& ecdata);
     friend void count_kmers(ECData& ecdata);
@@ -204,18 +217,7 @@ class ECData {
     void runCAStats(std::ostream& ots);
 
     bool findKmer(const kmer_id_t &kmerID) const;
-    bool findKmerDefault(const kmer_id_t &kmerID) const;
-    bool findKmerFlat(const kmer_id_t &kmerID) const;
-    bool findKmerCacheAware(const kmer_id_t &kmerID) const;
-    bool findKmerCacheOblivious(const kmer_id_t &kmerID) const;
-    bool findKmerParCacheAware(const kmer_id_t &kmerID) const;
-
     long findTile(const tile_id_t &tileID,kc_t& output) const;
-    long findTileFlat(const tile_id_t &tileID,kc_t& output) const;
-    long findTileDefault(const tile_id_t &tileID,kc_t& output) const;
-    long findTileCacheAware(const tile_id_t &tileID,kc_t& output) const;
-    long findTileCacheOblivious(const tile_id_t &tileID,kc_t& output) const;
-    long findTileParCacheAware(const tile_id_t &tileID,kc_t& output) const;
 
     void printByteCounters(std::ostream& ots) const;
     void printKArray() const;
