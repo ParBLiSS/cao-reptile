@@ -36,12 +36,11 @@ script_format = """#!/bin/bash
 #PBS  -o %s_d%sh%dr%dw%dt%dp%d_out.log
 #PBS  -e %s_d%sh%dr%dw%dt%dp%d_err.log
 #PBS -lnodes=%d:ppn=%d:compute,walltime=4:00:00
-#PBS -lpmem=125gb
 # Change to directory from which qsub command was issued
 cd $PBS_O_WORKDIR
-mpirun -np %d /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
-mpirun -np %d /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
-mpirun -np %d /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
+mpirun -np %d -f $PBS_NODEFILE -rr /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
+mpirun -np %d -f $PBS_NODEFILE -rr /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
+mpirun -np %d -f $PBS_NODEFILE -rr /work/alurugroup/jnk/cao-runs/cao-reptile/src/cao-preptile  /work/alurugroup/jnk/cao-runs/d%sruns/%s_d%sh%dr%dw%dt%dp%d.txt
 
 """
 
@@ -63,7 +62,7 @@ def gen_script(pref, dx, hd, rt, wd):
     sprocs = [  8,  16, 32,  64, 80]
     snodes = [  8,  16, 32,  64, 80]
     for pr,nd in zip(sprocs,snodes):
-        ppn = pr/nd
+        ppn = 16
         scx = script_format % (pref, dx, hd, rt, wd, num_threads, pr * num_threads, 
                                pref, dx, hd, rt, wd, num_threads, pr * num_threads, 
                                nd, ppn,
