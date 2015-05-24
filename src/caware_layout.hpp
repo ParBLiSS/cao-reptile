@@ -201,6 +201,8 @@ class ECDataCALayout{
 public:
     typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::iterator id_iterator;
     typedef typename std::vector<IdType, aligned_allocator<IdType, 64> >::const_iterator id_const_iterator;
+    typedef typename std::iterator_traits<id_iterator>::difference_type diff_type;
+
     ECDataCALayout(){};
     void init(RandomIterator intr,
               size_type nTotal, int kSize){
@@ -233,7 +235,7 @@ public:
                                                               mDegree,
                                                               rID);
         if(fpos != mIds.end()) {
-            int dist = fpos - mIds.begin();
+            diff_type dist = fpos - mIds.begin();
             count = mCounts[dist];
             //std::cout << "count " << (int) count << std::endl;
             return dist;
