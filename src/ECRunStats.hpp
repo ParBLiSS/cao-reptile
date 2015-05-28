@@ -12,7 +12,10 @@ struct ECRunStats{
     double read_sync_start, read_sync_stop,
         kmer_sync_start, kmer_sync_stop,
         ec_sync_start, ec_sync_stop;
-    clock_t tstart_read_p, tstop_read_p,
+    // clock_t tstart_read_p, tstop_read_p,
+    //     tstart_kmer_p, tstop_kmer_p,
+    //     tstart_ec_p, tstop_ec_p;
+    timespec tstart_read_p, tstop_read_p,
         tstart_kmer_p, tstop_kmer_p,
         tstart_ec_p, tstop_ec_p;
     // update global timings

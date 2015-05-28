@@ -6,6 +6,13 @@ double elapsed(clock_t& end, clock_t& start){
   return (double (end - start))/ ((double) CLOCKS_PER_SEC);
 }
 
+double elapsed_local(timespec& finish, timespec& start){
+  double tdiff;
+  tdiff = (finish.tv_sec - start.tv_sec);
+  tdiff += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+  return tdiff;
+}
+
 
 ECRunStats::ECRunStats(){
     tstartInit = MPI_Wtime();
@@ -56,19 +63,19 @@ void ECRunStats::reportTimings(Para& params, std::ostream& ofs){
         if(i == params.m_rank){
             std::stringstream oss;
             oss << i << "\t" << "read local" << "\t"
-                << elapsed(tstart_read_p, tstart_read_p) << "\t"
-                << elapsed(tstop_read_p, tstart_read_p) << "\t"
-                << elapsed(tstop_read_p, tstart_read_p)
+                << elapsed_local(tstart_read_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_read_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_read_p, tstart_read_p)
                 << std::endl;
             oss << i << "\t" << "kmer local" << "\t"
-                << elapsed(tstart_kmer_p, tstart_read_p) << "\t"
-                << elapsed(tstop_kmer_p, tstart_read_p) << "\t"
-                << elapsed(tstop_kmer_p, tstart_kmer_p)
+                << elapsed_local(tstart_kmer_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_kmer_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_kmer_p, tstart_kmer_p)
                 << std::endl;
             oss << i << "\t" << "ec local" << "\t"
-                << elapsed(tstart_ec_p, tstart_read_p) << "\t"
-                << elapsed(tstop_ec_p, tstart_read_p) << "\t"
-                << elapsed(tstop_ec_p, tstart_ec_p)
+                << elapsed_local(tstart_ec_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_ec_p, tstart_read_p) << "\t"
+                << elapsed_local(tstop_ec_p, tstart_ec_p)
                 << std::endl;
             ofs << oss.str();
             ofs.flush();

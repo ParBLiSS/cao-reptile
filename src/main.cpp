@@ -34,8 +34,14 @@
 #include "sort_kmers.hpp"
 #include "ECRunStats.hpp"
 
+timespec local_time(){
+  struct timespec tstart;
+  clock_gettime(CLOCK_REALTIME, &tstart);
+  return tstart;
+}
+
 void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = local_time();
 
     // counts the k-mers and loads them in the ECData object
     local_kmer_spectrum(ecdata);
@@ -45,7 +51,7 @@ void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& of
     local_tile_spectrum(ecdata);
     dist_tile_spectrum(ecdata);
 
-    ecstx.tstop_kmer_p = clock();
+    ecstx.tstop_kmer_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
 
@@ -54,11 +60,11 @@ void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& of
 }
 
 void load_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = local_time();
 
     ecdata.loadSpectrum();
 
-    ecstx.tstop_kmer_p = clock();
+    ecstx.tstop_kmer_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
@@ -67,13 +73,13 @@ void load_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 }
 
 void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart_read_p = clock();
+    ecstx.tstart_read_p = local_time();
     // If we have to store the reads, we read and store the reads
     if(ecdata.getParams().storeReads) {
         ecdata.getReadsFromFile();
     }
 
-    ecstx.tstop_read_p = clock();
+    ecstx.tstop_read_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
@@ -82,7 +88,7 @@ void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 }
 
 void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = local_time();
 
     // counts the k-mers and loads them in the ECData object
     count_kmers(ecdata);
@@ -91,7 +97,7 @@ void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     // gather kemers and tiles
     gather_spectrum(ecdata);
 
-    ecstx.tstop_kmer_p = clock();
+    ecstx.tstop_kmer_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
@@ -100,7 +106,7 @@ void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 }
 
 void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart = MPI_Wtime(); ecstx.tstart_ec_p = clock();
+    ecstx.tstart = MPI_Wtime(); ecstx.tstart_ec_p = local_time();
 
     // Cache Optimized layout construction
     ecdata.buildCacheOptimizedLayout();
@@ -109,7 +115,7 @@ void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ECDriver ecdr(ecdata, ecdata.getParams());
     ecdr.ec();
 
-    ecstx.tstop_ec_p = clock();
+    ecstx.tstop_ec_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
@@ -174,9 +180,12 @@ int parallelEC(Para& params){
 }
 
 int main(int argc,char *argv[]){
-
+    int provided;
     try{
-        MPI::Init(argc, argv);
+       //MPI::Init(argc, argv);
+
+       provided = MPI::Init_thread(argc, argv, MPI_THREAD_FUNNELED);
+       assert(provided == MPI_THREAD_FUNNELED);
     } catch(MPI::Exception& ex) {
         if(ex.Get_error_code() != MPI_SUCCESS) {
             std::cout << "Error starting MPI program. Terminating.\n" ;
