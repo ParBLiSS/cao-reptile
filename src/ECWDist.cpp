@@ -53,6 +53,17 @@ struct ReadBatchLoader{
     }
 };
 
+
+struct ReadBatchLoader2{
+    bool operator()(const ECImpl& ecr, unsigned long woffStart,
+                     unsigned long woffEnd, ReadStore& tmp){
+        // std::cout << "C" ;
+        ecr.getECData().loadReads(woffStart, woffEnd, tmp);
+        return (tmp.size() > 0);
+    }
+};
+
+
 long getTotalWork(const std::string& fileName){
     std::ifstream fin(fileName.c_str());
     fin.seekg(0,std::ios::end);
@@ -75,6 +86,32 @@ void ec_wdist(ECData& ecdata){
                      ReadBatchLoader, BatchEC, UnitEC> wdist(tWork, threadEC,
                                                              params.numThreads,
                                                              tChunk);
+    wdist.main();
+    if(ecdata.getParams().writeOutput != 0){
+        std::ofstream ofs(ecdata.getParams().outputFilename.c_str());
+        if(ofs.good()){
+            for(auto eit = threadEC.begin(); eit != threadEC.end(); eit++)
+                eit->writeErrors(ofs);
+        }
+    }
+}
+
+void ec_wdist2(ECData& ecdata){
+    Para& params = ecdata.getParams();
+    long nThreads = (long) params.numThreads;
+    std::vector<ECImpl> threadEC(nThreads + 1,
+                                 ECImpl(ecdata, params));
+    long tWork = ecdata.getFullReads().size();
+    long nWorkers = params.m_size * (params.numThreads + 1);
+    long tChunk = tWork / (nWorkers * params.workFactor);
+
+    if(params.m_rank == 0)
+        std::cout << "chunk\t" << tChunk << std::endl;
+
+    WorkDistribution<ReadStore, unsigned long, ECImpl,
+                     ReadBatchLoader2, BatchEC, UnitEC> wdist(tWork, threadEC,
+                                                              params.numThreads,
+                                                              tChunk);
     wdist.main();
     if(ecdata.getParams().writeOutput != 0){
         std::ofstream ofs(ecdata.getParams().outputFilename.c_str());

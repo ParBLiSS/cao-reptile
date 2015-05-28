@@ -85,6 +85,7 @@ void ECData::registerKmerTypes(){
 // Get the reads corresponding to this processor and
 // store it in ECData object
 bool ECData::getReadsFromFile(){
+    m_reads.reset();
     std::ifstream read_stream(m_params.iFaName.c_str());
     if(!read_stream.good()) {
         std::cout << "open " << m_params.iFaName << "failed :|\n";
@@ -102,6 +103,40 @@ bool ECData::getReadsFromFile(){
       std::cout << "nreads\t" << nsize << std::endl;
     }
     return lastRead;
+}
+
+bool ECData::getAllReads(){
+    m_fullReads.reset();
+    std::ifstream read_stream(m_params.iFaName.c_str());
+    if(!read_stream.good()) {
+        std::cout << "open " << m_params.iFaName << "failed :|\n";
+        exit(1);
+    }
+    read_stream.seekg(0, std::ios::beg);
+    bool lastRead = readBatch(&read_stream, INT_MAX,
+                              m_params.fileSize, m_fullReads);
+    if(m_params.m_rank == 0){
+      std::cout << "nreads\t" << m_fullReads.size() << std::endl;
+    }
+    return lastRead;
+}
+
+bool ECData::loadReads(unsigned long woffStart,
+                      unsigned long woffEnd, ReadStore& rbatch) const{
+    unsigned long rpos = 0, qpos = 0;
+    rbatch.reset();
+    rbatch.readId = (int) woffStart;
+    for(unsigned long i = woffStart; i < woffEnd && i < m_fullReads.size(); i++){
+        int position = m_fullReads.readsOffset[i];
+        int qposition = m_fullReads.qualsOffset[i];
+        char* addr = const_cast<char*> (&(m_fullReads.readsString[position]));
+        char* qAddr = const_cast<char*> (&(m_fullReads.qualsString[qposition]));
+        updateStrStore(std::string(addr), rbatch.readsString,
+                       rbatch.readsOffset, rpos);
+        updateStrStore(std::string(qAddr), rbatch.qualsString,
+                       rbatch.qualsOffset, qpos);
+    }
+    return (woffEnd >= m_fullReads.size());
 }
 
 

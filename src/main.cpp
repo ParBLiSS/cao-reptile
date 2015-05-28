@@ -34,9 +34,22 @@
 #include "sort_kmers.hpp"
 #include "ECRunStats.hpp"
 
+#ifdef __MACH__
+#include <sys/time.h>
+#endif
+
 timespec local_time(){
   struct timespec tstart;
+#ifdef __MACH__
+  struct timeval now;
+  int rv = gettimeofday(&now, NULL);
+  if (!rv) {
+      tstart.tv_sec  = now.tv_sec;
+      tstart.tv_nsec = now.tv_usec * 1000;
+  }
+#else
   clock_gettime(CLOCK_REALTIME, &tstart);
+#endif
   return tstart;
 }
 
@@ -77,6 +90,7 @@ void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     // If we have to store the reads, we read and store the reads
     if(ecdata.getParams().storeReads) {
         ecdata.getReadsFromFile();
+        ecdata.getAllReads();
     }
 
     ecstx.tstop_read_p = local_time();

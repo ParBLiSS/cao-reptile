@@ -26,7 +26,7 @@
  */
 
 #ifndef _UTIL_H
-#define	_UTIL_H
+#define _UTIL_H
 
 #include <iostream>
 #include <fstream>
@@ -237,7 +237,7 @@ inline bool toID(T& ID, char* addr, int len) {
     for (int i = 0; i < len; ++ i){
         int c = char_to_bits(addr[i]);
         if (c == -1) return false;
-	ID  = (ID << 2 | c);
+        ID  = (ID << 2 | c);
     }
     return true;
 }
@@ -286,4 +286,7 @@ bool readBatch(std::ifstream* fqfs, const long& batchSize,
                const unsigned long& offsetEnd,
                ReadStore& rbatch);
 bool goodQuals(const char* qAddr, int len, int threshold);
-#endif	/* _UTIL_H */
+void updateStrStore(const std::string& in_str,
+                    cvec_t &StrStore,ivec_t &Offset,
+                    unsigned long& position);
+#endif /* _UTIL_H */

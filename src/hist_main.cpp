@@ -3,6 +3,25 @@
 #include "ECRunStats.hpp"
 #include "ECData.hpp"
 
+#ifdef __MACH__
+#include <sys/time.h>
+#endif
+
+timespec local_time(){
+  struct timespec tstart;
+#ifdef __MACH__
+  struct timeval now;
+  int rv = gettimeofday(&now, NULL);
+  if (!rv) {
+      tstart.tv_sec  = now.tv_sec;
+      tstart.tv_nsec = now.tv_usec * 1000;
+  }
+#else
+  clock_gettime(CLOCK_REALTIME, &tstart);
+#endif
+  return tstart;
+}
+
 extern "C" void hist_reduce(void* in, void* inout, int* len, MPI_Datatype*) {
     int n = *len;
     long* srcHist = static_cast<long*>(in);
@@ -13,13 +32,13 @@ extern "C" void hist_reduce(void* in, void* inout, int* len, MPI_Datatype*) {
 }
 
 void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
-    ecstx.tstart_read_p = clock();
+    ecstx.tstart_read_p = local_time();
     // If we have to store the reads, we read and store the reads
     if(ecdata.getParams().storeReads) {
         ecdata.getReadsFromFile();
     }
 
-    ecstx.tstop_read_p = clock();
+    ecstx.tstop_read_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
@@ -29,12 +48,12 @@ void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 
 void hist_dist_spectrum(ECData& ecdata, ECRunStats& ecstx,
                         std::ostream& ofs, bool qFlag){
-    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = clock();
+    ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = local_time();
 
     local_tile_spectrum(ecdata, qFlag);
     dist_tile_spectrum(ecdata);
 
-    ecstx.tstop_kmer_p = clock();
+    ecstx.tstop_kmer_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
 

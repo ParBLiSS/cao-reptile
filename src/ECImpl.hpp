@@ -49,6 +49,7 @@ public:
     void writeErrors(std::ostream& oHandle);
     size_t getSize(){ return records_.size(); };
     const Para& getPara() const{ return inPara_; };
+    const ECData& getECData() const{ return ecdata_; };
 };
 
 #endif /* ERRORCORRECTOR_H */
