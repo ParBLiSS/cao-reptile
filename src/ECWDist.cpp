@@ -49,7 +49,8 @@ struct ReadBatchLoader{
         // std::cout << "C" ;
         std::ifstream fin(ecr.getPara().iFaName);
         fin.seekg(woffStart);
-        return readBatch(&fin, std::numeric_limits<int>::max(), woffEnd, tmp);
+        readBatch(&fin, std::numeric_limits<int>::max(), woffEnd, tmp);
+        return (tmp.size() > 0);
     }
 };
 
