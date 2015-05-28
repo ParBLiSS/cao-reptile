@@ -202,7 +202,8 @@ class WorkDistribution{
 
             bool initLoad = load_work(payLoads[tid + 1], threadOffset,
                                       threadOffset + workChunk, work);
-            assert(initLoad == true);
+            if(!initLoad)
+                std::cout << "E";
             wrkQueue.push(work);
             // start thread
             workers.push_back(std::thread(worker_thread, tid, mpiRank,
@@ -397,7 +398,8 @@ class WorkDistribution{
         // std::cout << mpiRank << " " << startOffset << std::endl;
         bool cwork = load_work(payLoads[0], startOffset,
                                startOffset + workChunk, crdWork);
-        assert(cwork == true);
+        if(!cwork)
+            std::cout << "E";
     }
 
     // Inital work allocation
@@ -447,6 +449,7 @@ public:
         while(doWork());  // finish if any local work left to do
 
         joinWorkers(workers);
+        std::cout << std::endl;
     }
 
     WorkDistribution(SizeType tWork, std::vector<PayLoadType>& refPayload,
