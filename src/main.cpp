@@ -89,8 +89,9 @@ void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ecstx.tstart_read_p = local_time();
     // If we have to store the reads, we read and store the reads
     if(ecdata.getParams().storeReads) {
-        ecdata.getReadsFromFile();
-        ecdata.getAllReads();
+        unsigned nReads = 0;
+        ecdata.getReadsFromFile(nReads);
+        //ecdata.getAllReads(nReads);
     }
 
     ecstx.tstop_read_p = local_time();

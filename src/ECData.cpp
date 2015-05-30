@@ -84,7 +84,7 @@ void ECData::registerKmerTypes(){
 
 // Get the reads corresponding to this processor and
 // store it in ECData object
-bool ECData::getReadsFromFile(){
+bool ECData::getReadsFromFile(unsigned& nreads){
     m_reads.reset();
     std::ifstream read_stream(m_params.iFaName.c_str());
     if(!read_stream.good()) {
@@ -96,44 +96,49 @@ bool ECData::getReadsFromFile(){
 
     bool lastRead = readBatch(&read_stream, m_params.batchSize,
                               m_params.offsetEnd, m_reads);
-    unsigned nsize = m_reads.size();
-    unsigned tmp = nsize;
-    MPI_Reduce( &tmp, &nsize, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD );
+    unsigned tmp = m_reads.size();
+    MPI_Allreduce( &tmp, &nreads, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD );
     if(m_params.m_rank == 0){
-      std::cout << "nreads\t" << nsize << std::endl;
+      std::cout << "nreads\t" << nreads << std::endl;
     }
     return lastRead;
 }
 
-bool ECData::getAllReads(){
-    m_fullReads.reset();
-    std::ifstream read_stream(m_params.iFaName.c_str());
-    if(!read_stream.good()) {
+bool ECData::getAllReads(long nReads){
+    m_fullReads.resize(nReads);
+    m_fullQuals.resize(nReads);
+    std::ifstream fqfs(m_params.iFaName.c_str());
+    if(!fqfs.good()) {
         std::cout << "open " << m_params.iFaName << "failed :|\n";
         exit(1);
     }
-    read_stream.seekg(0, std::ios::beg);
-    bool lastRead = readBatch(&read_stream, INT_MAX,
-                              m_params.fileSize, m_fullReads);
+    fqfs.seekg(0, std::ios::beg);
+    std::string fqRecord[4];
+    long idx = 0;
+    if(!readFirstFastqRecord(&fqfs, fqRecord))
+        return false;
+    do{
+      m_fullReads[idx] = fqRecord[1];
+      m_fullQuals[idx] = fqRecord[3];
+      idx += 1;
+    }while(idx < nReads && readFastqRecord(&fqfs, fqRecord));
+
+    assert(m_fullReads.size() == m_fullQuals.size());
     if(m_params.m_rank == 0){
       std::cout << "nreads\t" << m_fullReads.size() << std::endl;
     }
-    return lastRead;
+    return (idx == nReads);
 }
 
 bool ECData::loadReads(unsigned long woffStart,
-                      unsigned long woffEnd, ReadStore& rbatch) const{
+                       unsigned long woffEnd, ReadStore& rbatch) const{
     unsigned long rpos = 0, qpos = 0;
     rbatch.reset();
     rbatch.readId = (int) woffStart;
-    for(unsigned long i = woffStart; i < woffEnd && i < m_fullReads.size(); i++){
-        int position = m_fullReads.readsOffset[i];
-        int qposition = m_fullReads.qualsOffset[i];
-        char* addr = const_cast<char*> (&(m_fullReads.readsString[position]));
-        char* qAddr = const_cast<char*> (&(m_fullReads.qualsString[qposition]));
-        updateStrStore(std::string(addr), rbatch.readsString,
+    for(unsigned long i = woffStart; (i < woffEnd) && (i < m_fullReads.size()); i++){
+        updateStrStore(m_fullReads[i], rbatch.readsString,
                        rbatch.readsOffset, rpos);
-        updateStrStore(std::string(qAddr), rbatch.qualsString,
+        updateStrStore(m_fullQuals[i], rbatch.qualsString,
                        rbatch.qualsOffset, qpos);
     }
     return (woffEnd >= m_fullReads.size());

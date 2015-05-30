@@ -133,7 +133,8 @@ class ECData {
 
     // Store Reads if reqd.
     ReadStore m_reads;
-    ReadStore m_fullReads;
+    std::vector<std::string> m_fullReads;
+    std::vector<std::string> m_fullQuals;
 
     std::vector<kmer_id_t> m_byte_kref[3];
     unsigned m_byte_kcount[3];
@@ -198,11 +199,11 @@ class ECData {
         return j < (int)MAX_LEVELS ? m_tileLevels[j]: 0;
     }
 
-    bool getReadsFromFile();
-    bool getAllReads();
+    bool getReadsFromFile(unsigned& nreads);
+    bool getAllReads(long nReads);
     bool loadReads(unsigned long woffStart, unsigned long woffEnd, ReadStore& rbatch) const;
-    const ReadStore& getFullReads(){
-        return m_fullReads;
+    long getFullReadSize() const{
+      return m_fullReads.size();
     }
     bool addToArray(kmer_id_t &ID,int count);
     bool addToArray(kmer_id_t &ID,unsigned char count);

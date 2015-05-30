@@ -58,7 +58,6 @@ struct ReadBatchLoader{
 struct ReadBatchLoader2{
     bool operator()(const ECImpl& ecr, unsigned long woffStart,
                      unsigned long woffEnd, ReadStore& tmp){
-        // std::cout << "C" ;
         ecr.getECData().loadReads(woffStart, woffEnd, tmp);
         return (tmp.size() > 0);
     }
@@ -71,7 +70,7 @@ long getTotalWork(const std::string& fileName){
     return fin.tellg();
 }
 
-void ec_wdist(ECData& ecdata){
+void ec_wdist0(ECData& ecdata){
     Para& params = ecdata.getParams();
     long nThreads = (long) params.numThreads;
     std::vector<ECImpl> threadEC(nThreads + 1,
@@ -102,7 +101,7 @@ void ec_wdist2(ECData& ecdata){
     long nThreads = (long) params.numThreads;
     std::vector<ECImpl> threadEC(nThreads + 1,
                                  ECImpl(ecdata, params));
-    long tWork = ecdata.getFullReads().size();
+    long tWork = ecdata.getFullReadSize();
     long nWorkers = params.m_size * (params.numThreads + 1);
     long tChunk = tWork / (nWorkers * params.workFactor);
 

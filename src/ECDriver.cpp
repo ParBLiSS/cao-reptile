@@ -45,7 +45,8 @@ void printHex(int i) {
 }
 
 void ECDriver::ecDynamic(){
-    ec_wdist(ecdata_);
+   ec_wdist0(ecdata_);
+  // ec_wdist2(ecdata_);
 }
 
 void ECDriver::ecStatic() {

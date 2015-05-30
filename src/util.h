@@ -286,7 +286,12 @@ bool readBatch(std::ifstream* fqfs, const long& batchSize,
                const unsigned long& offsetEnd,
                ReadStore& rbatch);
 bool goodQuals(const char* qAddr, int len, int threshold);
+bool readFastqRecord(std::ifstream* fqfs,
+                     std::string fRecord[4]);
+bool readFirstFastqRecord(std::ifstream* fqfs,
+                          std::string fRecord[4]);
 void updateStrStore(const std::string& in_str,
                     cvec_t &StrStore,ivec_t &Offset,
                     unsigned long& position);
+
 #endif /* _UTIL_H */
