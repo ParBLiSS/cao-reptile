@@ -34,25 +34,6 @@
 #include "sort_kmers.hpp"
 #include "ECRunStats.hpp"
 
-#ifdef __MACH__
-#include <sys/time.h>
-#endif
-
-timespec local_time(){
-  struct timespec tstart;
-#ifdef __MACH__
-  struct timeval now;
-  int rv = gettimeofday(&now, NULL);
-  if (!rv) {
-      tstart.tv_sec  = now.tv_sec;
-      tstart.tv_nsec = now.tv_usec * 1000;
-  }
-#else
-  clock_gettime(CLOCK_REALTIME, &tstart);
-#endif
-  return tstart;
-}
-
 void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ecstx.tstart = MPI_Wtime();  ecstx.tstart_kmer_p = local_time();
 
@@ -121,6 +102,7 @@ void construct_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 }
 
 void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
+    std::vector<double> stTimings;
     ecstx.tstart = MPI_Wtime(); ecstx.tstart_ec_p = local_time();
 
     // Cache Optimized layout construction
@@ -128,13 +110,16 @@ void run_reptile(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
 
     // Run reptile
     ECDriver ecdr(ecdata, ecdata.getParams());
-    ecdr.ec();
+    ecdr.ec(stTimings);
 
     ecstx.tstop_ec_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
     ecstx.tstop = MPI_Wtime();
     if (ecdata.getParams().m_rank == 0) {
         ecstx.updateECTime(ofs);
+    }
+    if(ecdata.getParams().dynamicWorkDist != 0){
+        ecstx.reportDynamicLoadTimings(ecdata, stTimings, ofs);
     }
 }
 

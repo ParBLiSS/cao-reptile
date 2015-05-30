@@ -35,6 +35,7 @@
 #include "ECImpl.hpp"
 #include "ECDriver.hpp"
 #include "ECWDist.hpp"
+#include "ECRunStats.hpp"
 
 void print(int i) {
     std::cout << " " << i;
@@ -44,9 +45,9 @@ void printHex(int i) {
     std::cout << " " << std::hex << i;
 }
 
-void ECDriver::ecDynamic(){
-   ec_wdist0(ecdata_);
-  // ec_wdist2(ecdata_);
+void ECDriver::ecDynamic(std::vector<double>& stTimings){
+    ec_wdist0(ecdata_, stTimings);
+  // ec_wdist2(ecdata_, stTimings);
 }
 
 void ECDriver::ecStatic() {
@@ -64,11 +65,11 @@ void ECDriver::ecStatic() {
         oHandle_.close();
 }
 
-void ECDriver::ec(){
+void ECDriver::ec(std::vector<double>& stTimings){
     if(inPara_.dynamicWorkDist == 0){
         ecStatic();
     } else {
-        ecDynamic();
+        ecDynamic(stTimings);
     }
 }
 

@@ -282,6 +282,9 @@ static inline std::string &trim(std::string &s) {
 std::string toString(kmer_id_t ID, int len);
 double get_time();
 void print_time (const std::string& msg, double& timing);
+timespec local_time();
+double elapsed(const clock_t& end, const clock_t& start);
+double elapsed_local(const timespec& finish, const timespec& start);
 bool readBatch(std::ifstream* fqfs, const long& batchSize,
                const unsigned long& offsetEnd,
                ReadStore& rbatch);

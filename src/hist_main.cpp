@@ -3,25 +3,6 @@
 #include "ECRunStats.hpp"
 #include "ECData.hpp"
 
-#ifdef __MACH__
-#include <sys/time.h>
-#endif
-
-timespec local_time(){
-  struct timespec tstart;
-#ifdef __MACH__
-  struct timeval now;
-  int rv = gettimeofday(&now, NULL);
-  if (!rv) {
-      tstart.tv_sec  = now.tv_sec;
-      tstart.tv_nsec = now.tv_usec * 1000;
-  }
-#else
-  clock_gettime(CLOCK_REALTIME, &tstart);
-#endif
-  return tstart;
-}
-
 extern "C" void hist_reduce(void* in, void* inout, int* len, MPI_Datatype*) {
     int n = *len;
     long* srcHist = static_cast<long*>(in);
@@ -35,7 +16,8 @@ void load_reads(ECData& ecdata, ECRunStats& ecstx, std::ostream& ofs){
     ecstx.tstart_read_p = local_time();
     // If we have to store the reads, we read and store the reads
     if(ecdata.getParams().storeReads) {
-        ecdata.getReadsFromFile();
+        unsigned nReads;
+        ecdata.getReadsFromFile(nReads);
     }
 
     ecstx.tstop_read_p = local_time();

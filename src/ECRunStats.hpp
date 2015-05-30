@@ -26,6 +26,8 @@ struct ECRunStats{
     // report timigs
     void reportTimings(Para& params, std::ostream& ofs);
     void reportQueryCounts(ECData& ecd, std::ostream& ofs);
+    void reportDynamicLoadTimings(ECData& ecd, std::vector<double>& stTimings,
+                                  std::ostream& ofs);
     ECRunStats();
 };
 

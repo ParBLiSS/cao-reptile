@@ -70,7 +70,27 @@ long getTotalWork(const std::string& fileName){
     return fin.tellg();
 }
 
-void ec_wdist0(ECData& ecdata){
+void write_errors(ECData& ecdata, std::vector<ECImpl>& threadEC){
+    if(ecdata.getParams().writeOutput != 0){
+        std::ofstream ofs(ecdata.getParams().outputFilename.c_str());
+        if(ofs.good()){
+            for(auto eit = threadEC.begin(); eit != threadEC.end(); eit++)
+                eit->writeErrors(ofs);
+        }
+    }
+}
+
+void get_timings(const std::vector<timespec>& stateTimings,
+                 std::vector<double>& stTimings){
+    stTimings.push_back(elapsed_local(stateTimings[PENDING_WORK],
+                                      stateTimings[ASSIGN_WORK]));
+    stTimings.push_back(elapsed_local(stateTimings[FINISHED_WORK],
+                                      stateTimings[PENDING_WORK]));
+    stTimings.push_back(elapsed_local(stateTimings[NR_WORK_STATES],
+                                      stateTimings[FINISHED_WORK]));
+}
+
+void ec_wdist0(ECData& ecdata, std::vector<double>& stTimings){
     Para& params = ecdata.getParams();
     long nThreads = (long) params.numThreads;
     std::vector<ECImpl> threadEC(nThreads + 1,
@@ -87,16 +107,11 @@ void ec_wdist0(ECData& ecdata){
                                                              params.numThreads,
                                                              tChunk);
     wdist.main();
-    if(ecdata.getParams().writeOutput != 0){
-        std::ofstream ofs(ecdata.getParams().outputFilename.c_str());
-        if(ofs.good()){
-            for(auto eit = threadEC.begin(); eit != threadEC.end(); eit++)
-                eit->writeErrors(ofs);
-        }
-    }
+    write_errors(ecdata, threadEC);
+    get_timings(wdist.getStateTimings(), stTimings);
 }
 
-void ec_wdist2(ECData& ecdata){
+void ec_wdist2(ECData& ecdata, std::vector<double>& stTimings){
     Para& params = ecdata.getParams();
     long nThreads = (long) params.numThreads;
     std::vector<ECImpl> threadEC(nThreads + 1,
@@ -105,19 +120,16 @@ void ec_wdist2(ECData& ecdata){
     long nWorkers = params.m_size * (params.numThreads + 1);
     long tChunk = tWork / (nWorkers * params.workFactor);
 
-    if(params.m_rank == 0)
+    if(params.m_rank == 0){
+        std::cout << "work\t" << tWork << std::endl;
         std::cout << "chunk\t" << tChunk << std::endl;
+    }
 
     WorkDistribution<ReadStore, unsigned long, ECImpl,
                      ReadBatchLoader2, BatchEC, UnitEC> wdist(tWork, threadEC,
                                                               params.numThreads,
                                                               tChunk);
     wdist.main();
-    if(ecdata.getParams().writeOutput != 0){
-        std::ofstream ofs(ecdata.getParams().outputFilename.c_str());
-        if(ofs.good()){
-            for(auto eit = threadEC.begin(); eit != threadEC.end(); eit++)
-                eit->writeErrors(ofs);
-        }
-    }
+    write_errors(ecdata, threadEC);
+    get_timings(wdist.getStateTimings(), stTimings);
 }

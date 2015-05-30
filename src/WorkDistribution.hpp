@@ -76,9 +76,10 @@ private:
 
 
 enum WDState{
-    ASSIGN_WORK = 1, // ready for work to be assigned
+    ASSIGN_WORK = 0, // ready for work to be assigned
     PENDING_WORK,  // no more work left, but work queue not empty
-    FINISHED_WORK // work queue empty, go and wait for thread for
+    FINISHED_WORK, // work queue empty, go and wait for thread for
+    NR_WORK_STATES // place holder for counting states
 };
 
 enum WorkRequest{
@@ -169,6 +170,9 @@ class WorkDistribution{
     WDState coordState; // current state
     int initFactor; // scale of how much work is initially allocated
 
+    std::vector<timespec> stateTimings;
+    std::stringstream msgOut;
+
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
     // It is assumed that the PayLoadType object is exclusive to this thread
@@ -203,7 +207,7 @@ class WorkDistribution{
             bool initLoad = load_work(payLoads[tid + 1], threadOffset,
                                       threadOffset + workChunk, work);
             if(!initLoad)
-                std::cout << "E";
+                msgOut << "E";
             wrkQueue.push(work);
             // start thread
             workers.push_back(std::thread(worker_thread, tid, mpiRank,
@@ -318,6 +322,13 @@ class WorkDistribution{
                  SND_WORK_TAG, MPI_COMM_WORLD, &status);
     }
 
+    void updateCoordState(WDState newState){
+        coordState = newState;
+        if(coordState >= stateTimings.size())
+            stateTimings.resize(coordState + 1);
+        stateTimings[coordState] = local_time();
+    }
+
     // Co-ordination thread in master process.
     //  - Fullfills the responsibilites based on the coordState
     //  - This function is not thread safe, only one thread in a process
@@ -331,12 +342,12 @@ class WorkDistribution{
                 std::vector<SizeType> threadWork(numWorkers);
                 assignWork(threadWork);
                 if(!updateWorkQueue(threadWork)) // if assigned 'zero work'
-                    coordState = PENDING_WORK; // update state
+                    updateCoordState(PENDING_WORK); // update state
             }
             // Assign work to remote processes, if they are asking for it
             if(!assignWorkRemote()){
                 // Update state, if I have assigned 'zero work'
-                coordState = PENDING_WORK;
+                updateCoordState(PENDING_WORK);
             }
             break;
         case PENDING_WORK:
@@ -348,13 +359,15 @@ class WorkDistribution{
             // I, root, have assigned 'zero work' to every process;
             //   Also, my queue is empty. I can finish work now.
             if(numWorkZero == mpiSize && wrkQueue.empty()){
-                coordState = FINISHED_WORK;
+                updateCoordState(FINISHED_WORK);
             }
             break;
         case FINISHED_WORK: // nothing to done, signal workers
             if(!wrkFinished.load(std::memory_order_relaxed)){
                 wrkFinished.store(true, std::memory_order_relaxed);
             }
+            break;
+        default:
             break;
         }
     }
@@ -373,13 +386,13 @@ class WorkDistribution{
                 recvWorkRemote(recvMessage);
                 // If I have been assigned 'zero work', update state to pending
                 if(!updateWorkQueue(recvMessage))
-                    coordState = PENDING_WORK;
+                    updateCoordState(PENDING_WORK);
             }
             break;
         case PENDING_WORK:
             // No more work available, but work queue might not be empty
             if(wrkQueue.empty()){
-                coordState = FINISHED_WORK;
+                updateCoordState(FINISHED_WORK);
             }
             break;
         case FINISHED_WORK:
@@ -387,6 +400,8 @@ class WorkDistribution{
             if(!wrkFinished.load(std::memory_order_relaxed)){
                 wrkFinished.store(true, std::memory_order_relaxed);
             }
+            break;
+        default:
             break;
         }
         return 0;
@@ -399,7 +414,7 @@ class WorkDistribution{
         bool cwork = load_work(payLoads[0], startOffset,
                                startOffset + workChunk, crdWork);
         if(!cwork)
-            std::cout << "E";
+            msgOut << "E";
     }
 
     // Inital work allocation
@@ -421,12 +436,18 @@ class WorkDistribution{
 
 public:
 
+    const std::vector<timespec>& getStateTimings() const{
+        return stateTimings;
+    }
+
     // Main loop of the co-rodnation thread
     //  - assumes the root process
     //  - this function is not thread safe, only the main thread should be
     //     allowed to run this function.
     void main(int root = 0){
+        stateTimings.resize(NR_WORK_STATES + 1);
         wrkFinished.store(false, std::memory_order_relaxed);
+        updateCoordState(ASSIGN_WORK);
         std::vector<std::thread> workers;
         startWorkers(workers); // start workers
 
@@ -449,7 +470,11 @@ public:
         while(doWork());  // finish if any local work left to do
 
         joinWorkers(workers);
-        std::cout << std::endl;
+        updateCoordState(NR_WORK_STATES);
+        if(msgOut.str().size() > 0){
+            msgOut << std::endl;
+            std::cout << msgOut.str();
+        }
     }
 
     WorkDistribution(SizeType tWork, std::vector<PayLoadType>& refPayload,
@@ -466,7 +491,6 @@ public:
         workProgress = 0;
         initFactor = 1;
         numWorkZero = 1;
-        coordState = ASSIGN_WORK;
         assert(numWorkers > 0);
         assert(workChunk > 0);
         assert(payLoads.size() == numWorkers + 1);

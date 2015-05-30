@@ -2,18 +2,6 @@
 #include <sstream>
 #include <fstream>
 
-double elapsed(clock_t& end, clock_t& start){
-  return (double (end - start))/ ((double) CLOCKS_PER_SEC);
-}
-
-double elapsed_local(timespec& finish, timespec& start){
-  double tdiff;
-  tdiff = (finish.tv_sec - start.tv_sec);
-  tdiff += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-  return tdiff;
-}
-
-
 ECRunStats::ECRunStats(){
     tstartInit = MPI_Wtime();
     tstart = tstartInit;
@@ -201,4 +189,34 @@ void ECRunStats::updateECTime(std::ostream& ofs){
     oss << "total\t" << tstop-tstartInit << std::endl;
     ofs << oss.str();
     ofs.flush();
+}
+
+
+void ECRunStats::reportDynamicLoadTimings(ECData& ecd,
+                                          std::vector<double>& stTimings,
+                                          std::ostream& ofs){
+    if(stTimings.size() < 3)
+        return;
+    int p = ecd.getParams().m_size;
+    std::stringstream oss;
+    if(ecd.getParams().m_rank == 0){
+        oss << "--" << std::endl
+            << "pid" << "\t" << "state" << "\t"
+            << "duration" << std::endl;
+    }
+
+    for(int i = 0; i < p; i++){
+      MPI_Barrier(MPI_COMM_WORLD);
+      if(i == ecd.getParams().m_rank){
+          oss << ecd.getParams().m_rank << "\t"
+              << "ASSIGN" << "\t" << stTimings[0] << std::endl;
+          oss << ecd.getParams().m_rank << "\t"
+              << "PENDING" << "\t" << stTimings[1] << std::endl;
+          oss << ecd.getParams().m_rank << "\t"
+              << "FINISHED" << "\t" << stTimings[2] << std::endl;
+          ofs << oss.str();
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -418,3 +418,31 @@ double get_time() {
       gettimeofday(&t, 0);
       return t.tv_sec + (0.000001 * t.tv_usec);
 } // get_time
+
+
+timespec local_time(){
+  struct timespec tstart;
+#ifdef __MACH__
+  struct timeval now;
+  int rv = gettimeofday(&now, NULL);
+  if (!rv) {
+      tstart.tv_sec  = now.tv_sec;
+      tstart.tv_nsec = now.tv_usec * 1000;
+  }
+#else
+  clock_gettime(CLOCK_REALTIME, &tstart);
+#endif
+  return tstart;
+}
+
+
+double elapsed(const clock_t& end, const clock_t& start){
+  return (double (end - start))/ ((double) CLOCKS_PER_SEC);
+}
+
+double elapsed_local(const timespec& finish, const timespec& start){
+  double tdiff;
+  tdiff = (finish.tv_sec - start.tv_sec);
+  tdiff += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+  return tdiff;
+}

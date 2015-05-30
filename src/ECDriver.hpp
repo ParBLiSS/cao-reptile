@@ -45,7 +45,7 @@ public:
         ecdata_(p),inPara_(mpara),readID_(0){};
     virtual ~ECDriver(){};
 
-    void ec();
+    void ec(std::vector<double>& stTimings);
 private:
     ECData& ecdata_;
     Para& inPara_;
@@ -75,7 +75,7 @@ private:
 
     void ecStatic();
 
-    void ecDynamic();
+    void ecDynamic(std::vector<double>& stTimings);
 };
 
 #endif	/* _ECDRIVER_H */
