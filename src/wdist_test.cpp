@@ -58,6 +58,20 @@ struct UnitIntWork{
     }
 };
 
+struct CPar{
+    int pValue;
+    CPar(){
+        pValue = 100;
+    }
+};
+
+struct CSize{
+    int operator()(int , int , const CPar&){
+        return 100;
+    }
+};
+
+
 void check_file(const char* fname, int rank){
     std::ifstream fin(fname);
     if(!fin){
@@ -85,9 +99,10 @@ int main(int argc, char *argv[]){
     int tWork = 6000;
     std::vector<int> pload;
     pload.resize(nthreads + 1);
+    CPar cpx;
 
     WorkDistribution<WInt, int, int, WIntLoader, BatchIntWork,
-                     UnitIntWork> wds(tWork, pload, nthreads, 100);
+                     UnitIntWork, CSize, CPar> wds(tWork, pload, nthreads, cpx);
     wds.main();
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0)

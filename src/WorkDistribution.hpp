@@ -141,7 +141,8 @@ enum WorkRequest{
 //
 template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
-          typename UnitWorkerType>
+          typename UnitWorkerType, typename ChunkSizeType,
+          typename ParamType>
 class WorkDistribution{
     SharedQueue<WorkItemType> wrkQueue;
     std::atomic_bool wrkFinished;
@@ -150,11 +151,12 @@ class WorkDistribution{
     SizeType totalWork;
     std::vector<PayLoadType>& payLoads;
     unsigned numWorkers;
-    SizeType workChunk;
+    SizeType initChunk; // initial allocation chunk size
 
     // woker functions
     BatchLoaderType load_work;
     UnitWorkerType unit_work;
+    ChunkSizeType chunk_size;
 
     // work item and progress indicator for co-ordination thread
     WorkItemType crdWork;
@@ -168,10 +170,11 @@ class WorkDistribution{
     int numWorkZero; // master co-ord for counting no. 'zero work'
     SizeType workAssigned; // master co-ord tracks how much work is assinged
     WDState coordState; // current state
-    int initFactor; // scale of how much work is initially allocated
 
     std::vector<timespec> stateTimings;
     std::stringstream msgOut;
+
+    const ParamType& inParams;
 
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
@@ -201,11 +204,11 @@ class WorkDistribution{
             WorkItemType work;
             // My first work chunk
             //   (work_chunk) ((rank * (numWorkers + 1)) + tid);
-            SizeType threadOffset = mpiRank * (numWorkers + 1) * workChunk;
-            threadOffset += (tid + 1) * workChunk;
+            SizeType threadOffset = mpiRank * (numWorkers + 1) * initChunk;
+            threadOffset += (tid + 1) * initChunk;
 
             bool initLoad = load_work(payLoads[tid + 1], threadOffset,
-                                      threadOffset + workChunk, work);
+                                      threadOffset + initChunk, work);
             if(!initLoad)
                 msgOut << "E";
             wrkQueue.push(work);
@@ -247,7 +250,7 @@ class WorkDistribution{
         for(auto sit = wrkOffsets.begin(); sit != wrkOffsets.end(); sit++){
             if(workAssigned < totalWork){
                 *sit = workAssigned;
-                workAssigned += workChunk;
+                workAssigned += chunk_size(totalWork, workAssigned, inParams);
             } else {
                 *sit = 0;
             }
@@ -262,8 +265,9 @@ class WorkDistribution{
 
         for(auto ait = wrkOffsets.begin(); ait != last; ait++){
             WorkItemType tmp;
-            if(load_work(payLoads[0], *ait, (*ait) + workChunk, tmp))
-              wrkQueue.push(tmp);
+            if(load_work(payLoads[0], *ait,
+                         (*ait) + chunk_size(totalWork, *ait, inParams), tmp))
+                wrkQueue.push(tmp);
         }
         //std::cout << wrkOffsets.back();
 
@@ -409,10 +413,10 @@ class WorkDistribution{
 
     // Load a batch as the work item for coord thread
     void loadCoordWork(){
-        SizeType startOffset = mpiRank * (numWorkers + 1) * workChunk;
+        SizeType startOffset = mpiRank * (numWorkers + 1) * initChunk;
         // std::cout << mpiRank << " " << startOffset << std::endl;
         bool cwork = load_work(payLoads[0], startOffset,
-                               startOffset + workChunk, crdWork);
+                               startOffset + initChunk, crdWork);
         if(!cwork)
             msgOut << "E";
     }
@@ -421,21 +425,21 @@ class WorkDistribution{
     void initQueue(){
         std::vector<SizeType> iOffsets(numWorkers + 1);
         SizeType currOffset;
-        for(int j = 1; j <= 2; j++){
+        for(int j = 1; j <= INIT_QUEUE_FACTOR; j++){
             currOffset = mpiRank + (j * mpiSize);
-            currOffset *= (numWorkers + 1) * workChunk;
+            currOffset *= (numWorkers + 1) * initChunk;
             for(auto oit = iOffsets.begin(); oit != iOffsets.end(); ++oit){
                 *oit = currOffset;
-                currOffset += workChunk;
+                currOffset += initChunk;
                 // std::cout << mpiRank << " " << currOffset << std::endl;
             }
             updateWorkQueue(iOffsets);
         }
-        initFactor += 2;
     }
 
 public:
 
+    const int INIT_QUEUE_FACTOR = 2;
     const std::vector<timespec>& getStateTimings() const{
         return stateTimings;
     }
@@ -454,7 +458,8 @@ public:
         loadCoordWork(); // Load the local work first
         initQueue(); // Initializes the queue with 2 * numWorkers
 
-        workAssigned = initFactor * mpiSize * (numWorkers + 1) * workChunk;
+        workAssigned = (1 + INIT_QUEUE_FACTOR) * mpiSize *
+            (numWorkers + 1) * initChunk;
         // std::cout << mpiRank << " " << workAssigned << std::endl;
         // Start co-ordination loop
         do {
@@ -478,22 +483,20 @@ public:
     }
 
     WorkDistribution(SizeType tWork, std::vector<PayLoadType>& refPayload,
-                     unsigned nWorkers = 2, SizeType wChunk = 0):
+                     unsigned nWorkers, const ParamType& params):
         totalWork(tWork), payLoads(refPayload),
-        numWorkers(nWorkers), workChunk(wChunk)
+        numWorkers(nWorkers), inParams(params)
     {
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
 
-        if(!(wChunk > 0)) {
-            workChunk = totalWork/(mpiSize * numWorkers);
-        }
-        workProgress = 0;
-        initFactor = 1;
-        numWorkZero = 1;
         assert(numWorkers > 0);
-        assert(workChunk > 0);
         assert(payLoads.size() == numWorkers + 1);
+
+        workProgress = 0;
+        numWorkZero = 1;
+        initChunk = chunk_size(totalWork, 0, inParams);
+        assert(initChunk > 0);
     }
 };
 

@@ -63,12 +63,37 @@ struct ReadBatchLoader2{
     }
 };
 
-
 long getTotalWork(const std::string& fileName){
     std::ifstream fin(fileName.c_str());
     fin.seekg(0,std::ios::end);
     return fin.tellg();
 }
+
+struct ChunkSizer{
+    unsigned long operator()(unsigned long totalWork, unsigned long ,
+                             const Para& params){
+        static long nWorkers = params.m_size * (params.numThreads + 1);
+        static long tChunk = totalWork / (nWorkers * params.workFactor);
+        return tChunk;
+    }
+};
+
+struct ChunkSizer2{
+    unsigned long operator()(unsigned long totalWork, unsigned long cWork,
+                             const Para& params){
+        static int initFactor  = 3;
+        static unsigned long initWorkChunk =
+            (totalWork / 4) / (initFactor * params.m_size *
+                               (params.numThreads + 1));
+        static unsigned long upThreshold = (totalWork/4) + (totalWork/2);
+        static unsigned long downWorkChunk = 2500;
+        static unsigned long upWorkChunk = 500;
+        return (cWork < (totalWork/4)) ? initWorkChunk :
+            ((cWork < upThreshold) ? downWorkChunk : upWorkChunk);
+
+    }
+};
+
 
 void write_errors(ECData& ecdata, std::vector<ECImpl>& threadEC){
     if(ecdata.getParams().writeOutput != 0){
@@ -103,9 +128,10 @@ void ec_wdist0(ECData& ecdata, std::vector<double>& stTimings){
         std::cout << "chunk\t" << tChunk << std::endl;
 
     WorkDistribution<ReadStore, unsigned long, ECImpl,
-                     ReadBatchLoader, BatchEC, UnitEC> wdist(tWork, threadEC,
-                                                             params.numThreads,
-                                                             tChunk);
+                     ReadBatchLoader, BatchEC, UnitEC,
+                     ChunkSizer2, Para> wdist(tWork, threadEC,
+                                             params.numThreads,
+                                             params);
     wdist.main();
     write_errors(ecdata, threadEC);
     get_timings(wdist.getStateTimings(), stTimings);
@@ -117,18 +143,15 @@ void ec_wdist2(ECData& ecdata, std::vector<double>& stTimings){
     std::vector<ECImpl> threadEC(nThreads + 1,
                                  ECImpl(ecdata, params));
     long tWork = ecdata.getFullReadSize();
-    long nWorkers = params.m_size * (params.numThreads + 1);
-    long tChunk = tWork / (nWorkers * params.workFactor);
 
     if(params.m_rank == 0){
         std::cout << "work\t" << tWork << std::endl;
-        std::cout << "chunk\t" << tChunk << std::endl;
     }
 
     WorkDistribution<ReadStore, unsigned long, ECImpl,
-                     ReadBatchLoader2, BatchEC, UnitEC> wdist(tWork, threadEC,
-                                                              params.numThreads,
-                                                              tChunk);
+                     ReadBatchLoader2, BatchEC, UnitEC,
+                     ChunkSizer2, Para> wdist(tWork, threadEC,
+                                             params.numThreads, params);
     wdist.main();
     write_errors(ecdata, threadEC);
     get_timings(wdist.getStateTimings(), stTimings);
