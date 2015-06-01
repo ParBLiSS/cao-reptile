@@ -124,8 +124,8 @@ enum WorkRequest{
 // to get its own copy of a PayLoadType object so that the thread can
 // write any results to this object with out any conflict.
 //
-// BatchLoaderType, BatchWorkerType and UnitWorkerType are function
-// objects.
+// BatchLoaderType, BatchWorkerType, UnitWorkerType, and ChunkSizeType
+// are function objects.
 //
 // BatchLoaderType loads a WorkItemType object from starting and ending
 // offset. It also takes the payload object as an argument to retrieve
@@ -139,10 +139,11 @@ enum WorkRequest{
 // batch. Its arguments are WorkItemType& item, PayLoadType& pl,
 // unsigned unit_id
 //
+// ChunkPolicyType is a function objects that estimates the chunk size for
+// the current work load
 template <typename WorkItemType, typename SizeType, typename PayLoadType,
           typename BatchLoaderType, typename BatchWorkerType,
-          typename UnitWorkerType, typename ChunkSizeType,
-          typename ParamType>
+          typename UnitWorkerType, typename ChunkPolicyType>
 class WorkDistribution{
     SharedQueue<WorkItemType> wrkQueue;
     std::atomic_bool wrkFinished;
@@ -156,7 +157,7 @@ class WorkDistribution{
     // woker functions
     BatchLoaderType load_work;
     UnitWorkerType unit_work;
-    ChunkSizeType chunk_size;
+    ChunkPolicyType chunk_policy;
 
     // work item and progress indicator for co-ordination thread
     WorkItemType crdWork;
@@ -173,8 +174,6 @@ class WorkDistribution{
 
     std::vector<timespec> stateTimings;
     std::stringstream msgOut;
-
-    const ParamType& inParams;
 
     //This function will be called from a thread,
     //   therfore any function that is called by this function should be thread safe
@@ -250,7 +249,7 @@ class WorkDistribution{
         for(auto sit = wrkOffsets.begin(); sit != wrkOffsets.end(); sit++){
             if(workAssigned < totalWork){
                 *sit = workAssigned;
-                workAssigned += chunk_size(totalWork, workAssigned, inParams);
+                workAssigned += chunk_policy(workAssigned);
             } else {
                 *sit = 0;
             }
@@ -266,7 +265,7 @@ class WorkDistribution{
         for(auto ait = wrkOffsets.begin(); ait != last; ait++){
             WorkItemType tmp;
             if(load_work(payLoads[0], *ait,
-                         (*ait) + chunk_size(totalWork, *ait, inParams), tmp))
+                         (*ait) + chunk_policy(*ait), tmp))
                 wrkQueue.push(tmp);
         }
         //std::cout << wrkOffsets.back();
@@ -483,9 +482,9 @@ public:
     }
 
     WorkDistribution(SizeType tWork, std::vector<PayLoadType>& refPayload,
-                     unsigned nWorkers, const ParamType& params):
+                     unsigned nWorkers):
         totalWork(tWork), payLoads(refPayload),
-        numWorkers(nWorkers), inParams(params)
+        numWorkers(nWorkers), chunk_policy(tWork, refPayload[0])
     {
         MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
@@ -495,7 +494,7 @@ public:
 
         workProgress = 0;
         numWorkZero = 1;
-        initChunk = chunk_size(totalWork, 0, inParams);
+        initChunk = chunk_policy(0);
         assert(initChunk > 0);
     }
 };

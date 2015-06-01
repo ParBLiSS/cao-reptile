@@ -177,7 +177,7 @@ class ECData {
     friend void dist_kmer_spectrum(ECData& ecdata);
     friend void dist_tile_spectrum(ECData& ecdata);
 
-    Para& getParams(){return m_params;}
+    Para& getParams() const{return m_params;}
 
     long getKmerCount() const{return m_kcount;}
     long getTileCount() const{return m_tilecount;}

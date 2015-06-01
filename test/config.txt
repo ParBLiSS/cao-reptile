@@ -83,7 +83,7 @@ T_card          1
 
 # If set to 1, the program will store the reads and then
 #  process the reads - Applicable only if run with out map reduce
-StoreReads      0
+StoreReads      1
 # Whether to write the output to the filesystem.
 # If 1, writes to the file system
 WriteOutput     1
@@ -98,7 +98,7 @@ WriteOutput     1
 #   sorted layout "kmer" list is used for k-spectrum search
 # If CacheOptimizedSearch == 4,
 #   parallel cache aware layout list of "kmer" is used for k-spectrum search
-CacheOptimizedSearch      4
+CacheOptimizedSearch      0
 # KmerCacheSize and TileCacheSize are paramters used for cache
 # aware layout
 KmerCacheSize      4
@@ -126,7 +126,7 @@ KmerSpectrumInAbsent   1
 # Number of worker threads
 #   - In case of static work distribution
 #
-Threads                2
+Threads                1
 #
 # Work distribution - Whether it should be static (0) or dynamic (1)
 #
@@ -136,4 +136,4 @@ WorkDistribution       1
 # correction work be paritioned. It is computed as below
 #     (fileSize)/(nproc * (num_threads + 1) * workfactor)
 #
-WorkFactor             2
+WorkFactor             1

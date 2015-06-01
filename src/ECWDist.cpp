@@ -69,28 +69,40 @@ long getTotalWork(const std::string& fileName){
     return fin.tellg();
 }
 
-struct ChunkSizer{
-    unsigned long operator()(unsigned long totalWork, unsigned long ,
-                             const Para& params){
-        static long nWorkers = params.m_size * (params.numThreads + 1);
-        static long tChunk = totalWork / (nWorkers * params.workFactor);
+struct ChunkSizePolicy{
+    const Para& params;
+    long nWorkers;
+    long tChunk;
+    ChunkSizePolicy(unsigned long totalWork, ECImpl& cref):
+        params(cref.getECData().getParams()){
+        nWorkers = params.m_size * (params.numThreads + 1);
+        tChunk = totalWork / (nWorkers * params.workFactor);
+        if(params.m_rank == 0)
+            std::cout << "chunk\t" << tChunk << std::endl;
+    }
+    unsigned long operator()(unsigned long){
         return tChunk;
     }
 };
 
-struct ChunkSizer2{
-    unsigned long operator()(unsigned long totalWork, unsigned long cWork,
-                             const Para& params){
-        static int initFactor  = 3;
-        static unsigned long initWorkChunk =
-            (totalWork / 4) / (initFactor * params.m_size *
-                               (params.numThreads + 1));
-        static unsigned long upThreshold = (totalWork/4) + (totalWork/2);
-        static unsigned long downWorkChunk = 2500;
-        static unsigned long upWorkChunk = 500;
-        return (cWork < (totalWork/4)) ? initWorkChunk :
-            ((cWork < upThreshold) ? downWorkChunk : upWorkChunk);
-
+struct ChunkSizePolicy2{
+    const Para& params;
+    unsigned long upThreshold;
+    unsigned long downWorkChunk;
+    unsigned long upWorkChunk;
+    ChunkSizePolicy2(unsigned long totalWork, ECImpl& cref) :
+        params(cref.getECData().getParams()){
+        upThreshold = (totalWork/2);
+        downWorkChunk = 2500;
+        upWorkChunk = 500;
+        if(params.m_rank == 0){
+            std::cout << "threshold\t" << upThreshold << std::endl;
+            std::cout << "up chunk\t" << upWorkChunk << std::endl;
+            std::cout << "down chunk\t" << downWorkChunk << std::endl;
+        }
+    }
+    unsigned long operator()(unsigned long cWork){
+        return (cWork < upThreshold) ? downWorkChunk : upWorkChunk;
     }
 };
 
@@ -121,17 +133,11 @@ void ec_wdist0(ECData& ecdata, std::vector<double>& stTimings){
     std::vector<ECImpl> threadEC(nThreads + 1,
                                  ECImpl(ecdata, params));
     long tWork = getTotalWork(params.iFaName);
-    long nWorkers = params.m_size * (params.numThreads + 1);
-    long tChunk = tWork / (nWorkers * params.workFactor);
-
-    if(params.m_rank == 0)
-        std::cout << "chunk\t" << tChunk << std::endl;
 
     WorkDistribution<ReadStore, unsigned long, ECImpl,
                      ReadBatchLoader, BatchEC, UnitEC,
-                     ChunkSizer2, Para> wdist(tWork, threadEC,
-                                             params.numThreads,
-                                             params);
+                     ChunkSizePolicy> wdist(tWork, threadEC,
+                                             params.numThreads);
     wdist.main();
     write_errors(ecdata, threadEC);
     get_timings(wdist.getStateTimings(), stTimings);
@@ -150,8 +156,8 @@ void ec_wdist2(ECData& ecdata, std::vector<double>& stTimings){
 
     WorkDistribution<ReadStore, unsigned long, ECImpl,
                      ReadBatchLoader2, BatchEC, UnitEC,
-                     ChunkSizer2, Para> wdist(tWork, threadEC,
-                                             params.numThreads, params);
+                     ChunkSizePolicy2> wdist(tWork, threadEC,
+                                             params.numThreads);
     wdist.main();
     write_errors(ecdata, threadEC);
     get_timings(wdist.getStateTimings(), stTimings);
