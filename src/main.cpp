@@ -39,11 +39,18 @@ void construct_dist_spectrum(ECData& ecdata, ECRunStats& ecstx, std::ostream& of
 
     // counts the k-mers and loads them in the ECData object
     local_kmer_spectrum(ecdata);
-    // sort kmers
-    dist_kmer_spectrum(ecdata);
+    dist_kmer_spectrum(ecdata); // sort kmers
+    ecdata.writeKmerDistSpectrum(); // write out kmers
 
-    local_tile_spectrum(ecdata);
-    dist_tile_spectrum(ecdata);
+    ecstx.updateKmerDistSpectrum(ecdata, ofs);
+
+    // clear current array
+    ecdata.replaceKArray(0, 0, 0);
+    ecdata.replaceTileArray(0, 0, 0);
+
+    local_tile_spectrum(ecdata); // count tiles
+    dist_tile_spectrum(ecdata);  // sort tiles
+    ecdata.writeTileDistSpectrum(); // write out tiles
 
     ecstx.tstop_kmer_p = local_time();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -132,7 +139,7 @@ void dist_spectrum(Para& params){
 
     construct_dist_spectrum(ecdata, ecstx, ofs);
 
-    ecdata.writeDistSpectrum();
+    //ecdata.writeDistSpectrum();
 
     ecstx.reportTimings(params, ofs);
 }
