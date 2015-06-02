@@ -211,9 +211,7 @@ void ECRunStats::reportDynamicLoadTimings(ECData& ecd,
           oss << ecd.getParams().m_rank << "\t"
               << "ASSIGN" << "\t" << stTimings[0] << std::endl;
           oss << ecd.getParams().m_rank << "\t"
-              << "PENDING" << "\t" << stTimings[1] << std::endl;
-          oss << ecd.getParams().m_rank << "\t"
-              << "FINISHED" << "\t" << stTimings[2] << std::endl;
+              << "PENDING" << "\t" << stTimings[1] + stTimings[2] << std::endl;
           ofs << oss.str();
       }
       MPI_Barrier(MPI_COMM_WORLD);
