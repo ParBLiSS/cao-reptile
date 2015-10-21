@@ -140,23 +140,31 @@ void ECRunStats::updateFileReadTime(std::ostream&){
     read_sync_stop = tstop;
 }
 
-void ECRunStats::updateDistSpectrumTime(ECData& ecdata, std::ostream& ofs){
+void ECRunStats::updateKmerDistSpectrum(ECData& ecdata, std::ostream& ofs){
     long kcount = ecdata.getKmerCount();
-    long tilecount = ecdata.getTileCount();
     long tmp = kcount;
     MPI_Reduce( &tmp, &kcount, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD );
-    tmp = tilecount;
+    if(ecdata.getParams().m_rank != 0)
+      return;
+    std::stringstream oss;
+    oss << "kmer count\t" << kcount << std::endl;
+    oss << "absent kmer\t" << ecdata.getParams().absentKmers << std::endl;
+    ofs << oss.str();
+    ofs.flush();
+}
+
+void ECRunStats::updateDistSpectrumTime(ECData& ecdata, std::ostream& ofs){
+    long tilecount = ecdata.getTileCount();
+    long tmp = tilecount;
     MPI_Reduce( &tmp, &tilecount, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD );
 
     if(ecdata.getParams().m_rank != 0)
       return;
 
     std::stringstream oss, oss2;
-    oss << "kmer count\t" << kcount << std::endl;
     oss << "tile count\t" << tilecount << std::endl;
-    oss << "absent kmer\t" << ecdata.getParams().absentKmers << std::endl;
-    std::cout << oss.str();
-    std::cout.flush();
+    ofs << oss.str();
+    ofs.flush();
 
     kmer_sync_start = tstart;
     kmer_sync_stop = tstop;
@@ -211,9 +219,7 @@ void ECRunStats::reportDynamicLoadTimings(ECData& ecd,
           oss << ecd.getParams().m_rank << "\t"
               << "ASSIGN" << "\t" << stTimings[0] << std::endl;
           oss << ecd.getParams().m_rank << "\t"
-              << "PENDING" << "\t" << stTimings[1] << std::endl;
-          oss << ecd.getParams().m_rank << "\t"
-              << "FINISHED" << "\t" << stTimings[2] << std::endl;
+              << "PENDING" << "\t" << stTimings[1] + stTimings[2] << std::endl;
           ofs << oss.str();
       }
       MPI_Barrier(MPI_COMM_WORLD);

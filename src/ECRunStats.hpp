@@ -23,6 +23,7 @@ struct ECRunStats{
     void updateSpectrumTime(ECData& ecd, std::ostream& ofs);
     void updateECTime(std::ostream& ofs);
     void updateDistSpectrumTime(ECData& ecdata, std::ostream& ofs);
+    void updateKmerDistSpectrum(ECData& ecdata, std::ostream& ofs);
     // report timigs
     void reportTimings(Para& params, std::ostream& ofs);
     void reportQueryCounts(ECData& ecd, std::ostream& ofs);
