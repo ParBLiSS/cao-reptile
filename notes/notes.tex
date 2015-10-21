@@ -1,4 +1,4 @@
-% Created 2015-05-02 Sat 19:43
+% Created 2015-06-13 Sat 17:49
 \documentclass[integrals, nointegrals, article, 12pt, a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -548,5 +548,76 @@ processes. The next state is 'FINISHED$_{\text{WORK'}}$. At this state, there is
 nothing more to do for the co-ord threads. It sets the shared boolean
 variable to true and waits for the worker threads to finish the last
 error correction work items.
+
+
+
+
+Page 3:
+Add SRX027713 and SRX027583 as the references for the human dataset.
+
+Page 4: (right column: 2nd paragraph)
+\begin{itemize}
+\item The work-queue can hold up to 3 × M chunks at any given time.
+\end{itemize}
+Page 4: (right column: 4th paragraph)
+\begin{itemize}
+\item Each local-master is responsible for maintaining a work-queue of size
+3 x M chunks.
+\end{itemize}
+
+Comment: We maintain only 2 x M work-chunks in the queue at a
+time. However, the initial queue size is 3 x M work-chunks because we
+want to avoid work requests from local masters as soon as the error
+correction is started. Suppose if the initial queue size is less than 3
+x M, which implies that after M work-chunks are taken up by the worker
+threads, we will have less than 2 x M left in the queue. This
+immediately causes the local master to request the global master for
+work. By keeping the initial queue size 3 x M, we avoid the initial
+flood of requests.
+
+Page 4: (right column: 3rd paragraph)
+\begin{itemize}
+\item After communicating the no−more−work message to all the local-masters,
+\end{itemize}
+the global master waits for all the local-masters to complete the work
+previously requested by them.
+
+Comment : No, global-master doesn't wait for the local-master. It waits
+to make sure only two things:
+\begin{enumerate}
+\item All local-masters have recieved the "no-more-work" message. This is
+done by counting how many times "no-more-work" message has been sent.
+\item global-masters' own local workers have completed their work.
+\end{enumerate}
+If the above two are done, global-master just go ahead and does
+MPI$_{\text{finalize}}$. Here, also it doesn't wait for local-masters -- only that
+it announces that there is nothing more to do.
+
+
+Page 5:(left column: 1st paragraph)
+\begin{itemize}
+\item The local-master then sends a pending − work − done message to the
+global-master and exits.
+\end{itemize}
+
+Comment : No, the local-master doesn't send any message to global
+master. The "pending-work" is just a state maintained by local masters
+to no longer request work from the master and just wait until every
+local worker is done error correction.
+
+Page 5:(right column: 1st paragraph)
+\begin{itemize}
+\item By taking the network-latency of our cluster into account, a choice of
+500 reads for the chunk size achieves a good trade-off between the two
+conflicting requirements.
+\end{itemize}
+
+Comment: Also, note that it also depends on the dataset on how much work
+500 reads consume.
+
+Page 7:(results)
+
+Comment: Do we have to mention that we don't use the parallel
+cache-aware construction algorithm in our experiments ?
 % Emacs 24.5.1 (Org mode 8.2.8)
 \end{document}
